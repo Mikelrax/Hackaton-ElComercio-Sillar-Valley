@@ -26,6 +26,10 @@ import {
   Eye,
   Radio,
   Shield,
+  Waves,
+  Package,
+  Hospital,
+  Siren,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -46,7 +50,8 @@ const DEMO_REPORTS = [
   {
     id: 1,
     type: "Incendio forestal",
-    icon: "🔥",
+    icon: Flame,
+    iconClass: "bg-rose-50 text-rose-600",
     severity: "alta",
     location: "Cerro Colorado, Sector 5",
     time: "Hace 10 min",
@@ -56,7 +61,8 @@ const DEMO_REPORTS = [
   {
     id: 2,
     type: "Inundación parcial",
-    icon: "🌊",
+    icon: Waves,
+    iconClass: "bg-sky-50 text-sky-600",
     severity: "media",
     location: "Calle Antiquilla, Yanahuara",
     time: "Hace 35 min",
@@ -66,7 +72,8 @@ const DEMO_REPORTS = [
   {
     id: 3,
     type: "Derrumbe menor",
-    icon: "⚠️",
+    icon: AlertTriangle,
+    iconClass: "bg-amber-50 text-amber-600",
     severity: "baja",
     location: "Av. Ejército cuadra 8",
     time: "Hace 2 horas",
@@ -77,10 +84,10 @@ const DEMO_REPORTS = [
 
 // DEMO – Recursos críticos
 const DEMO_RESOURCES = [
-  { id: 1, name: "Punto de agua potable", location: "Plaza Yanahuara", status: "activo", icon: "💧" },
-  { id: 2, name: "Centro de acopio", location: "Colegio San José", status: "activo", icon: "📦" },
-  { id: 3, name: "Albergue temporal", location: "Polideportivo Municipal", status: "preparado", icon: "🏠" },
-  { id: 4, name: "Botiquín comunitario", location: "Calle Los Arcos 210", status: "activo", icon: "🏥" },
+  { id: 1, name: "Punto de agua potable", location: "Plaza Yanahuara", status: "activo", icon: Droplet, iconClass: "bg-sky-50 text-sky-600" },
+  { id: 2, name: "Centro de acopio", location: "Colegio San José", status: "activo", icon: Package, iconClass: "bg-amber-50 text-amber-600" },
+  { id: 3, name: "Albergue temporal", location: "Polideportivo Municipal", status: "preparado", icon: Home, iconClass: "bg-emerald-50 text-emerald-600" },
+  { id: 4, name: "Botiquín comunitario", location: "Calle Los Arcos 210", status: "activo", icon: Hospital, iconClass: "bg-rose-50 text-rose-600" },
 ];
 
 // DEMO – Usuarios registrados
@@ -283,8 +290,8 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
                   : "border-rose-400 text-rose-600 hover:bg-rose-50"
               }`}
             >
-              <ShieldAlert className="size-4" />
-              {emergencyMode ? "🚨 MODO SOS ACTIVO" : "Activar Modo Emergencia"}
+              {emergencyMode ? <Siren className="size-4" /> : <ShieldAlert className="size-4" />}
+              {emergencyMode ? "MODO SOS ACTIVO" : "Activar Modo Emergencia"}
             </Button>
           </div>
         </div>
@@ -371,7 +378,9 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
                   {DEMO_REPORTS.map((r) => (
                     <div key={r.id} className="px-5 py-3.5 flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <span className="text-lg">{r.icon}</span>
+                        <span className={`size-8 shrink-0 rounded-lg flex items-center justify-center ${r.iconClass}`}>
+                          <r.icon className="size-4" aria-hidden="true" />
+                        </span>
                         <div>
                           <p className="text-sm font-semibold">{r.type}</p>
                           <p className="text-[11px] text-gray-500">{r.location}</p>
@@ -420,7 +429,9 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                      <span className="text-2xl">{r.icon}</span>
+                      <span className={`size-10 shrink-0 rounded-xl flex items-center justify-center ${r.iconClass}`}>
+                        <r.icon className="size-5" aria-hidden="true" />
+                      </span>
                       <div>
                         <p className="text-base font-bold">{r.type}</p>
                         <p className="text-xs text-gray-500 flex items-center gap-1">
@@ -483,7 +494,9 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
                     key={res.id}
                     className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm flex items-start gap-3"
                   >
-                    <span className="text-2xl">{res.icon}</span>
+                    <span className={`size-10 shrink-0 rounded-xl flex items-center justify-center ${res.iconClass}`}>
+                      <res.icon className="size-5" aria-hidden="true" />
+                    </span>
                     <div className="flex-1">
                       <p className="text-sm font-bold">{res.name}</p>
                       <p className="text-[11px] text-gray-500 flex items-center gap-1 mt-0.5">

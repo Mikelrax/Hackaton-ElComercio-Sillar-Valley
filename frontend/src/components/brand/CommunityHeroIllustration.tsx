@@ -1,4 +1,5 @@
 import * as React from "react"
+import { Handshake, Siren, Star, Wrench } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export function CommunityHeroIllustration({ className }: { className?: string }) {
@@ -109,28 +110,33 @@ export function CommunityHeroIllustration({ className }: { className?: string })
         </g>
 
         {/* Card flotante 1: Recomendación Vecinal */}
-        <g transform="translate(45, 60)" className="animate-bounce" style={{ animationDuration: "5s" }}>
-          <rect x="0" y="0" width="135" height="42" rx="12" fill="#ffffff" stroke="#e2e8f0" strokeWidth="1.5" filter="drop-shadow(0 4px 6px rgba(0,0,0,0.06))" />
-          <circle cx="22" cy="21" r="13" fill="#d1fae5" />
-          <text x="22" y="26" fill="#059669" fontSize="13" textAnchor="middle">🛠️</text>
-          <text x="42" y="18" fill="#0f172a" fontSize="10" fontWeight="bold">Don Lucho (Gasfitero)</text>
-          <text x="42" y="30" fill="#059669" fontSize="8.5" fontWeight="600">★ Recomendado por 12</text>
+        <g transform="translate(45, 60)">
+          <g className="animate-bounce" style={{ animationDuration: "5s", transformBox: "fill-box" }}>
+            <rect x="0" y="0" width="135" height="42" rx="12" fill="#ffffff" stroke="#e2e8f0" strokeWidth="1.5" filter="drop-shadow(0 4px 6px rgba(0,0,0,0.06))" />
+            <circle cx="22" cy="21" r="13" fill="#d1fae5" />
+            <Wrench x={15} y={14} size={14} color="#059669" strokeWidth={2.25} />
+            <text x="42" y="18" fill="#0f172a" fontSize="10" fontWeight="bold">Don Lucho (Gasfitero)</text>
+            <Star x={42} y={23} size={8} color="#059669" fill="#059669" />
+            <text x="53" y="30" fill="#059669" fontSize="8.5" fontWeight="600">Recomendado por 12</text>
+          </g>
         </g>
 
         {/* Card flotante 2: Muro de Favores */}
-        <g transform="translate(340, 70)" className="animate-bounce" style={{ animationDuration: "6s" }}>
-          <rect x="0" y="0" width="140" height="42" rx="12" fill="#ffffff" stroke="#e2e8f0" strokeWidth="1.5" filter="drop-shadow(0 4px 6px rgba(0,0,0,0.06))" />
-          <circle cx="22" cy="21" r="13" fill="#e0f2fe" />
-          <text x="22" y="26" fill="#0284c7" fontSize="13" textAnchor="middle">🤝</text>
-          <text x="42" y="18" fill="#0f172a" fontSize="10" fontWeight="bold">Préstamo de Escalera</text>
-          <text x="42" y="30" fill="#0284c7" fontSize="8.5" fontWeight="600">A 200m · Costo Cero</text>
+        <g transform="translate(340, 70)">
+          <g className="animate-bounce" style={{ animationDuration: "6s", transformBox: "fill-box" }}>
+            <rect x="0" y="0" width="140" height="42" rx="12" fill="#ffffff" stroke="#e2e8f0" strokeWidth="1.5" filter="drop-shadow(0 4px 6px rgba(0,0,0,0.06))" />
+            <circle cx="22" cy="21" r="13" fill="#e0f2fe" />
+            <Handshake x={15} y={14} size={14} color="#0284c7" strokeWidth={2.25} />
+            <text x="42" y="18" fill="#0f172a" fontSize="10" fontWeight="bold">Préstamo de Escalera</text>
+            <text x="42" y="30" fill="#0284c7" fontSize="8.5" fontWeight="600">A 200m · Costo Cero</text>
+          </g>
         </g>
 
         {/* Card flotante 3: Red SOS / Emergencias */}
         <g transform="translate(195, 290)">
           <rect x="0" y="0" width="130" height="34" rx="10" fill="#ffffff" stroke="#fecdd3" strokeWidth="1.5" filter="drop-shadow(0 4px 6px rgba(0,0,0,0.06))" />
           <circle cx="18" cy="17" r="10" fill="#ffe4e6" />
-          <text x="18" y="21" fill="#e11d48" fontSize="10" textAnchor="middle">🚨</text>
+          <Siren x={12} y={11} size={12} color="#e11d48" strokeWidth={2.25} />
           <text x="35" y="16" fill="#9f1239" fontSize="9" fontWeight="bold">Punto de Agua Activo</text>
           <text x="35" y="26" fill="#64748b" fontSize="8">Yanahuara · Respaldo Offline</text>
         </g>

@@ -21,6 +21,11 @@ import {
   AlertCircle,
   ChevronDown,
   ChevronUp,
+  Accessibility,
+  Backpack,
+  Wrench,
+  Siren,
+  type LucideIcon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -42,30 +47,30 @@ const NEIGHBORHOODS = [
   "Sachaca",
 ]
 
-const PROFILES: { id: UserProfile; title: string; subtitle: string; icon: string }[] = [
+const PROFILES: { id: UserProfile; title: string; subtitle: string; icon: LucideIcon }[] = [
   {
     id: "mayor",
     title: "Adulto Mayor",
     subtitle: "Modo accesible con letras grandes y apoyo prioritario",
-    icon: "👴",
+    icon: Accessibility,
   },
   {
     id: "familia",
     title: "Familia / Padres",
     subtitle: "Apoyo escolar, trueque de ropa y actividades familiares",
-    icon: "👨‍👩‍👧",
+    icon: Users,
   },
   {
     id: "joven",
     title: "Joven / Estudiante",
     subtitle: "Oportunidades locales, mandados y voluntariado",
-    icon: "🎒",
+    icon: Backpack,
   },
   {
     id: "adulto",
     title: "Vecino / Oficios",
     subtitle: "Servicios del hogar, herramientas y directorio del barrio",
-    icon: "🛠️",
+    icon: Wrench,
   },
 ]
 
@@ -430,7 +435,13 @@ export function AuthCard() {
                       }`}
                     >
                       <div className="flex items-center gap-2">
-                        <span className="text-xl">{p.icon}</span>
+                        <span
+                          className={`size-9 shrink-0 rounded-lg flex items-center justify-center ${
+                            isSelected ? "bg-emerald-600 text-white" : "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+                          }`}
+                        >
+                          <p.icon className="size-5" aria-hidden="true" />
+                        </span>
                         <div>
                           <p className="text-xs font-bold leading-tight text-foreground">{p.title}</p>
                           <p className="text-[10px] text-muted-foreground line-clamp-1 mt-0.5">{p.subtitle}</p>
@@ -497,7 +508,8 @@ export function AuthCard() {
                   onClick={() => handleDemoAccess("vecino")}
                   className="h-8 text-xs font-semibold rounded-lg justify-start"
                 >
-                  👤 Vecino General
+                  <UserIcon className="size-3.5" />
+                  Vecino General
                 </Button>
                 <Button
                   type="button"
@@ -506,7 +518,8 @@ export function AuthCard() {
                   onClick={() => handleDemoAccess("moderador")}
                   className="h-8 text-xs font-semibold rounded-lg justify-start border-rose-500/30 text-rose-600 dark:text-rose-400"
                 >
-                  🚨 Moderador (Junta SOS)
+                  <Siren className="size-3.5" />
+                  Moderador (Junta SOS)
                 </Button>
               </div>
             </div>

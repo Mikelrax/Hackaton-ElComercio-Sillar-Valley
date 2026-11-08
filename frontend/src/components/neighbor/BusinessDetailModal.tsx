@@ -3,7 +3,7 @@
 "use client"
 
 import React, { useState } from "react"
-import { ArrowLeft, Phone, ThumbsUp, Wrench, Utensils, Scissors, Store, Sparkles, Check, Share2 } from "lucide-react"
+import { ArrowLeft, Phone, ThumbsUp, Wrench, Utensils, Scissors, Store, Sparkles, Check, Share2, MessageCircle } from "lucide-react"
 import { BusinessItem } from "@/lib/types"
 
 interface BusinessDetailModalProps {
@@ -126,7 +126,7 @@ export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({
               rel="noopener noreferrer"
               className="h-11 rounded-xl bg-[#087F72] text-white font-bold text-xs flex items-center justify-center gap-2 hover:bg-[#075E54] active:scale-98 transition-all shadow-sm"
             >
-              <span className="text-base">💬</span>
+              <MessageCircle className="size-4" />
               <span>WhatsApp</span>
             </a>
             <a
