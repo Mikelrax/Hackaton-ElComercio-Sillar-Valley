@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button"
 import { Logo } from "@/components/brand/Logo"
 import { CommunityHeroIllustration } from "@/components/brand/CommunityHeroIllustration"
 import { apiFetch } from "@/lib/api"
+import { appUrl } from "@/lib/hosts"
 import { Landing } from "@/lib/types"
 
 interface Feature {
@@ -113,17 +114,17 @@ export function LandingView() {
           </nav>
 
           <div className="flex items-center gap-2.5">
-            <Link href="/login">
+            <a href={appUrl("/login")}>
               <Button variant="ghost" size="sm" className="font-semibold text-sm h-10 px-3.5 rounded-xl">
                 Iniciar sesión
               </Button>
-            </Link>
-            <Link href="/registro">
+            </a>
+            <a href={appUrl("/registro")}>
               <Button size="sm" className="bg-[#087F72] hover:bg-[#075E54] text-white font-semibold text-sm h-10 px-4 rounded-xl shadow-sm gap-1.5">
                 <span>Registrarme</span>
                 <ArrowRight className="size-4" />
               </Button>
-            </Link>
+            </a>
           </div>
         </div>
       </header>
@@ -150,12 +151,12 @@ export function LandingView() {
               </p>
 
               <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
-                <Link href="/registro">
+                <a href={appUrl("/registro")}>
                   <Button className="w-full sm:w-auto h-12 px-7 rounded-xl bg-[#087F72] hover:bg-[#075E54] text-white font-semibold text-base shadow-md gap-2">
                     <span>Unirme a mi barrio</span>
                     <ArrowRight className="size-4" />
                   </Button>
-                </Link>
+                </a>
                 <a href="#como-funciona">
                   <Button variant="outline" className="w-full sm:w-auto h-12 px-6 rounded-xl font-semibold text-base border-border hover:bg-muted/80 gap-2">
                     <Search className="size-4 text-[#087F72]" />
@@ -240,11 +241,11 @@ export function LandingView() {
             Únete hoy a Ayni y fortalece los lazos de confianza, apoyo mutuo y seguridad en tu comunidad.
           </p>
           <div className="pt-3 flex flex-wrap gap-3 justify-center">
-            <Link href="/registro">
+            <a href={appUrl("/registro")}>
               <Button className="h-12 px-8 rounded-xl bg-white text-[#087F72] hover:bg-[#EAF5F1] font-bold text-base shadow-md">
                 Empezar ahora
               </Button>
-            </Link>
+            </a>
           </div>
         </div>
       </section>

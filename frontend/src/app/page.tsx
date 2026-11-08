@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useSyncExternalStore } from "react"
 import { authService, parseSession, sessionSnapshot, subscribeSession } from "@/lib/auth"
-import { LandingView } from "@/components/landing/LandingView"
+import { LoginScreen } from "@/components/auth/LoginScreen"
 import { ModeratorDashboard } from "@/components/dashboard/ModeratorDashboard"
 import { DashboardView } from "@/components/dashboard/DashboardView"
 
@@ -45,5 +45,5 @@ export default function Home() {
     )
   }
 
-  return <LandingView />
+  return <LoginScreen />
 }

@@ -57,7 +57,7 @@ export function AuthCard() {
     setLoading(true)
     try {
       await authService.login({ phone, password })
-      router.push("/")
+      router.replace("/")
     } catch (err) {
       setError(
         err instanceof ApiError && err.status === 401
@@ -73,7 +73,7 @@ export function AuthCard() {
     setLoading(true)
     try {
       await authService.demoLogin(key)
-      router.push("/")
+      router.replace("/")
     } catch (err) {
       setError(errorMessage(err, "No pudimos iniciar sesión. Intenta otra vez."))
       setLoading(false)

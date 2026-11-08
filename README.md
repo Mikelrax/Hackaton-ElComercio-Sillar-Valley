@@ -40,7 +40,7 @@ npm install
 npm run dev
 ```
 
-Corre en http://localhost:3000.
+Corre en http://localhost:3000. La raíz abre el login (o el inicio si ya hay sesión). La landing se ve en http://inicio.localhost:3000: el mismo servidor la muestra según el dominio (`src/proxy.ts`).
 
 Agregar componentes de shadcn:
 
@@ -55,12 +55,16 @@ La app (**Ayni**) corre en Dokploy como un servicio Docker Compose con el `docke
 | Servicio | URL |
 |---|---|
 | App | https://aynibarrio.duckdns.org |
+| Landing | https://inicio.aynibarrio.duckdns.org |
 | Backend | https://api.aynibarrio.duckdns.org |
+
+La app y la landing salen del mismo servicio `frontend`: en Dokploy ese servicio tiene los dos dominios.
 
 Variables de entorno configuradas en Dokploy:
 
 - `NEXT_PUBLIC_API_URL`: URL pública del backend. Se fija al compilar el frontend, así que si cambia hay que volver a desplegar.
-- `CORS_ALLOWED_ORIGINS`: URL de la app que puede llamar al backend (varias separadas por comas).
+- `NEXT_PUBLIC_APP_URL` y `NEXT_PUBLIC_LANDING_URL`: URLs públicas de la app y de la landing. También se fijan al compilar.
+- `CORS_ALLOWED_ORIGINS`: URLs que pueden llamar al backend, separadas por comas. Deben estar la app y la landing.
 - `PUBLIC_BASE_URL`: URL pública del backend, para armar los enlaces de las imágenes subidas.
 - `DB_PASSWORD`: contraseña de PostgreSQL (el servicio `db` del compose).
 - `JWT_SECRET`: clave para firmar los tokens, de al menos 32 caracteres.

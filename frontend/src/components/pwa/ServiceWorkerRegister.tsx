@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
+import { isLandingHost } from "@/lib/hosts"
 
 function loadedAssets(): string[] {
   const urls = performance
@@ -13,6 +14,7 @@ function loadedAssets(): string[] {
 export function ServiceWorkerRegister() {
   useEffect(() => {
     if (process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator)) return
+    if (isLandingHost(window.location.host)) return
     navigator.serviceWorker
       .register("/sw.js", { scope: "/", updateViaCache: "none" })
       .then(() => navigator.serviceWorker.ready)
