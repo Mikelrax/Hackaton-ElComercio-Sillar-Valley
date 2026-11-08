@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sillar Valley",
-  description: "Hackaton El Comercio - Sillar Valley",
+  title: "Ayni",
+  description: "Recomendaciones, favores y ayuda entre vecinos",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
