@@ -36,6 +36,15 @@ export default function PrivacidadPage() {
           ],
         },
         {
+          title: "Cuando conversas con Kusi",
+          items: [
+            "Kusi es el asistente de Ayni. Es un programa automático, no una persona.",
+            "Para responderte, lo que le escribes se envía a Anthropic, la empresa que creó la inteligencia artificial que usa Kusi.",
+            "Junto con tu mensaje solo enviamos tu primer nombre, tu barrio y la información pública que Kusi consulta: negocios del directorio, favores del muro y puntos de apoyo. No enviamos tu celular ni el de otros vecinos.",
+            "Ayni no guarda tus conversaciones con Kusi. No le escribas claves, números de cuenta ni otros datos privados.",
+          ],
+        },
+        {
           title: "En tu teléfono",
           items: [
             "Guardamos tu sesión y lo que publicas sin señal hasta que se pueda enviar.",
@@ -45,7 +54,7 @@ export default function PrivacidadPage() {
         {
           title: "Lo que no hacemos",
           items: [
-            "No vendemos ni compartimos tus datos con empresas.",
+            "No vendemos tus datos ni los compartimos con empresas, salvo lo que le escribes a Kusi para que pueda responderte.",
             "No usamos tus datos para publicidad.",
             "El mapa se carga desde OpenFreeMap, que recibe la zona del mapa que estás viendo, no tus datos personales.",
           ],

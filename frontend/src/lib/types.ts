@@ -67,6 +67,7 @@ export interface Catalog {
   recommendationTags: Option[]
   openDays: Option[]
   map: MapOptions
+  assistantEnabled?: boolean
 }
 
 export interface MapItem {
@@ -256,4 +257,33 @@ export interface ModerationStats {
   openSupportPoints: number
   users: number
   emergencyActive: boolean
+}
+
+export type KusiRole = "user" | "assistant"
+
+export type KusiDraftType = "necesito" | "ofrezco" | "recomiendo" | "emergencia"
+
+export interface KusiPostCard {
+  id: number
+  type: "REQUEST" | "OFFER"
+  typeLabel: string
+  category: string
+  categoryLabel: string
+  title: string
+  neighborhood: string
+  createdAt: string
+}
+
+export interface KusiDraft {
+  type: KusiDraftType
+  text: string
+}
+
+export interface KusiReply {
+  reply: string
+  businesses: BusinessSummary[]
+  posts: KusiPostCard[]
+  supportPoints: SupportPoint[]
+  draft: KusiDraft | null
+  showEmergencyNumbers: boolean
 }
