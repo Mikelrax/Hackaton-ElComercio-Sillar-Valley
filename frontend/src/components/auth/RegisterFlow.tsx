@@ -22,6 +22,7 @@ import { NEIGHBORHOODS } from "@/lib/neighborhoods"
 import { helpClass, inputClass, labelClass, primaryButton, secondaryButton } from "@/lib/form-styles"
 import { FormError } from "@/components/ui/form-error"
 import { SoftBackdrop } from "@/components/layout/SoftBackdrop"
+import { BigSelect } from "@/components/ui/big-select"
 
 type Step = 1 | 2 | 3 | "done"
 type GpsState = "idle" | "locating" | "ok" | "error"
@@ -335,19 +336,13 @@ export function RegisterFlow() {
 
               <div>
                 <label htmlFor="reg-barrio" className={labelClass}>Tu barrio</label>
-                <div className="relative">
-                  <Home className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-[#087F72] pointer-events-none" />
-                  <select
-                    id="reg-barrio"
-                    value={neighborhood}
-                    onChange={e => setNeighborhood(e.target.value)}
-                    className={`${inputClass} pl-12 appearance-none font-semibold`}
-                  >
-                    {NEIGHBORHOODS.map(b => (
-                      <option key={b} value={b}>{b}</option>
-                    ))}
-                  </select>
-                </div>
+                <BigSelect
+                  id="reg-barrio"
+                  value={neighborhood}
+                  onValueChange={setNeighborhood}
+                  options={NEIGHBORHOODS.map(n => ({ value: n, label: n }))}
+                  icon={Home}
+                />
               </div>
 
               <div>

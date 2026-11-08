@@ -12,16 +12,25 @@ import { NEIGHBORHOODS } from "@/lib/neighborhoods"
 import { helpClass, inputClass, labelClass, primaryButton, secondaryButton } from "@/lib/form-styles"
 import { FormError } from "@/components/ui/form-error"
 import { SoftBackdrop } from "@/components/layout/SoftBackdrop"
+import { BigSelect, type BigSelectOption } from "@/components/ui/big-select"
 
-const PLACE_TYPES = ["Casa", "Trabajo", "Familia", "Otro"] as const
-type PlaceType = (typeof PLACE_TYPES)[number]
+type PlaceType = "Casa" | "Trabajo" | "Familia" | "Otro"
 type GpsState = "idle" | "locating" | "ok" | "error"
+
+const PLACE_OPTIONS: BigSelectOption[] = [
+  { value: "Casa", label: "Casa", icon: Home },
+  { value: "Trabajo", label: "Trabajo", icon: Briefcase },
+  { value: "Familia", label: "Casa de un familiar", icon: Users },
+  { value: "Otro", label: "Otro lugar", icon: MapPin },
+]
+
+const NEIGHBORHOOD_OPTIONS: BigSelectOption[] = NEIGHBORHOODS.map(n => ({ value: n, label: n }))
 
 function iconFor(label: string): LucideIcon {
   const l = label.toLowerCase()
-  if (l.includes("casa")) return Home
+  if (/famili|mam[aá]|pap[aá]|abuel/.test(l)) return Users
   if (l.includes("trabajo")) return Briefcase
-  if (l.includes("familia") || l.includes("mamá") || l.includes("papá")) return Users
+  if (l.includes("casa")) return Home
   return MapPin
 }
 
@@ -58,7 +67,8 @@ function AddressForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
-    const label = placeType === "Otro" ? customLabel.trim() : placeType
+    const label =
+      placeType === "Otro" ? customLabel.trim() : PLACE_OPTIONS.find(o => o.value === placeType)?.label ?? placeType
     if (!label) {
       setError("Escribe un nombre para este lugar, por ejemplo «Casa de mi abuela».")
       return
@@ -83,25 +93,14 @@ function AddressForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () 
     <form onSubmit={submit} noValidate className="rounded-2xl bg-white border-2 border-[#087F72]/40 p-4 space-y-5">
       <h2 className="text-[20px] font-bold">Nueva dirección</h2>
 
-      <fieldset>
-        <legend className={labelClass}>¿Qué lugar es?</legend>
-        <div className="grid grid-cols-2 gap-2">
-          {PLACE_TYPES.map(type => (
-            <button
-              key={type}
-              type="button"
-              onClick={() => setPlaceType(type)}
-              aria-pressed={placeType === type}
-              className={`h-12 rounded-xl border-2 text-[16px] font-semibold transition-colors ${
-                placeType === type
-                  ? "border-[#087F72] bg-[#EAF5F1] text-[#087F72]"
-                  : "border-[#E7E5E4] bg-white text-[#44403C] hover:border-[#A8A29E]"
-              }`}
-            >
-              {type}
-            </button>
-          ))}
-        </div>
+      <div>
+        <label htmlFor="addr-place" className={labelClass}>¿Qué lugar es?</label>
+        <BigSelect
+          id="addr-place"
+          value={placeType}
+          onValueChange={v => setPlaceType(v as PlaceType)}
+          options={PLACE_OPTIONS}
+        />
         {placeType === "Otro" && (
           <input
             aria-label="Nombre del lugar"
@@ -112,23 +111,17 @@ function AddressForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () 
             className={`${inputClass} mt-2`}
           />
         )}
-      </fieldset>
+      </div>
 
       <div>
         <label htmlFor="addr-barrio" className={labelClass}>Barrio</label>
-        <div className="relative">
-          <Home className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-[#087F72] pointer-events-none" />
-          <select
-            id="addr-barrio"
-            value={neighborhood}
-            onChange={e => setNeighborhood(e.target.value)}
-            className={`${inputClass} pl-12 appearance-none font-semibold`}
-          >
-            {NEIGHBORHOODS.map(b => (
-              <option key={b} value={b}>{b}</option>
-            ))}
-          </select>
-        </div>
+        <BigSelect
+          id="addr-barrio"
+          value={neighborhood}
+          onValueChange={setNeighborhood}
+          options={NEIGHBORHOOD_OPTIONS}
+          icon={MapPin}
+        />
       </div>
 
       <div>
