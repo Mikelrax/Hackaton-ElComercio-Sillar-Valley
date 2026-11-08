@@ -15,6 +15,8 @@ export interface NewSupportPoint {
   type: string
   neighborhood?: string
   address?: string
+  latitude?: number
+  longitude?: number
 }
 
 export interface AdminUser {
@@ -39,8 +41,8 @@ export const emergencyApi = {
     return apiFetch<EmergencyOverview>(`/api/emergency${at}`)
   },
 
-  report(input: NewEmergencyReport): Promise<EmergencyReport> {
-    return apiFetch<EmergencyReport>("/api/emergency/reports", { method: "POST", body: input })
+  report(input: NewEmergencyReport, label: string): Promise<EmergencyReport> {
+    return apiFetch<EmergencyReport>("/api/emergency/reports", { method: "POST", body: input, queue: label })
   },
 
   onTheWay(id: number): Promise<EmergencyReport> {

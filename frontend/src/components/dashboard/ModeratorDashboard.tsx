@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import {
   AlertTriangle,
   BadgeCheck,
@@ -31,6 +32,12 @@ import { timeAgo } from "@/lib/posts";
 import { EmergencyOverview, EmergencyReport, ModerationStats } from "@/lib/types";
 import { PendingPostsPanel } from "@/components/dashboard/PendingPostsPanel";
 import { BigSelect } from "@/components/ui/big-select";
+import { Spot } from "@/lib/types";
+
+const LocationPicker = dynamic(() => import("@/components/map/LocationPicker"), {
+  ssr: false,
+  loading: () => <div className="h-60 rounded-2xl bg-gray-100 animate-pulse" />,
+});
 
 interface ModeratorDashboardProps {
   user: User;
@@ -157,6 +164,9 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
   const [pointType, setPointType] = useState("");
   const [pointAddress, setPointAddress] = useState("");
   const [pointFormOpen, setPointFormOpen] = useState(false);
+  const [pointSpot, setPointSpot] = useState<Spot | null>(null);
+  const [pointError, setPointError] = useState("");
+  const [confirming, setConfirming] = useState<"activate" | "deactivate" | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -201,6 +211,7 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
   const go = (section: Section) => {
     setActiveSection(section);
     setMobileMenuOpen(false);
+    setConfirming(null);
   };
 
   const navButtons = (onPick: (s: Section) => void) =>
@@ -426,12 +437,24 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
                   className="bg-white rounded-2xl border-2 border-[#087F72]/40 p-4 space-y-3"
                   onSubmit={async e => {
                     e.preventDefault();
+                    setPointError("");
+                    if (!pointSpot) {
+                      setPointError("Marca el punto en el mapa: muévelo, busca la calle o toca «Usar mi ubicación».");
+                      return;
+                    }
                     const ok = await run("new-point", () =>
-                      emergencyApi.addSupportPoint({ name: pointName, type: currentPointType, address: pointAddress || undefined })
+                      emergencyApi.addSupportPoint({
+                        name: pointName.trim(),
+                        type: currentPointType,
+                        address: pointAddress.trim() || undefined,
+                        latitude: pointSpot.latitude,
+                        longitude: pointSpot.longitude,
+                      })
                     );
                     if (ok) {
                       setPointName("");
                       setPointAddress("");
+                      setPointSpot(null);
                       setPointFormOpen(false);
                     }
                   }}
@@ -459,7 +482,20 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
                     aria-label="Dirección"
                     className="w-full h-11 px-3 rounded-xl border border-gray-300 text-sm"
                   />
-                  <p className="text-[11px] text-gray-500">Se ubica en el mapa según tu dirección principal.</p>
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold">¿Dónde queda?</p>
+                    {catalog ? (
+                      <LocationPicker
+                        styleUrl={catalog.map.styleUrl}
+                        start={{ lat: user.location.lat, lng: user.location.lng }}
+                        startZoom={15}
+                        onChange={setPointSpot}
+                      />
+                    ) : (
+                      <div className="h-60 rounded-2xl bg-gray-100 animate-pulse" />
+                    )}
+                  </div>
+                  {pointError && <p className="text-xs font-semibold text-rose-600">{pointError}</p>}
                   <div className="flex gap-2">
                     <button
                       type="submit"
@@ -468,7 +504,15 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
                     >
                       Guardar
                     </button>
-                    <button type="button" onClick={() => setPointFormOpen(false)} className="h-10 px-4 rounded-xl border border-gray-300 text-sm font-bold">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPointFormOpen(false);
+                        setPointSpot(null);
+                        setPointError("");
+                      }}
+                      className="h-10 px-4 rounded-xl border border-gray-300 text-sm font-bold"
+                    >
                       Cancelar
                     </button>
                   </div>
@@ -549,13 +593,40 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
                   <p className="text-xs text-rose-100">
                     Activada por {mode.activatedBy} · {mode.activatedAt && timeAgo(mode.activatedAt)}
                   </p>
-                  <button
-                    disabled={busyKey !== null}
-                    onClick={() => run("deactivate", () => emergencyApi.deactivate())}
-                    className="h-10 px-4 rounded-xl bg-white text-rose-700 text-sm font-bold disabled:opacity-60"
-                  >
-                    Desactivar modo emergencia
-                  </button>
+                  {confirming === "deactivate" ? (
+                    <div className="rounded-xl bg-white/10 border border-white/30 p-3 space-y-2" role="alertdialog" aria-label="Confirmar desactivación">
+                      <p className="text-sm font-bold">¿Desactivar el modo emergencia?</p>
+                      <p className="text-xs text-rose-50">
+                        Los vecinos dejarán de ver el aviso rojo y la app volverá al modo cotidiano.
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          disabled={busyKey !== null}
+                          onClick={async () => {
+                            const ok = await run("deactivate", () => emergencyApi.deactivate());
+                            if (ok) setConfirming(null);
+                          }}
+                          className="h-10 px-4 rounded-xl bg-white text-rose-700 text-sm font-bold disabled:opacity-60"
+                        >
+                          {busyKey === "deactivate" ? "Desactivando…" : "Sí, desactivar"}
+                        </button>
+                        <button
+                          onClick={() => setConfirming(null)}
+                          className="h-10 px-4 rounded-xl border border-white/70 text-white text-sm font-bold"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      disabled={busyKey !== null}
+                      onClick={() => setConfirming("deactivate")}
+                      className="h-10 px-4 rounded-xl bg-white text-rose-700 text-sm font-bold disabled:opacity-60"
+                    >
+                      Desactivar modo emergencia
+                    </button>
+                  )}
                 </div>
               )}
               {overview && !mode?.active && (
@@ -563,10 +634,15 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
                   className="bg-white rounded-2xl border border-gray-200 p-5 space-y-3"
                   onSubmit={async e => {
                     e.preventDefault();
+                    if (confirming !== "activate") {
+                      setConfirming("activate");
+                      return;
+                    }
                     const ok = await run("activate", () => emergencyApi.activate(modeTitle.trim(), modeMessage.trim() || undefined));
                     if (ok) {
                       setModeTitle("");
                       setModeMessage("");
+                      setConfirming(null);
                     }
                   }}
                 >
@@ -591,14 +667,42 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
                     aria-label="Mensaje para los vecinos"
                     className="w-full p-3 rounded-xl border border-gray-300 text-sm resize-none"
                   />
-                  <button
-                    type="submit"
-                    disabled={busyKey !== null || !modeTitle.trim()}
-                    className="h-11 px-5 rounded-xl bg-rose-600 text-white text-sm font-bold flex items-center gap-2 disabled:opacity-60"
-                  >
-                    <Siren className="size-4" />
-                    Activar modo emergencia
-                  </button>
+                  {confirming === "activate" ? (
+                    <div className="rounded-xl bg-rose-50 border border-rose-200 p-3 space-y-2" role="alertdialog" aria-label="Confirmar activación">
+                      <p className="text-sm font-bold text-rose-800">
+                        ¿Activar «{modeTitle.trim()}» para toda la zona?
+                      </p>
+                      <p className="text-xs text-rose-700">
+                        Todos los vecinos verán el aviso rojo y la pantalla de emergencia en cuanto abran o usen la app.
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="submit"
+                          disabled={busyKey !== null || !modeTitle.trim()}
+                          className="h-10 px-4 rounded-xl bg-rose-600 text-white text-sm font-bold flex items-center gap-2 disabled:opacity-60"
+                        >
+                          <Siren className="size-4" />
+                          {busyKey === "activate" ? "Activando…" : "Sí, activar"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirming(null)}
+                          className="h-10 px-4 rounded-xl border border-gray-300 bg-white text-sm font-bold"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="submit"
+                      disabled={busyKey !== null || !modeTitle.trim()}
+                      className="h-11 px-5 rounded-xl bg-rose-600 text-white text-sm font-bold flex items-center gap-2 disabled:opacity-60"
+                    >
+                      <Siren className="size-4" />
+                      Activar modo emergencia
+                    </button>
+                  )}
                 </form>
               )}
             </div>

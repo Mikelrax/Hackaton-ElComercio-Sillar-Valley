@@ -13,6 +13,7 @@ import { useCatalog } from "@/lib/catalog"
 import { Spot } from "@/lib/types"
 import { helpClass, inputClass, labelClass, primaryButton, secondaryButton } from "@/lib/form-styles"
 import { FormError } from "@/components/ui/form-error"
+import { LoadError } from "@/components/ui/load-error"
 import { SoftBackdrop } from "@/components/layout/SoftBackdrop"
 import { BigSelect, type BigSelectOption } from "@/components/ui/big-select"
 import { CategoryIcon } from "@/components/ui/category-icon"
@@ -35,7 +36,7 @@ function AddressForm({
   onSaved: () => void
   onCancel: () => void
 }) {
-  const { catalog } = useCatalog()
+  const { catalog, error: catalogError, retry: retryCatalog } = useCatalog()
   const places = catalog?.addressPlaces ?? []
   const placeOptions: BigSelectOption[] = places.map(p => ({ value: p.value, label: p.label, iconName: p.icon }))
   const [chosenPlace, setPlace] = useState("")
@@ -108,6 +109,8 @@ function AddressForm({
             large
             onChange={setSpot}
           />
+        ) : catalogError ? (
+          <LoadError title="No pudimos cargar el mapa" onRetry={retryCatalog} />
         ) : (
           <div className="h-72 rounded-2xl bg-[#E7E5E4] animate-pulse" />
         )}

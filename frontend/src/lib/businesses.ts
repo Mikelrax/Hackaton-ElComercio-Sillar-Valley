@@ -55,7 +55,7 @@ export const businessesApi = {
   },
 
   create(input: NewBusiness): Promise<BusinessDetail> {
-    return apiFetch<BusinessDetail>("/api/businesses", { method: "POST", body: input })
+    return apiFetch<BusinessDetail>("/api/businesses", { method: "POST", body: input, queue: input.name })
   },
 
   recommend(id: number, input: RecommendInput): Promise<BusinessDetail> {

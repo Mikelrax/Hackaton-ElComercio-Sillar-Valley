@@ -1,5 +1,6 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -16,6 +17,15 @@ export const metadata: Metadata = {
   title: "AYNI · Red Comunitaria y Soporte Vecinal",
   description:
     "Plataforma cívica barrial de servicios recomendados, apoyo solidario y coordinación en emergencias para Arequipa.",
+  appleWebApp: {
+    capable: true,
+    title: "AYNI",
+    statusBarStyle: "default",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#087F72",
 };
 
 export default function RootLayout({
@@ -30,6 +40,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col font-sans bg-background text-foreground selection:bg-emerald-500/20 selection:text-emerald-900">
         {children}
+        <ServiceWorkerRegister />
       </body>
     </html>
   );

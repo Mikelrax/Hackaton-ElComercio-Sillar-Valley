@@ -1,27 +1,33 @@
 "use client"
 
-import React, { useEffect, useMemo, useState } from "react"
-import { AlertTriangle, Heart, Home, LogOut, Map, MapPin, Plus } from "lucide-react"
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { AlertTriangle, CircleHelp, Heart, Home, LogOut, Map, MapPin, Plus, WifiOff } from "lucide-react"
 import Link from "next/link"
 import { Logo } from "@/components/brand/Logo"
 import { Address, User } from "@/lib/auth"
-import { AppTab, EmergencyOverview, FavorItem, MapItem, Option } from "@/lib/types"
+import { ApiError } from "@/lib/api"
+import { AppTab, EmergencyMode, EmergencyOverview, FavorItem, MapItem, Option } from "@/lib/types"
 import { postsApi } from "@/lib/posts"
 import { businessesApi } from "@/lib/businesses"
 import { emergencyApi } from "@/lib/emergency"
 import { addressesApi } from "@/lib/addresses"
 import { useCatalog } from "@/lib/catalog"
+import { flushOutbox, useOutbox } from "@/lib/outbox"
+import { outboxSnapshot, setOutboxFailure } from "@/lib/outbox-store"
+import { markTutorialSeen, TutorialOverlay, tutorialRequested } from "@/components/onboarding/TutorialOverlay"
 
 import { DirectoryView } from "@/components/neighbor/DirectoryView"
 import { SolidarityWallView } from "@/components/neighbor/SolidarityWallView"
 import { CommunityMapView } from "@/components/neighbor/CommunityMapView"
 import { EmergencySOSView } from "@/components/neighbor/EmergencySOSView"
 import { BusinessDetailModal } from "@/components/neighbor/BusinessDetailModal"
+import { LoadError } from "@/components/ui/load-error"
 import {
   CreatePostModal,
   EmergencyKindValue,
   NewPostData,
   PostTypeSelection,
+  PublishResult,
 } from "@/components/neighbor/CreatePostModal"
 
 interface DashboardViewProps {
@@ -31,6 +37,12 @@ interface DashboardViewProps {
 
 type LoadStatus = "loading" | "ready" | "error"
 
+const LIVE_CHECK_MS = 20000
+
+function modeChanged(prev: EmergencyMode | null, next: EmergencyMode): boolean {
+  return !prev || prev.active !== next.active || prev.activatedAt !== next.activatedAt || prev.title !== next.title
+}
+
 const TABS: { id: AppTab; label: string; icon: typeof Home }[] = [
   { id: "inicio", label: "Inicio", icon: Home },
   { id: "mapa", label: "Mapa", icon: Map },
@@ -39,7 +51,7 @@ const TABS: { id: AppTab; label: string; icon: typeof Home }[] = [
 
 export function DashboardView({ user, onLogout }: DashboardViewProps) {
   const [activeTab, setActiveTab] = useState<AppTab>("inicio")
-  const { catalog } = useCatalog()
+  const { catalog, error: catalogError, retry: retryCatalog } = useCatalog()
   const location = useMemo(() => ({ lat: user.location.lat, lng: user.location.lng }), [user.location.lat, user.location.lng])
   const neighborhoodName = user.location.neighborhood
 
@@ -60,6 +72,74 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
   const [modalKey, setModalKey] = useState(0)
   const [createInitialType, setCreateInitialType] = useState<PostTypeSelection>("necesito")
   const [createEmergencyKind, setCreateEmergencyKind] = useState<EmergencyKindValue>("NEED")
+
+  const [tutorialOpen, setTutorialOpen] = useState(tutorialRequested)
+  const outbox = useOutbox()
+  const [sendingOutbox, setSendingOutbox] = useState(false)
+  const modeRef = useRef<EmergencyMode | null>(null)
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has("tutorial")) window.history.replaceState(null, "", "/")
+  }, [])
+
+  useEffect(() => {
+    modeRef.current = emergency?.mode ?? null
+  }, [emergency])
+
+  const sendOutbox = useCallback(async () => {
+    if (outboxSnapshot().items.length === 0) return
+    const sent = await flushOutbox()
+    if (sent > 0) {
+      setWallReloadKey(k => k + 1)
+      setEmergencyReloadKey(k => k + 1)
+      setDirectoryKey(k => k + 1)
+      setMapKey(k => k + 1)
+    }
+  }, [])
+
+  const sendOutboxNow = async () => {
+    setSendingOutbox(true)
+    try {
+      await sendOutbox()
+    } finally {
+      setSendingOutbox(false)
+    }
+  }
+
+  useEffect(() => {
+    const check = () => {
+      if (document.visibilityState !== "visible") return
+      void sendOutbox()
+      if (activeTab === "emergencia") {
+        setEmergencyReloadKey(k => k + 1)
+        return
+      }
+      emergencyApi
+        .mode()
+        .then(next => {
+          if (modeChanged(modeRef.current, next)) setEmergencyReloadKey(k => k + 1)
+        })
+        .catch(() => {})
+    }
+    const timer = window.setInterval(check, LIVE_CHECK_MS)
+    document.addEventListener("visibilitychange", check)
+    window.addEventListener("online", check)
+    return () => {
+      window.clearInterval(timer)
+      document.removeEventListener("visibilitychange", check)
+      window.removeEventListener("online", check)
+    }
+  }, [activeTab, sendOutbox])
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => void sendOutbox(), 0)
+    return () => window.clearTimeout(timer)
+  }, [sendOutbox])
+
+  const closeTutorial = useCallback(() => {
+    markTutorialSeen()
+    setTutorialOpen(false)
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -88,7 +168,7 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
         setEmergencyStatus("ready")
       })
       .catch(() => {
-        if (!cancelled) setEmergencyStatus("error")
+        if (!cancelled) setEmergencyStatus(current => (current === "ready" ? current : "error"))
       })
     return () => {
       cancelled = true
@@ -157,7 +237,22 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
     [catalog]
   )
 
-  const handleCreatePost = async (data: NewPostData): Promise<string> => {
+  const handleCreatePost = async (data: NewPostData): Promise<PublishResult> => {
+    try {
+      return { message: await publish(data) }
+    } catch (err) {
+      if (!(err instanceof ApiError) || !err.queued) throw err
+      return {
+        queued: true,
+        message:
+          data.type === "emergencia"
+            ? "Sin señal: guardamos tu alerta y se enviará sola apenas vuelva la conexión. Si es urgente, llama a los números de emergencia."
+            : "Sin señal: guardamos tu publicación y se enviará sola cuando vuelva la conexión.",
+      }
+    }
+  }
+
+  const publish = async (data: NewPostData): Promise<string> => {
     if (data.type === "necesito" || data.type === "ofrezco") {
       const { favor, pending } = await postsApi.create({
         type: data.type,
@@ -175,13 +270,16 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
     }
 
     if (data.type === "emergencia") {
-      await emergencyApi.report({
-        kind: data.emergencyKind,
-        category: data.category,
-        title: data.description || undefined,
-        peopleCount: data.emergencyKind === "NEED" ? data.peopleCount : undefined,
-        ...(data.where ?? {}),
-      })
+      await emergencyApi.report(
+        {
+          kind: data.emergencyKind,
+          category: data.category,
+          title: data.description || undefined,
+          peopleCount: data.emergencyKind === "NEED" ? data.peopleCount : undefined,
+          ...(data.where ?? {}),
+        },
+        data.description || `Emergencia: ${data.categoryLabel}`
+      )
       reloadEmergency()
       setMapKey(k => k + 1)
       setActiveTab("emergencia")
@@ -206,6 +304,14 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
   }
 
   const mode = emergency?.mode
+
+  const catalogFallback = catalogError ? (
+    <LoadError onRetry={retryCatalog} />
+  ) : (
+    <div className="py-16 flex justify-center">
+      <div className="size-7 rounded-full border-2 border-[#087F72] border-t-transparent animate-spin" />
+    </div>
+  )
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F8FAFC] text-[#172B2A] antialiased">
@@ -240,6 +346,15 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
 
           <div className="flex items-center gap-2.5">
             <button
+              onClick={() => setTutorialOpen(true)}
+              aria-label="Cómo funciona AYNI"
+              title="Cómo funciona"
+              className="size-9 rounded-xl border border-gray-200 bg-white text-[#087F72] hover:border-[#087F72] flex items-center justify-center"
+            >
+              <CircleHelp className="size-4" />
+            </button>
+
+            <button
               onClick={() => openCreate("necesito")}
               className="hidden sm:flex h-9 px-4 rounded-xl bg-[#087F72] hover:bg-[#075E54] text-white font-bold text-xs items-center gap-1.5 shadow-sm"
             >
@@ -271,6 +386,41 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
         </div>
       </header>
 
+      {outbox.items.length > 0 && (
+        <div
+          role="status"
+          className="bg-amber-50 border-b border-amber-200 px-4 py-2.5 text-sm text-amber-900 flex flex-wrap items-center justify-center gap-x-3 gap-y-1"
+        >
+          <span className="flex items-center gap-2 font-semibold">
+            <WifiOff className="size-4 shrink-0" />
+            {outbox.items.length === 1
+              ? "1 publicación espera señal para enviarse"
+              : `${outbox.items.length} publicaciones esperan señal para enviarse`}
+          </span>
+          <button
+            onClick={sendOutboxNow}
+            disabled={sendingOutbox}
+            className="font-bold underline underline-offset-2 disabled:opacity-60"
+          >
+            {sendingOutbox ? "Enviando…" : "Enviar ahora"}
+          </button>
+        </div>
+      )}
+
+      {outbox.failed && (
+        <div
+          role="alert"
+          className="bg-rose-50 border-b border-rose-200 px-4 py-2.5 text-sm text-rose-800 flex flex-wrap items-center justify-center gap-x-3 gap-y-1"
+        >
+          <span>
+            No pudimos enviar «{outbox.failed.label}»: {outbox.failed.message}
+          </span>
+          <button onClick={() => setOutboxFailure(null)} className="font-bold underline underline-offset-2">
+            Entendido
+          </button>
+        </div>
+      )}
+
       {mode?.active && activeTab !== "emergencia" && (
         <button
           onClick={() => goTo("emergencia")}
@@ -295,9 +445,7 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
               onRecommendNew={() => openCreate("recomiendo")}
             />
           ) : (
-            <div className="py-16 flex justify-center">
-              <div className="size-7 rounded-full border-2 border-[#087F72] border-t-transparent animate-spin" />
-            </div>
+            catalogFallback
           ))}
 
         {activeTab === "mapa" &&
@@ -314,9 +462,7 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
               onOpenEmergency={() => goTo("emergencia")}
             />
           ) : (
-            <div className="py-16 flex justify-center">
-              <div className="size-7 rounded-full border-2 border-[#087F72] border-t-transparent animate-spin" />
-            </div>
+            catalogFallback
           ))}
 
         {activeTab === "muro" && (
@@ -404,6 +550,8 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
         emergencyKinds={catalog?.emergencyKinds ?? []}
         onSubmitPost={handleCreatePost}
       />
+
+      <TutorialOverlay open={tutorialOpen} onClose={closeTutorial} />
     </div>
   )
 }

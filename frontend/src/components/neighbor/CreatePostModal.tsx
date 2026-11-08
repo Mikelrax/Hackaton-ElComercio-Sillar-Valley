@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react"
 import dynamic from "next/dynamic"
-import { AlertCircle, Check, LocateFixed, MapPin, Minus, Plus, X } from "lucide-react"
+import { AlertCircle, Check, LocateFixed, MapPin, Minus, Plus, WifiOff, X } from "lucide-react"
 import { Option, Spot } from "@/lib/types"
 import { ApiError } from "@/lib/api"
 import { Address } from "@/lib/auth"
@@ -39,7 +39,12 @@ interface CreatePostModalProps {
   mapStyleUrl: string | null
   categories: Record<PostTypeSelection, Option[]>
   emergencyKinds: Option[]
-  onSubmitPost: (data: NewPostData) => Promise<string>
+  onSubmitPost: (data: NewPostData) => Promise<PublishResult>
+}
+
+export interface PublishResult {
+  message: string
+  queued?: boolean
 }
 
 const TYPES: { value: PostTypeSelection; title: string; hint: string; active: string; idle: string; titleColor: string }[] = [
@@ -76,7 +81,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const [phone, setPhone] = useState("")
   const [peopleCount, setPeopleCount] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [successMessage, setSuccessMessage] = useState("")
+  const [result, setResult] = useState<PublishResult | null>(null)
   const [submitError, setSubmitError] = useState("")
   const [whereKey, setWhereKey] = useState("")
   const [gpsPoint, setGpsPoint] = useState<LatLng | null>(null)
@@ -145,7 +150,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
     }
     setIsSubmitting(true)
     try {
-      const message = await onSubmitPost({
+      const outcome = await onSubmitPost({
         type: selectedType,
         category: currentCategory,
         categoryLabel: options.find(o => o.value === currentCategory)?.label ?? "",
@@ -156,15 +161,15 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
         peopleCount,
         where,
       })
-      setSuccessMessage(message)
+      setResult(outcome)
       setDescription("")
       setReference("")
       setPhone("")
       setPeopleCount(1)
       setTimeout(() => {
-        setSuccessMessage("")
+        setResult(null)
         onClose()
-      }, 2200)
+      }, outcome.queued ? 4000 : 2200)
     } catch (err) {
       setSubmitError(err instanceof ApiError ? err.friendlyMessage : "No pudimos publicar. Intenta otra vez.")
     } finally {
@@ -405,23 +410,30 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
                 <span>{submitError}</span>
               </div>
             )}
-            {successMessage && (
-              <div className="flex items-start gap-2 rounded-xl bg-[#EAF5F1] p-3 text-xs font-semibold text-[#087F72] border border-[#087F72]/30" role="status">
-                <Check className="size-4 shrink-0" />
-                <span>{successMessage}</span>
+            {result && (
+              <div
+                className={`flex items-start gap-2 rounded-xl p-3 text-xs font-semibold border ${
+                  result.queued
+                    ? "bg-amber-50 text-amber-900 border-amber-300"
+                    : "bg-[#EAF5F1] text-[#087F72] border-[#087F72]/30"
+                }`}
+                role="status"
+              >
+                {result.queued ? <WifiOff className="size-4 shrink-0" /> : <Check className="size-4 shrink-0" />}
+                <span>{result.message}</span>
               </div>
             )}
             <button
               type="submit"
-              disabled={isSubmitting || !!successMessage || options.length === 0}
+              disabled={isSubmitting || !!result || options.length === 0}
               className={`w-full h-12 rounded-xl text-white font-black text-sm flex items-center justify-center gap-2 shadow-md disabled:opacity-60 ${
                 selectedType === "emergencia" ? "bg-[#BA1A1A] hover:bg-[#9B1414]" : "bg-[#087F72] hover:bg-[#075E54]"
               }`}
             >
-              {successMessage ? (
+              {result ? (
                 <>
                   <Check className="size-5" />
-                  Listo
+                  {result.queued ? "Guardado" : "Listo"}
                 </>
               ) : isSubmitting ? (
                 "Publicando…"

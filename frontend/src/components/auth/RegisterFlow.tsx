@@ -12,6 +12,8 @@ import { useCatalog } from "@/lib/catalog"
 import { Spot } from "@/lib/types"
 import { helpClass, inputClass, labelClass, primaryButton, secondaryButton } from "@/lib/form-styles"
 import { FormError } from "@/components/ui/form-error"
+import { LoadError } from "@/components/ui/load-error"
+import { markTutorialSeen } from "@/components/onboarding/TutorialOverlay"
 import { SoftBackdrop } from "@/components/layout/SoftBackdrop"
 
 const LocationPicker = dynamic(() => import("@/components/map/LocationPicker"), {
@@ -70,7 +72,7 @@ export function RegisterFlow() {
   const [showPassword, setShowPassword] = useState(false)
   const [triedStep2, setTriedStep2] = useState(false)
 
-  const { catalog } = useCatalog()
+  const { catalog, error: catalogError, retry: retryCatalog } = useCatalog()
   const [spot, setSpot] = useState<Spot | null>(null)
   const [reference, setReference] = useState("")
   const [accepted, setAccepted] = useState(false)
@@ -293,6 +295,12 @@ export function RegisterFlow() {
                   large
                   onChange={setSpot}
                 />
+              ) : catalogError ? (
+                <LoadError
+                  title="No pudimos cargar el mapa"
+                  message="Revisa tu conexión a internet. Lo que ya escribiste no se pierde."
+                  onRetry={retryCatalog}
+                />
               ) : (
                 <div className="h-72 rounded-2xl bg-[#E7E5E4] animate-pulse" />
               )}
@@ -414,12 +422,15 @@ export function RegisterFlow() {
             </div>
 
             <div className="pt-6 space-y-3">
-              <button type="button" onClick={() => router.push("/")} className={primaryButton}>
+              <button type="button" onClick={() => router.push("/?tutorial=1")} className={primaryButton}>
                 Ver cómo funciona
               </button>
               <button
                 type="button"
-                onClick={() => router.push("/")}
+                onClick={() => {
+                  markTutorialSeen()
+                  router.push("/")
+                }}
                 className={secondaryButton}
               >
                 Ir al inicio

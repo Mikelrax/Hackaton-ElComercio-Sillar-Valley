@@ -1,4 +1,5 @@
 import { apiFetch, SESSION_KEY } from "@/lib/api"
+import { clearOutbox } from "@/lib/outbox-store"
 import { DemoAccount, GeoPoint } from "@/lib/types"
 
 export type UserRole = "vecino" | "emprendedor" | "moderador"
@@ -144,6 +145,13 @@ export const authService = {
   logout(): void {
     if (typeof window === "undefined") return
     localStorage.removeItem(SESSION_KEY)
+    clearOutbox()
+    if ("caches" in window) {
+      caches
+        .keys()
+        .then(keys => Promise.all(keys.filter(key => key.endsWith("-api")).map(key => caches.delete(key))))
+        .catch(() => {})
+    }
   },
 
   async login(credentials: LoginCredentials): Promise<User> {

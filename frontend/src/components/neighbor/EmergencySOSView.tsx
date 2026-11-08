@@ -95,7 +95,25 @@ export const EmergencySOSView: React.FC<EmergencySOSViewProps> = ({
       {!online && (
         <div className="p-3 rounded-2xl border-2 border-dashed border-gray-300 bg-white flex items-center gap-2 text-xs text-gray-600 font-medium">
           <WifiOff className="size-4 text-gray-500 shrink-0" />
-          Sin conexión: los reportes se podrán enviar cuando vuelva la señal. Llama a los números de abajo si es urgente.
+          Sin conexión: si avisas una emergencia la guardamos y se envía sola cuando vuelva la señal. Si es urgente, llama a los números de emergencia.
+        </div>
+      )}
+
+      {emergencyNumbers.length > 0 && (
+        <div className="grid grid-cols-3 gap-2.5" aria-label="Números de emergencia">
+          {emergencyNumbers.map(n => (
+            <a
+              key={n.value}
+              href={`tel:${n.value}`}
+              className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-center hover:bg-rose-100"
+            >
+              <p className="text-base sm:text-lg font-black text-[#BA1A1A] flex items-center justify-center gap-1.5">
+                <Phone className="size-4" />
+                {n.value}
+              </p>
+              <p className="text-[11px] font-bold text-rose-900 mt-0.5">{n.label}</p>
+            </a>
+          ))}
         </div>
       )}
 
@@ -243,27 +261,12 @@ export const EmergencySOSView: React.FC<EmergencySOSViewProps> = ({
                   </div>
                 </div>
                 <span className="text-xs text-gray-500 font-medium shrink-0">
-                  {formatDistance(point.distanceMeters)} · {point.open ? "Abierto" : "Cerrado"}
+                  {[formatDistance(point.distanceMeters), point.open ? "Abierto" : "Cerrado"].filter(Boolean).join(" · ")}
                 </span>
               </div>
             ))}
           </div>
         </>
-      )}
-
-      {emergencyNumbers.length > 0 && (
-        <div className="grid grid-cols-3 gap-2.5 pt-2">
-          {emergencyNumbers.map(n => (
-            <a
-              key={n.value}
-              href={`tel:${n.value}`}
-              className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-center hover:bg-rose-100"
-            >
-              <p className="text-base sm:text-lg font-black text-[#BA1A1A]">{n.value}</p>
-              <p className="text-[11px] font-bold text-rose-900 mt-0.5">{n.label}</p>
-            </a>
-          ))}
-        </div>
       )}
     </div>
   )

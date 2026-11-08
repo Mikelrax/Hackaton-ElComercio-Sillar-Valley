@@ -89,6 +89,7 @@ export const postsApi = {
       .join("\n")
     const post = await apiFetch<BackendPost>("/api/posts", {
       method: "POST",
+      queue: title.slice(0, 80),
       body: {
         type: data.type === "necesito" ? "REQUEST" : "OFFER",
         category: data.category,
