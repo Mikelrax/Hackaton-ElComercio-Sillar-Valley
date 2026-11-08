@@ -42,6 +42,14 @@ interface Group {
 
 const TILE = 512
 const GROUP_PIXELS = 44
+const FAN_ZOOM = 17
+const FAN_PIXELS = 46
+
+function fanOffset(index: number, count: number): [number, number] {
+  const radius = Math.max(26, FAN_PIXELS / (2 * Math.sin(Math.PI / count)))
+  const angle = -Math.PI / 2 + (2 * Math.PI * index) / count
+  return [Math.round(Math.cos(angle) * radius), Math.round(Math.sin(angle) * radius)]
+}
 
 function project(lat: number, lng: number, zoom: number): { x: number; y: number } {
   const scale = TILE * Math.pow(2, zoom)
@@ -115,7 +123,41 @@ export default function NeighborhoodMap({
   }
 
   const openGroup = (g: Group) => {
-    mapRef.current?.easeTo({ center: [g.lng, g.lat], zoom: Math.min(zoom + 2, 19), duration: 500 })
+    mapRef.current?.easeTo({
+      center: [g.lng, g.lat],
+      zoom: Math.min(Math.max(zoom + 2, FAN_ZOOM), 19),
+      duration: 500,
+    })
+  }
+
+  const pin = (item: MapItem, offset?: [number, number]) => {
+    const style = layerStyle(item.layer)
+    const selected = item.key === selectedKey
+    return (
+      <Marker
+        key={item.key}
+        longitude={item.longitude}
+        latitude={item.latitude}
+        anchor="center"
+        offset={offset}
+        style={{ zIndex: selected ? 3 : item.alert ? 2 : 1 }}
+        onClick={e => {
+          e.originalEvent.stopPropagation()
+          onSelect(item)
+        }}
+      >
+        <button
+          type="button"
+          aria-label={item.title}
+          className={`relative size-10 rounded-full border-[3px] border-white shadow-lg text-white flex items-center justify-center transition-transform ${
+            style.pin
+          } ${selected ? "scale-125 ring-4 ring-black/20" : "hover:scale-110"} ${item.approximate ? "opacity-90" : ""}`}
+        >
+          {item.alert && <span className="absolute -inset-1 rounded-full bg-[#BA1A1A]/40 animate-ping" />}
+          <CategoryIcon name={item.icon} className="relative size-[18px]" />
+        </button>
+      </Marker>
+    )
   }
 
   return (
@@ -163,7 +205,10 @@ export default function NeighborhoodMap({
         </span>
       </Marker>
 
-      {groups.map(g => {
+      {groups.flatMap(g => {
+        if (g.items.length > 1 && zoom >= FAN_ZOOM) {
+          return g.items.map((item, index) => pin(item, fanOffset(index, g.items.length)))
+        }
         if (g.items.length > 1) {
           const urgent = g.items.some(i => i.alert)
           return (
@@ -189,33 +234,7 @@ export default function NeighborhoodMap({
             </Marker>
           )
         }
-        const item = g.items[0]
-        const style = layerStyle(item.layer)
-        const selected = item.key === selectedKey
-        return (
-          <Marker
-            key={item.key}
-            longitude={item.longitude}
-            latitude={item.latitude}
-            anchor="center"
-            style={{ zIndex: selected ? 3 : item.alert ? 2 : 1 }}
-            onClick={e => {
-              e.originalEvent.stopPropagation()
-              onSelect(item)
-            }}
-          >
-            <button
-              type="button"
-              aria-label={item.title}
-              className={`relative size-10 rounded-full border-[3px] border-white shadow-lg text-white flex items-center justify-center transition-transform ${
-                style.pin
-              } ${selected ? "scale-125 ring-4 ring-black/20" : "hover:scale-110"} ${item.approximate ? "opacity-90" : ""}`}
-            >
-              {item.alert && <span className="absolute -inset-1 rounded-full bg-[#BA1A1A]/40 animate-ping" />}
-              <CategoryIcon name={item.icon} className="relative size-[18px]" />
-            </button>
-          </Marker>
-        )
+        return pin(g.items[0])
       })}
     </Map>
   )
