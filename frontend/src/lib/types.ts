@@ -163,6 +163,14 @@ export interface BusinessRecommendation {
   createdAt: string
 }
 
+export type AutoReviewState = "QUEUED" | "APPROVED" | "ESCALATED" | "FLAGGED" | "FAILED"
+
+export interface AutoReviewInfo {
+  state: AutoReviewState
+  label: string
+  note: string | null
+}
+
 export interface BusinessDetail extends BusinessSummary {
   description: string | null
   phone: string | null
@@ -174,6 +182,7 @@ export interface BusinessDetail extends BusinessSummary {
   recommendedByMe: boolean
   recommendations: BusinessRecommendation[]
   createdAt: string
+  autoReview: AutoReviewInfo | null
 }
 
 export interface BusinessSearchResult {

@@ -1,5 +1,6 @@
 package com.sillarvalley.ayni.business;
 
+import com.sillarvalley.ayni.review.AutoReviewInfo;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
@@ -33,7 +34,7 @@ public final class BusinessDtos {
             Integer distanceMeters, Boolean openNow, String scheduleText, String priceHint,
             int recommendationsCount, Tags tags, double latitude, double longitude,
             BusinessStatus status, String moderationNote, String createdBy, boolean recommendedByMe,
-            List<RecommendationResponse> recommendations, Instant createdAt) {}
+            List<RecommendationResponse> recommendations, Instant createdAt, AutoReviewInfo autoReview) {}
 
     public record RecommendRequest(boolean goodPrice, boolean punctual, boolean reliable,
                                    @Size(max = 500) String comment) {}

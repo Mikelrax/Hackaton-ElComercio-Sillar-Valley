@@ -45,6 +45,14 @@ export default function PrivacidadPage() {
           ],
         },
         {
+          title: "Cuando publicas algo",
+          items: [
+            "Antes de aparecer, lo que publicas en el muro y los negocios que recomiendas pasan por una revisión automática que usa la misma inteligencia artificial de Anthropic.",
+            "Solo enviamos el texto de la publicación, su categoría y tu barrio. No enviamos tu nombre, tu celular ni tus fotos.",
+            "Si todo está claro se publica en segundos. Si hay dudas, lo revisa un moderador de la junta vecinal antes de publicarlo.",
+          ],
+        },
+        {
           title: "En tu teléfono",
           items: [
             "Guardamos tu sesión y lo que publicas sin señal hasta que se pueda enviar.",
@@ -54,7 +62,7 @@ export default function PrivacidadPage() {
         {
           title: "Lo que no hacemos",
           items: [
-            "No vendemos tus datos ni los compartimos con empresas, salvo lo que le escribes a Kusi para que pueda responderte.",
+            "No vendemos tus datos ni los compartimos con empresas, salvo lo que le escribes a Kusi y el texto de lo que publicas, que se envían a Anthropic para responderte y revisarlo.",
             "No usamos tus datos para publicidad.",
             "El mapa se carga desde OpenFreeMap, que recibe la zona del mapa que estás viendo, no tus datos personales.",
           ],

@@ -1,10 +1,11 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
-import { CheckCircle2, RefreshCw, XCircle } from "lucide-react"
+import React, { useEffect, useRef, useState } from "react"
+import { Bot, CheckCircle2, RefreshCw, ShieldAlert, XCircle } from "lucide-react"
 import { ApiError } from "@/lib/api"
 import { postsApi, timeAgo } from "@/lib/posts"
 import { businessesApi } from "@/lib/businesses"
+import { AutoReviewInfo, AutoReviewState } from "@/lib/types"
 
 interface PendingItem {
   key: string
@@ -16,8 +17,52 @@ interface PendingItem {
   author: string
   place: string | null
   createdAt: string
+  review: AutoReviewInfo | null
   approve: () => Promise<void>
   reject: (note: string) => Promise<void>
+}
+
+const REVIEW_POLL_MS = 5000
+const REVIEW_POLLS = 24
+
+const REVIEW_ORDER: Record<AutoReviewState, number> = {
+  FLAGGED: 0,
+  ESCALATED: 1,
+  FAILED: 1,
+  APPROVED: 1,
+  QUEUED: 2,
+}
+
+const REVIEW_STYLE: Record<AutoReviewState, string> = {
+  FLAGGED: "bg-rose-50 border-rose-200 text-rose-800",
+  ESCALATED: "bg-amber-50 border-amber-200 text-[#8A5800]",
+  FAILED: "bg-gray-50 border-gray-200 text-gray-600",
+  APPROVED: "bg-[#ecf8f4] border-[#bfe9dd] text-[#087F72]",
+  QUEUED: "bg-sky-50 border-sky-200 text-sky-800",
+}
+
+function reviewRank(item: PendingItem): number {
+  return item.review ? REVIEW_ORDER[item.review.state] : 1
+}
+
+function ReviewNote({ review }: { review: AutoReviewInfo }) {
+  const Icon = review.state === "FLAGGED" ? ShieldAlert : Bot
+  return (
+    <div className={`rounded-xl border px-3 py-2 text-xs ${REVIEW_STYLE[review.state]}`}>
+      <p className="font-bold flex items-center gap-1.5">
+        {review.state === "QUEUED" ? (
+          <span className="size-3 rounded-full border-2 border-current border-t-transparent animate-spin" />
+        ) : (
+          <Icon className="size-3.5" />
+        )}
+        {review.label}
+      </p>
+      {review.note && <p className="mt-1 leading-snug">{review.note}</p>}
+      {review.state === "QUEUED" && (
+        <p className="mt-1 leading-snug">Si todo está bien se publicará sola. Igual puedes decidir tú ahora.</p>
+      )}
+    </div>
+  )
 }
 
 function errorText(err: unknown): string {
@@ -36,6 +81,7 @@ async function loadPending(): Promise<PendingItem[]> {
     author: p.author.fullName,
     place: p.neighborhood,
     createdAt: p.createdAt,
+    review: p.autoReview,
     approve: () => postsApi.approve(p.id),
     reject: note => postsApi.reject(p.id, note),
   }))
@@ -51,10 +97,13 @@ async function loadPending(): Promise<PendingItem[]> {
     author: b.createdBy,
     place: b.neighborhood,
     createdAt: b.createdAt,
+    review: b.autoReview,
     approve: () => businessesApi.approve(b.id),
     reject: note => businessesApi.reject(b.id, note),
   }))
-  return [...fromPosts, ...fromBusinesses].sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+  return [...fromPosts, ...fromBusinesses].sort(
+    (a, b) => reviewRank(a) - reviewRank(b) || a.createdAt.localeCompare(b.createdAt)
+  )
 }
 
 export function PendingPostsPanel({ onChanged }: { onChanged?: () => void }) {
@@ -83,6 +132,21 @@ export function PendingPostsPanel({ onChanged }: { onChanged?: () => void }) {
 
   const refresh = () => setReloadKey(k => k + 1)
 
+  const reviewing = items?.some(item => item.review?.state === "QUEUED") ?? false
+  const polls = useRef(0)
+  useEffect(() => {
+    if (!reviewing) {
+      polls.current = 0
+      return
+    }
+    if (polls.current >= REVIEW_POLLS || busyKey !== null || rejectingKey !== null) return
+    const timer = setTimeout(() => {
+      polls.current += 1
+      setReloadKey(k => k + 1)
+    }, REVIEW_POLL_MS)
+    return () => clearTimeout(timer)
+  }, [reviewing, reloadKey, busyKey, rejectingKey])
+
   const run = async (key: string, action: () => Promise<void>) => {
     setBusyKey(key)
     setError("")
@@ -109,7 +173,7 @@ export function PendingPostsPanel({ onChanged }: { onChanged?: () => void }) {
         </button>
       </div>
       <p className="text-xs text-gray-500">
-        Lo que publican los vecinos en el muro y los negocios que recomiendan aparecen aquí. Solo se muestran a todos cuando los apruebas.
+        Lo que publican los vecinos en el muro y los negocios que recomiendan pasan primero por una revisión automática. Lo que está claro se publica solo; aquí llega lo dudoso o sospechoso, primero lo más delicado.
       </p>
 
       {error && <p className="text-xs font-semibold text-rose-600">{error}</p>}
@@ -142,6 +206,8 @@ export function PendingPostsPanel({ onChanged }: { onChanged?: () => void }) {
               {item.place ? ` · ${item.place}` : ""}
             </p>
           </div>
+
+          {item.review && <ReviewNote review={item.review} />}
 
           {rejectingKey === item.key ? (
             <div className="space-y-2">

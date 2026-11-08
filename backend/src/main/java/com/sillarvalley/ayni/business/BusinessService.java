@@ -6,6 +6,10 @@ import com.sillarvalley.ayni.common.ApiException;
 import com.sillarvalley.ayni.common.GeoPoint;
 import com.sillarvalley.ayni.common.PhoneUtils;
 import com.sillarvalley.ayni.geo.Distances;
+import com.sillarvalley.ayni.review.AutoReview;
+import com.sillarvalley.ayni.review.AutoReviewInfo;
+import com.sillarvalley.ayni.review.ReviewQueue;
+import com.sillarvalley.ayni.review.ReviewSubject;
 import com.sillarvalley.ayni.user.CurrentUser;
 import com.sillarvalley.ayni.user.Role;
 import com.sillarvalley.ayni.user.User;
@@ -29,11 +33,12 @@ public class BusinessService {
     private final Distances distances;
     private final ZoneId zone;
     private final String countryCode;
+    private final ReviewQueue reviews;
 
     public BusinessService(BusinessRepository businesses, CategoryRepository categories,
                            BusinessRecommendationRepository recommendations, BusinessSearch search,
                            CurrentUser currentUser, Locations locations, Distances distances,
-                           AppProperties props) {
+                           AppProperties props, ReviewQueue reviews) {
         this.businesses = businesses;
         this.categories = categories;
         this.recommendations = recommendations;
@@ -43,6 +48,7 @@ public class BusinessService {
         this.distances = distances;
         this.zone = ZoneId.of(props.timezone());
         this.countryCode = props.countryCode();
+        this.reviews = reviews;
     }
 
     @Transactional(readOnly = true)
@@ -115,6 +121,9 @@ public class BusinessService {
         if (req.recommendation() != null) {
             addRecommendation(b, user, req.recommendation());
         }
+        if (b.getStatus() == BusinessStatus.PENDING && reviews.enqueue(ReviewSubject.BUSINESS, b.getId())) {
+            b.setAutoReview(AutoReview.QUEUED);
+        }
         return toDetail(b, uid, null, null);
     }
 
@@ -136,7 +145,7 @@ public class BusinessService {
     public List<BusinessDtos.BusinessDetail> listPending(Long uid) {
         requireModerator(uid);
         return businesses.findByStatusOrderByCreatedAtAsc(BusinessStatus.PENDING, PageRequest.of(0, 50))
-                .map(b -> toDetail(b, uid, null, null)).getContent();
+                .map(b -> toDetail(b, uid, null, null, true)).getContent();
     }
 
     @Transactional
@@ -172,6 +181,10 @@ public class BusinessService {
     }
 
     private BusinessDtos.BusinessDetail toDetail(Business b, Long uid, Double lat, Double lng) {
+        return toDetail(b, uid, lat, lng, false);
+    }
+
+    private BusinessDtos.BusinessDetail toDetail(Business b, Long uid, Double lat, Double lng, boolean moderatorView) {
         LocalDateTime now = LocalDateTime.now(zone);
         Integer distance = distances.from(Distances.Table.BUSINESSES, lat, lng, b.getId());
         List<BusinessDtos.RecommendationResponse> recent = b.getId() == null ? List.of()
@@ -188,7 +201,15 @@ public class BusinessService {
                 b.getPriceHint(), b.getRecommendationsCount(),
                 new BusinessDtos.Tags(b.getGoodPriceCount(), b.getPunctualCount(), b.getReliableCount()),
                 b.getLatitude(), b.getLongitude(), b.getStatus(), b.getModerationNote(),
-                firstName(b.getCreatedBy().getFullName()), mine, recent, b.getCreatedAt());
+                firstName(b.getCreatedBy().getFullName()), mine, recent, b.getCreatedAt(),
+                review(b, uid, moderatorView));
+    }
+
+    private static AutoReviewInfo review(Business b, Long uid, boolean moderatorView) {
+        boolean owner = b.getCreatedBy().getId().equals(uid);
+        return owner || moderatorView
+                ? AutoReviewInfo.of(b.getAutoReview(), b.getAutoReviewNote(), moderatorView)
+                : null;
     }
 
     private String normalizePhone(String raw) {

@@ -1,6 +1,7 @@
 package com.sillarvalley.ayni.business;
 
 import com.sillarvalley.ayni.common.TextSearch;
+import com.sillarvalley.ayni.review.AutoReview;
 import com.sillarvalley.ayni.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -76,6 +77,13 @@ public class Business {
     @Column(length = 500)
     private String moderationNote;
 
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private AutoReview autoReview;
+
+    @Column(length = 300)
+    private String autoReviewNote;
+
     @Column(nullable = false)
     private int recommendationsCount;
 
@@ -145,6 +153,10 @@ public class Business {
     public void setModeratedBy(User moderatedBy) { this.moderatedBy = moderatedBy; }
     public String getModerationNote() { return moderationNote; }
     public void setModerationNote(String moderationNote) { this.moderationNote = moderationNote; }
+    public AutoReview getAutoReview() { return autoReview; }
+    public void setAutoReview(AutoReview autoReview) { this.autoReview = autoReview; }
+    public String getAutoReviewNote() { return autoReviewNote; }
+    public void setAutoReviewNote(String autoReviewNote) { this.autoReviewNote = autoReviewNote; }
     public int getRecommendationsCount() { return recommendationsCount; }
     public int getGoodPriceCount() { return goodPriceCount; }
     public int getPunctualCount() { return punctualCount; }

@@ -1,7 +1,5 @@
 package com.sillarvalley.ayni.assistant;
 
-import com.anthropic.client.AnthropicClient;
-import com.anthropic.client.okhttp.AnthropicOkHttpClient;
 import com.anthropic.errors.AnthropicIoException;
 import com.anthropic.errors.AnthropicServiceException;
 import com.anthropic.errors.BadRequestException;
@@ -20,8 +18,6 @@ import com.sillarvalley.ayni.common.ApiException;
 import com.sillarvalley.ayni.emergency.EmergencyService;
 import com.sillarvalley.ayni.user.UserDtos;
 import com.sillarvalley.ayni.user.UserService;
-import jakarta.annotation.PreDestroy;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -43,41 +39,30 @@ public class AssistantService {
             + "a los Bomberos al 116 o al SAMU al 106.";
     private static final String FALLBACK = "Perdona, no te entendí bien. ¿Me lo cuentas con otras palabras?";
 
-    private final AssistantProperties props;
-    private final AnthropicClient client;
+    private final ClaudeClient claude;
     private final AssistantTools tools;
     private final AssistantPrompt prompt;
     private final AssistantRateLimiter limiter;
     private final UserService users;
     private final EmergencyService emergency;
 
-    public AssistantService(AssistantProperties props, AssistantTools tools, AssistantPrompt prompt,
+    public AssistantService(ClaudeClient claude, AssistantTools tools, AssistantPrompt prompt,
                             AssistantRateLimiter limiter, UserService users,
                             EmergencyService emergency) {
-        this.props = props;
+        this.claude = claude;
         this.tools = tools;
         this.prompt = prompt;
         this.limiter = limiter;
         this.users = users;
         this.emergency = emergency;
-        this.client = props.enabled()
-                ? AnthropicOkHttpClient.builder()
-                        .apiKey(props.apiKey().trim())
-                        .timeout(Duration.ofSeconds(props.timeoutSeconds()))
-                        .maxRetries(1)
-                        .build()
-                : null;
-        if (client == null) {
-            log.info("Kusi está desactivado: falta ANTHROPIC_API_KEY");
-        }
     }
 
     public boolean enabled() {
-        return client != null;
+        return claude.enabled();
     }
 
     public AssistantDtos.ChatResponse chat(Long uid, AssistantDtos.ChatRequest req) {
-        if (client == null) {
+        if (!claude.enabled()) {
             throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, UNAVAILABLE);
         }
         UserDtos.UserResponse user = users.me(uid);
@@ -125,14 +110,14 @@ public class AssistantService {
 
     private Message call(String system, List<Tool> definitions, List<MessageParam> messages) {
         MessageCreateParams.Builder params = MessageCreateParams.builder()
-                .model(props.model())
-                .maxTokens(props.maxTokens())
+                .model(claude.model())
+                .maxTokens(claude.maxTokens())
                 .system(system)
-                .outputConfig(OutputConfig.builder().effort(OutputConfig.Effort.of(props.effort())).build())
+                .outputConfig(OutputConfig.builder().effort(claude.effort()).build())
                 .messages(messages);
         definitions.forEach(params::addTool);
         try {
-            return client.messages().create(params.build());
+            return claude.client().messages().create(params.build());
         } catch (UnauthorizedException | PermissionDeniedException e) {
             log.error("Kusi: la API key de Anthropic no es válida o no tiene permisos ({})", e.statusCode());
             throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, UNAVAILABLE);
@@ -180,12 +165,5 @@ public class AssistantService {
         String trimmed = fullName == null ? "" : fullName.trim();
         int space = trimmed.indexOf(' ');
         return space > 0 ? trimmed.substring(0, space) : trimmed;
-    }
-
-    @PreDestroy
-    void close() {
-        if (client != null) {
-            client.close();
-        }
     }
 }

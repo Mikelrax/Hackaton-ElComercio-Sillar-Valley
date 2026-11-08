@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import { Check, ChevronDown, ChevronUp, MessageCircle, RefreshCw } from "lucide-react"
 import { ApiError } from "@/lib/api"
 import { BackendPost, HelpResponse, postsApi, whatsappLink } from "@/lib/posts"
@@ -19,6 +19,9 @@ const POST_STATUS_STYLE: Record<BackendPost["status"], string> = {
   FULFILLED: "bg-emerald-100 text-emerald-800",
   CANCELLED: "bg-gray-100 text-gray-500",
 }
+
+const REVIEW_POLL_MS = 4000
+const REVIEW_POLLS = 30
 
 async function loadActivity(): Promise<Activity> {
   const [posts, sent] = await Promise.all([postsApi.listMine(), postsApi.listMyResponses()])
@@ -65,6 +68,21 @@ export function WallActivityPanel() {
 
   const refresh = () => setReloadKey(k => k + 1)
 
+  const reviewing = activity?.posts.some(p => p.status === "PENDING" && p.autoReview?.state === "QUEUED") ?? false
+  const polls = useRef(0)
+  useEffect(() => {
+    if (!reviewing) {
+      polls.current = 0
+      return
+    }
+    if (!open || polls.current >= REVIEW_POLLS) return
+    const timer = setTimeout(() => {
+      polls.current += 1
+      setReloadKey(k => k + 1)
+    }, REVIEW_POLL_MS)
+    return () => clearTimeout(timer)
+  }, [open, reviewing, reloadKey])
+
   const run = async (key: string, action: () => Promise<void>) => {
     setBusyKey(key)
     setError("")
@@ -86,7 +104,10 @@ export function WallActivityPanel() {
   return (
     <div className="rounded-2xl bg-white border border-gray-200/90 shadow-2xs">
       <button
-        onClick={() => setOpen(!open)}
+        onClick={() => {
+          if (!open) refresh()
+          setOpen(!open)
+        }}
         className="w-full p-4 flex items-center justify-between text-left"
         aria-expanded={open}
       >
@@ -144,7 +165,13 @@ export function WallActivityPanel() {
                         </span>
                       </div>
 
-                      {post.status === "PENDING" && (
+                      {post.status === "PENDING" && post.autoReview?.state === "QUEUED" && (
+                        <p className="text-xs text-gray-500 flex items-center gap-1.5" role="status">
+                          <span className="size-3 rounded-full border-2 border-[#087F72] border-t-transparent animate-spin" />
+                          La estamos revisando. Suele tardar unos segundos.
+                        </p>
+                      )}
+                      {post.status === "PENDING" && post.autoReview?.state !== "QUEUED" && (
                         <p className="text-xs text-gray-500">Un moderador la revisará antes de que aparezca en el muro.</p>
                       )}
                       {post.status === "REJECTED" && post.moderationNote && (

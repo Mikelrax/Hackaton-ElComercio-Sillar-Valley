@@ -54,7 +54,7 @@ public class ModerationService {
         requireModerator(uid);
         var result = posts.findByStatusOrderByCreatedAtAsc(status,
                 PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 50)));
-        return PageResponse.of(result, p -> mapper.toDto(p, true));
+        return PageResponse.of(result, mapper::toModeratorDto);
     }
 
     @Transactional

@@ -43,7 +43,8 @@ export default function ReglasPage() {
         {
           title: "La junta vecinal modera",
           items: [
-            "Los moderadores de la junta vecinal revisan publicaciones y recomendaciones antes o después de publicarse.",
+            "Una revisión automática lee cada publicación y recomendación antes de que aparezca. Lo que está claro se publica en segundos; lo dudoso o sospechoso pasa a los moderadores.",
+            "Los moderadores de la junta vecinal tienen la última palabra: revisan lo que la revisión automática les pasa y lo que reportan los vecinos.",
             "Pueden rechazar contenido que no cumpla estas reglas y desactivar cuentas que las incumplan varias veces.",
           ],
         },

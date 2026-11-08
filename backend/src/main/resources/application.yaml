@@ -56,3 +56,12 @@ assistant:
   hourly-limit: ${ASSISTANT_HOURLY_LIMIT:30}
   max-tokens: 2048
   timeout-seconds: 45
+
+review:
+  enabled: ${AUTO_REVIEW_ENABLED:true}
+  batch-size: 5
+  max-attempts: 3
+  retry-delay-seconds: 30
+  stale-seconds: 300
+  poll-delay-ms: 3000
+  initial-delay-ms: 10000

@@ -307,7 +307,7 @@ export function DashboardView({ user, onLogout, onOpenPanel }: DashboardViewProp
 
   const publish = async (data: NewPostData): Promise<string> => {
     if (data.type === "necesito" || data.type === "ofrezco") {
-      const { favor, pending } = await postsApi.create({
+      const { favor, pending, reviewing } = await postsApi.create({
         type: data.type,
         category: data.category,
         categoryLabel: data.categoryLabel,
@@ -315,6 +315,7 @@ export function DashboardView({ user, onLogout, onOpenPanel }: DashboardViewProp
         reference: data.reference,
         where: data.where,
       })
+      if (reviewing) return "¡Enviado! Lo estamos revisando y suele tardar unos segundos. Míralo en «Mi actividad», en el muro."
       if (pending) return "¡Enviado! Un moderador lo revisará y luego aparecerá en el muro."
       setFavors(prev => [favor, ...prev])
       setMapKey(k => k + 1)
@@ -360,7 +361,9 @@ export function DashboardView({ user, onLogout, onOpenPanel }: DashboardViewProp
       ...(data.where ?? {}),
     })
     if (created.status === "PENDING") {
-      return "¡Gracias! Un moderador revisará tu recomendación antes de publicarla."
+      return created.autoReview?.state === "QUEUED"
+        ? "¡Gracias! Estamos revisando tu recomendación. Si todo está bien, aparecerá en unos segundos."
+        : "¡Gracias! Un moderador revisará tu recomendación antes de publicarla."
     }
     setDirectoryKey(k => k + 1)
     setMapKey(k => k + 1)
