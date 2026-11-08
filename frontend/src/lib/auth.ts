@@ -63,15 +63,20 @@ export const authService = {
     localStorage.removeItem(STORAGE_KEY)
   },
 
-  // Iniciar sesión (conecta a backend o usa fallback para demo)
+  // Iniciar sesión (conecta a backend con timeout rápido o usa fallback para demo)
   async login(credentials: LoginCredentials): Promise<User> {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
     try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 1500) // 1.5s max para no colgar el botón
+
       const response = await fetch(`${apiUrl}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(credentials),
+        signal: controller.signal,
       })
+      clearTimeout(timeoutId)
 
       if (response.ok) {
         const user: User = await response.json()
@@ -79,7 +84,7 @@ export const authService = {
         return user
       }
     } catch (e) {
-      console.warn("Backend no disponible, usando sesión local de demostración", e)
+      console.warn("Backend no disponible o demoró, usando sesión local de demostración", e)
     }
 
     // Modo Demostración / Offline

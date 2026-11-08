@@ -140,11 +140,10 @@ export function AuthCard() {
     setLoginLoading(true)
     try {
       await authService.login({ phone: loginPhone, password: loginPassword })
-      router.push("/")
-      router.refresh()
+      // Forzar redirección limpia a la raíz
+      window.location.href = "/"
     } catch {
       setLoginError("Error al iniciar sesión.")
-    } finally {
       setLoginLoading(false)
     }
   }
@@ -154,8 +153,7 @@ export function AuthCard() {
     setLoginLoading(true)
     const demoPhone = demoRole === "moderador" ? "999888777" : "958123456"
     await authService.login({ phone: demoPhone, password: "password123" })
-    router.push("/")
-    router.refresh()
+    window.location.href = "/"
   }
 
   // Envío de Registro
@@ -193,11 +191,9 @@ export function AuthCard() {
         location,
       })
 
-      router.push("/")
-      router.refresh()
+      window.location.href = "/"
     } catch {
       setRegisterError("Error al registrar tu cuenta vecinal.")
-    } finally {
       setRegisterLoading(false)
     }
   }
