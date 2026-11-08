@@ -12,7 +12,6 @@ import java.util.regex.Pattern;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-/** Guarda imágenes en disco (carpeta app.upload-dir). El nombre lo genera el servidor (UUID). */
 @Service
 public class StorageService {
 
@@ -42,7 +41,6 @@ public class StorageService {
         }
         try {
             byte[] bytes = file.getBytes();
-            // Se valida el contenido real (no solo la extensión ni el Content-Type que envía el cliente).
             String ext = detectExtension(bytes);
             if (ext == null) {
                 throw ApiException.badRequest("Formato no permitido. Usa JPG, PNG o WEBP");

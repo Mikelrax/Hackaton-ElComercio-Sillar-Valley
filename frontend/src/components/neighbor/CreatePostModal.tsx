@@ -1,5 +1,3 @@
-// src/components/neighbor/CreatePostModal.tsx
-// Pantalla 4 del Figma: Flujo "+ Publicar en 3 clics"
 "use client"
 
 import React, { useState, useEffect } from "react"
@@ -14,7 +12,6 @@ interface CreatePostModalProps {
   onClose: () => void
   initialType?: PostTypeSelection
   userNeighborhood: string
-  /** Devuelve el mensaje de confirmación; si falla, lanza un error. */
   onSubmitPost: (data: {
     type: PostTypeSelection
     category: string
@@ -23,7 +20,6 @@ interface CreatePostModalProps {
   }) => Promise<string>
 }
 
-// Necesito / Ofrezco usan las categorías del backend (ver lib/posts.ts)
 const NECESITO: FavorCategory[] = ["Herramientas", "Hogar", "Cuidado", "Alimentos", "Movilidad", "Salud", "Educación", "Otros"]
 const OFREZCO: FavorCategory[] = ["Herramientas", "Educación", "Hogar", "Cuidado", "Alimentos", "Movilidad", "Salud", "Otros"]
 
@@ -52,7 +48,6 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const [successMessage, setSuccessMessage] = useState("")
   const [submitError, setSubmitError] = useState("")
 
-  // Cierre con la tecla Escape
   useEffect(() => {
     if (!isOpen) return
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -109,7 +104,6 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
         onClick={(e) => e.stopPropagation()}
         className="relative w-full max-w-md min-h-screen sm:min-h-0 bg-white sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden my-auto"
       >
-        {/* ================= CABECERA (Figma: Botón cerrar X y "Toque 2 de 3") ================= */}
         <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-xs p-4 sm:p-5 flex items-center justify-between border-b border-gray-100">
           <button
             type="button"
@@ -120,19 +114,15 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
             <X className="size-4" />
           </button>
           <span className="text-xs font-bold text-gray-400">Toque 2 de 3</span>
-          <div className="size-9" /> {/* Espaciador balanceador */}
+          <div className="size-9" />
         </div>
 
-        {/* ================= CONTENIDO FORMULARIO ================= */}
         <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-5 flex-1 overflow-y-auto">
-          {/* Título de la pregunta */}
           <h2 className="text-xl sm:text-2xl font-black text-[#172B2A] tracking-tight">
             ¿Qué quieres publicar?
           </h2>
 
-          {/* Cuadrícula 2x2 de Tipos de Publicación (Figma) */}
           <div className="grid grid-cols-2 gap-3">
-            {/* 1. Recomiendo */}
             <button
               type="button"
               onClick={() => handleTypeSelect("recomiendo")}
@@ -146,7 +136,6 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
               <p className="text-[11px] text-gray-500 font-medium mt-0.5">Un negocio o servicio</p>
             </button>
 
-            {/* 2. Necesito (Figma: seleccionado en amarillo/ámbar) */}
             <button
               type="button"
               onClick={() => handleTypeSelect("necesito")}
@@ -160,7 +149,6 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
               <p className="text-[11px] text-amber-900/70 font-medium mt-0.5">Pide un favor</p>
             </button>
 
-            {/* 3. Ofrezco */}
             <button
               type="button"
               onClick={() => handleTypeSelect("ofrezco")}
@@ -174,7 +162,6 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
               <p className="text-[11px] text-gray-500 font-medium mt-0.5">Presta o regala algo</p>
             </button>
 
-            {/* 4. Emergencia */}
             <button
               type="button"
               onClick={() => handleTypeSelect("emergencia")}
@@ -191,7 +178,6 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
             </button>
           </div>
 
-          {/* Categoría (Figma: chips redondeados) */}
           <div className="space-y-2">
             <label className="text-xs font-bold text-gray-700">Categoría</label>
             <div className="flex flex-wrap gap-2">
@@ -212,7 +198,6 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
             </div>
           </div>
 
-          {/* Cuéntalo en pocas palabras (opcional) */}
           <div className="space-y-2">
             <label className="text-xs font-bold text-gray-700">
               Cuéntalo en pocas palabras <span className="font-normal text-gray-400">(opcional)</span>
@@ -226,7 +211,6 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
             />
           </div>
 
-          {/* Ubicación GPS Prellenada (Figma) */}
           <div className="p-3.5 rounded-2xl bg-white border border-gray-200 flex items-center justify-between shadow-2xs">
             <div className="flex items-center gap-2.5">
               <MapPin className="size-4 text-[#087F72] shrink-0" />
@@ -247,7 +231,6 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
             </button>
           </div>
 
-          {/* Botón Grande: "Publicar" (Figma) */}
           <div className="pt-2 space-y-2">
             {submitError && (
               <div className="flex items-start gap-2 rounded-xl bg-rose-50 p-3 text-xs text-rose-700 border border-rose-200">
@@ -278,7 +261,6 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
               )}
             </button>
 
-            {/* Texto aclaratorio (Figma) */}
             <p className="text-[11px] text-center text-gray-400 font-medium">
               Ubicación y categoría ya vienen llenas: solo tocas Publicar.
             </p>
@@ -288,4 +270,3 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
     </div>
   )
 }
-

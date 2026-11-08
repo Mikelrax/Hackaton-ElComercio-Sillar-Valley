@@ -1,5 +1,3 @@
-// src/components/dashboard/PendingPostsPanel.tsx
-// Cola de moderación del muro solidario: el moderador aprueba o rechaza lo que publican los vecinos.
 "use client"
 
 import React, { useEffect, useState } from "react"

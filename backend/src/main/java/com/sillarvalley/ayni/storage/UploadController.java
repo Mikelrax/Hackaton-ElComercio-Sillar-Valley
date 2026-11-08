@@ -20,7 +20,6 @@ public class UploadController {
         this.storage = storage;
     }
 
-    /** Sube una imagen (multipart, campo "file"). Usa el fileName devuelto al crear la publicación. */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public UploadResponse upload(@RequestParam("file") MultipartFile file) {

@@ -1,5 +1,3 @@
-// src/components/neighbor/CommunityMapView.tsx
-// Pantalla 5 del Figma: Mapa Comunitario Interactivo
 "use client"
 
 import React, { useState } from "react"
@@ -34,7 +32,6 @@ export const CommunityMapView: React.FC<CommunityMapViewProps> = ({
     layer: MapLayer
     rawItem: any
   } | null>(() => {
-    // Por defecto inicia mostrando la tarjeta de Don Lucho como en el Figma
     const biz = businesses[0]
     return biz
       ? {
@@ -53,7 +50,6 @@ export const CommunityMapView: React.FC<CommunityMapViewProps> = ({
 
   return (
     <div className="w-full max-w-5xl mx-auto space-y-4">
-      {/* ================= BUSCADOR SUPERIOR EN EL MAPA (Figma) ================= */}
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
         <input
@@ -65,7 +61,6 @@ export const CommunityMapView: React.FC<CommunityMapViewProps> = ({
         />
       </div>
 
-      {/* ================= FILTROS DE CAPAS (Figma: Negocios | Favores | Puntos de apoyo) ================= */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
         <button
           onClick={() => toggleLayer("negocios")}
@@ -104,9 +99,7 @@ export const CommunityMapView: React.FC<CommunityMapViewProps> = ({
         </button>
       </div>
 
-      {/* ================= CONTENEDOR DEL MAPA (Figma: Cuadrícula urbana estilizada) ================= */}
       <div className="relative w-full h-[460px] sm:h-[520px] rounded-3xl bg-[#E8EFE9] border border-gray-200 overflow-hidden shadow-sm">
-        {/* Trazo de calles en cuadrícula urbana y avenidas diagonales (inspirado en el mapa de Figma) */}
         <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-60">
           <defs>
             <pattern id="grid" width="80" height="80" patternUnits="userSpaceOnUse">
@@ -114,13 +107,10 @@ export const CommunityMapView: React.FC<CommunityMapViewProps> = ({
             </pattern>
           </defs>
           <rect width="100%" height="100%" fill="url(#grid)" />
-          {/* Parque verde */}
           <rect x="60%" y="40%" width="25%" height="22%" rx="12" fill="#D3E7D3" />
-          {/* Avenida diagonal blanca principal */}
           <line x1="0%" y1="90%" x2="100%" y2="25%" stroke="#FFFFFF" strokeWidth="12" />
         </svg>
 
-        {/* Pin: Mi Ubicación (Punto azul con radio suave) */}
         <div
           className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none z-10"
           style={{ left: "50%", top: "45%" }}
@@ -129,7 +119,6 @@ export const CommunityMapView: React.FC<CommunityMapViewProps> = ({
           <div className="absolute inset-0 m-auto size-4 rounded-full bg-blue-600 border-2 border-white shadow-md" />
         </div>
 
-        {/* Pines: Negocios (Círculos verde petróleo con centro blanco, como en Figma) */}
         {activeLayers.negocios &&
           businesses.map(biz => (
             <button
@@ -154,7 +143,6 @@ export const CommunityMapView: React.FC<CommunityMapViewProps> = ({
             </button>
           ))}
 
-        {/* Pines: Favores (Círculos dorados/naranjas con centro blanco, como en Figma) */}
         {activeLayers.favores &&
           favors
             .filter(f => f.coords)
@@ -181,7 +169,6 @@ export const CommunityMapView: React.FC<CommunityMapViewProps> = ({
               </button>
             ))}
 
-        {/* Pines: Puntos de apoyo (Círculos azules con centro blanco) */}
         {activeLayers.puntos_apoyo &&
           supportPoints.map(point => (
             <button
@@ -206,7 +193,6 @@ export const CommunityMapView: React.FC<CommunityMapViewProps> = ({
             </button>
           ))}
 
-        {/* ================= TARJETA FLOTANTE INFERIOR AL SELECCIONAR PIN (Figma) ================= */}
         {selectedPoint && (
           <div className="absolute bottom-4 left-4 right-4 z-40 bg-white rounded-3xl p-4 sm:p-5 shadow-xl border border-gray-100 max-w-lg mx-auto animate-in slide-in-from-bottom duration-200">
             <div className="flex items-start justify-between gap-2">
@@ -226,7 +212,6 @@ export const CommunityMapView: React.FC<CommunityMapViewProps> = ({
               </button>
             </div>
 
-            {/* Botones: "Ver ficha" y "Cómo llegar" (Figma) */}
             <div className="grid grid-cols-2 gap-3 pt-3">
               {selectedPoint.layer === "negocios" ? (
                 <button
@@ -260,4 +245,3 @@ export const CommunityMapView: React.FC<CommunityMapViewProps> = ({
     </div>
   )
 }
-

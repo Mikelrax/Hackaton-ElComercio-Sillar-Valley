@@ -5,15 +5,12 @@ spring:
   application:
     name: ayni
 
-  # Los valores por defecto son solo para desarrollo local (ver db/00_crear_base.sql).
-  # En Docker / Dokploy se definen por variables de entorno.
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/ayni}
     username: ${DB_USER:ayni}
     password: ${DB_PASSWORD:ayni}
 
   jpa:
-    # Flyway crea el esquema (src/main/resources/db/migration); Hibernate solo lo valida.
     hibernate:
       ddl-auto: validate
     open-in-view: false
@@ -37,14 +34,12 @@ management:
         include: health,info
 
 app:
-  # >= 32 caracteres (HS256). En producción se define JWT_SECRET.
   jwt-secret: ${JWT_SECRET:AYNI-local-secret-key-change-before-production-2026}
   jwt-expiration-minutes: ${JWT_EXPIRATION_MINUTES:720}
-  cors-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}   # varios: separados por coma
+  cors-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
   moderator-invite-code: ${MODERATOR_INVITE_CODE:JUNTA2026}
   timezone: America/Lima
   country-code: "51"
   upload-dir: ${UPLOAD_DIR:uploads}
   public-base-url: ${PUBLIC_BASE_URL:http://localhost:8080}
-  # Crea datos de ejemplo solo si la tabla users está vacía. En producción APP_SEED=false.
   seed: ${APP_SEED:true}

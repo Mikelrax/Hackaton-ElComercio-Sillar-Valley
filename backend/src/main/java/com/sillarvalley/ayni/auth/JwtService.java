@@ -33,7 +33,6 @@ public class JwtService {
                 .claim("roles", List.of(user.getRole().name()))
                 .claim("name", user.getFullName())
                 .build();
-        // HS256 explícito: por defecto Spring usaría RS256 y fallaría con clave simétrica.
         JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
         return encoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
     }

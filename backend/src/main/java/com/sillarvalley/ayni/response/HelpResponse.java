@@ -15,7 +15,6 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
 
-/** Un vecino responde a una publicación ("yo te ayudo" / "yo lo necesito"). */
 @Entity
 @Table(name = "help_responses")
 public class HelpResponse {

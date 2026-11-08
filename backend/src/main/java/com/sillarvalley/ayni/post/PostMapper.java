@@ -13,7 +13,6 @@ public class PostMapper {
         this.storage = storage;
     }
 
-    /** includeNote: la nota del moderador solo la ven el autor y los moderadores. */
     public PostDtos.PostResponse toDto(Post p, boolean includeNote) {
         return new PostDtos.PostResponse(
                 p.getId(), p.getType(), p.getCategory(), p.getTitle(), p.getDescription(),

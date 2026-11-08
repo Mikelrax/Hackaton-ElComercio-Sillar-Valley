@@ -62,13 +62,11 @@ public class PostController {
         return service.update(CurrentUser.idOf(jwt), id, req);
     }
 
-    /** Cancela la publicación (borrado lógico). */
     @DeleteMapping("/{id}")
     public PostDtos.PostResponse cancel(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id) {
         return service.cancel(CurrentUser.idOf(jwt), id);
     }
 
-    /** El autor confirma que la ayuda se dio: suma puntos ayni. */
     @PostMapping("/{id}/fulfill")
     public PostDtos.PostResponse fulfill(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id) {
         return service.fulfill(CurrentUser.idOf(jwt), id);

@@ -17,7 +17,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Todo lo que hace un moderador, más la creación de reportes (cualquier vecino). */
 @Service
 public class ModerationService {
 
@@ -35,8 +34,6 @@ public class ModerationService {
         this.currentUser = currentUser;
         this.mapper = mapper;
     }
-
-    // ---------- publicaciones ----------
 
     @Transactional(readOnly = true)
     public PageResponse<PostDtos.PostResponse> listByStatus(Long uid, PostStatus status, int page, int size) {
@@ -65,8 +62,6 @@ public class ModerationService {
         p.setModerationNote(note.trim());
         return mapper.toDto(p, true);
     }
-
-    // ---------- reportes ----------
 
     @Transactional
     public ModerationDtos.ReportDto report(Long uid, Long postId, String reason) {
@@ -120,8 +115,6 @@ public class ModerationService {
         return toDto(r);
     }
 
-    // ---------- usuarios ----------
-
     @Transactional
     public UserDtos.UserResponse setActive(Long uid, Long targetId, boolean active) {
         requireModerator(uid);
@@ -135,8 +128,6 @@ public class ModerationService {
         target.setActive(active);
         return UserDtos.UserResponse.of(target);
     }
-
-    // ---------- helpers ----------
 
     private User requireModerator(Long uid) {
         User u = currentUser.require(uid);

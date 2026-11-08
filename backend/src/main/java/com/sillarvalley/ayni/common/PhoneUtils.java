@@ -1,6 +1,5 @@
 package com.sillarvalley.ayni.common;
 
-/** Normaliza teléfonos peruanos: "+51 987-654-321" y "987654321" -> "51987654321". */
 public final class PhoneUtils {
 
     private PhoneUtils() {}

@@ -1,7 +1,3 @@
-// ModeratorDashboard.tsx – AYNI moderator interface
-// Uses only existing shadcn/ui components (Button, Card, Badge) and Tailwind.
-// No backend changes; demo data is clearly marked.
-
 "use client";
 
 import * as React from "react";
@@ -42,11 +38,6 @@ interface ModeratorDashboardProps {
   onLogout: () => void;
 }
 
-// ------------------------------------------------------------
-// DEMO data – clearly marked
-// ------------------------------------------------------------
-
-// DEMO – Reportes de emergencia
 const DEMO_REPORTS = [
   {
     id: 1,
@@ -83,7 +74,6 @@ const DEMO_REPORTS = [
   },
 ];
 
-// DEMO – Recursos críticos
 const DEMO_RESOURCES = [
   { id: 1, name: "Punto de agua potable", location: "Plaza Yanahuara", status: "activo", icon: Droplet, iconClass: "bg-sky-50 text-sky-600" },
   { id: 2, name: "Centro de acopio", location: "Colegio San José", status: "activo", icon: Package, iconClass: "bg-amber-50 text-amber-600" },
@@ -91,7 +81,6 @@ const DEMO_RESOURCES = [
   { id: 4, name: "Botiquín comunitario", location: "Calle Los Arcos 210", status: "activo", icon: Hospital, iconClass: "bg-rose-50 text-rose-600" },
 ];
 
-// DEMO – Usuarios registrados
 const DEMO_USERS = [
   { id: 1, name: "Ana María Condori", role: "vecino", profile: "familia", neighborhood: "Yanahuara", status: "verificado" },
   { id: 2, name: "Don Mario Zúñiga", role: "emprendedor", profile: "adulto", neighborhood: "Yanahuara", status: "verificado" },
@@ -144,7 +133,6 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-[#F8FAFC] text-[#172B2A] antialiased">
-      {/* ================= SIDEBAR (Desktop) ================= */}
       <aside className="hidden md:flex md:w-64 flex-col bg-white border-r border-gray-200 shadow-sm">
         <div className="p-5 border-b border-gray-100">
           <button
@@ -207,7 +195,6 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
         </div>
       </aside>
 
-      {/* ================= MOBILE HEADER ================= */}
       <header className="md:hidden sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
         <div className="flex items-center justify-between px-4 h-14">
           <button
@@ -234,7 +221,6 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
           </div>
         </div>
 
-        {/* Mobile nav dropdown */}
         {mobileMenuOpen && (
           <div className="bg-white border-t border-gray-100 px-4 py-3 space-y-1 shadow-lg">
             {SIDEBAR_ITEMS.map((item) => {
@@ -269,9 +255,7 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
         )}
       </header>
 
-      {/* ================= MAIN CONTENT ================= */}
       <main className="flex-1 overflow-y-auto">
-        {/* Top bar */}
         <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
           <div className="max-w-5xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
@@ -298,7 +282,6 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
           </div>
         </div>
 
-        {/* Emergency banner */}
         {emergencyMode && (
           <div className="bg-rose-600 text-white px-4 py-3">
             <div className="max-w-5xl mx-auto flex items-center gap-3">
@@ -314,13 +297,10 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
           </div>
         )}
 
-        {/* Content area */}
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
 
-          {/* ===== PANEL GENERAL ===== */}
           {activeSection === "dashboard" && (
             <>
-              {/* Stats cards */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
                   <div className="flex items-center gap-2 mb-2">
@@ -362,7 +342,6 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
                 </div>
               </div>
 
-              {/* Recent reports preview */}
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm">
                 <div className="p-5 border-b border-gray-100 flex items-center justify-between">
                   <h2 className="text-base font-bold flex items-center gap-2">
@@ -399,7 +378,6 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
                 </div>
               </div>
 
-              {/* Emergency numbers */}
               <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
                 <div className="flex items-center gap-2 mb-3">
                   <PhoneCall className="size-4 text-[#087F72]" />
@@ -415,10 +393,8 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
             </>
           )}
 
-          {/* ===== MURO SOLIDARIO: PUBLICACIONES POR APROBAR (backend) ===== */}
           {activeSection === "posts" && <PendingPostsPanel />}
 
-          {/* ===== REPORTES DE EMERGENCIA ===== */}
           {activeSection === "reports" && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -471,7 +447,6 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
             </div>
           )}
 
-          {/* ===== RECURSOS CRÍTICOS ===== */}
           {activeSection === "resources" && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -481,7 +456,6 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
                 </Badge>
               </div>
 
-              {/* Map placeholder */}
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                 <div className="h-48 sm:h-64 bg-gradient-to-br from-emerald-50 to-teal-50 flex items-center justify-center">
                   <div className="text-center space-y-2">
@@ -492,7 +466,6 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
                 </div>
               </div>
 
-              {/* Resource list */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {DEMO_RESOURCES.map((res) => (
                   <div
@@ -517,7 +490,6 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
             </div>
           )}
 
-          {/* ===== GESTIÓN DE USUARIOS ===== */}
           {activeSection === "users" && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -566,7 +538,6 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
             </div>
           )}
 
-          {/* ===== CONFIGURACIÓN ===== */}
           {activeSection === "settings" && (
             <div className="space-y-4">
               <h2 className="text-lg font-bold">Configuración</h2>
@@ -613,7 +584,6 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
             </div>
           )}
 
-          {/* Footer */}
           <footer className="pt-4 border-t border-gray-100 text-center">
             <p className="text-[11px] text-gray-400">
               AYNI · Conectamos vecinos, compartimos soluciones · Panel de Moderador
@@ -624,4 +594,3 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
     </div>
   );
 }
-

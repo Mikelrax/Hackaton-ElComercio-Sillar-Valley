@@ -1,6 +1,3 @@
-// src/components/neighbor/WallActivityPanel.tsx
-// "Mi actividad" del muro: mis publicaciones (con las respuestas que recibí) y las respuestas que envié.
-// El teléfono de la otra persona solo aparece cuando una respuesta fue aceptada.
 "use client"
 
 import React, { useEffect, useState } from "react"
@@ -128,7 +125,6 @@ export function WallActivityPanel() {
 
           {activity && (
             <>
-              {/* ---------- Mis publicaciones ---------- */}
               <section className="space-y-2.5">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-black uppercase tracking-wide text-gray-500">Mis publicaciones</h3>
@@ -224,7 +220,6 @@ export function WallActivityPanel() {
                 })}
               </section>
 
-              {/* ---------- Mis respuestas ---------- */}
               <section className="space-y-2.5">
                 <h3 className="text-xs font-black uppercase tracking-wide text-gray-500">Mis respuestas</h3>
                 {activity.sent.length === 0 && (

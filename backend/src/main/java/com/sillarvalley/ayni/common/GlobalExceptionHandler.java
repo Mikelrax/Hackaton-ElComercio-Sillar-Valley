@@ -19,7 +19,6 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
-/** Manejo global de errores: toda respuesta de error tiene el formato de ApiError. */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -59,7 +58,6 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.CONFLICT, "La operación entra en conflicto con datos existentes", req, null);
     }
 
-    /** Cualquier otra excepción. Las de Spring MVC (404, 405, 415...) conservan su status original. */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleOther(Exception e, HttpServletRequest req) {
         if (e instanceof ErrorResponse er) {

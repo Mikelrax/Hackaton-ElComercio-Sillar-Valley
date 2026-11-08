@@ -2,7 +2,6 @@ package com.sillarvalley.ayni.common;
 
 import org.springframework.http.HttpStatus;
 
-/** Excepción de negocio: el GlobalExceptionHandler la convierte en una respuesta JSON con el status indicado. */
 public class ApiException extends RuntimeException {
 
     private final HttpStatus status;

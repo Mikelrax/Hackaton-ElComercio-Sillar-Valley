@@ -17,7 +17,6 @@ public final class PostDtos {
             @NotBlank @Size(max = 150) String title,
             @NotBlank @Size(max = 2000) String description,
             @Size(max = 120) String neighborhood,
-            /** Nombres de archivo devueltos por POST /api/uploads (máx. 4). */
             @Size(max = 4, message = "Máximo 4 imágenes") List<String> images) {}
 
     public record PostResponse(

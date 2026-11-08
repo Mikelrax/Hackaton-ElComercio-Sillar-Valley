@@ -1,5 +1,3 @@
-// src/lib/mockData.ts
-// Datos demostrativos identificados y consistentes con las capturas oficiales de Figma
 import { BusinessItem, EmergencyReportItem, SupportPointItem } from "./types"
 
 export const INITIAL_BUSINESSES: BusinessItem[] = [
@@ -219,4 +217,3 @@ export const INITIAL_SUPPORT_POINTS: SupportPointItem[] = [
     coords: { x: 25, y: 65 },
   },
 ]
-

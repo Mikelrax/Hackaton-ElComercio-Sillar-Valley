@@ -22,7 +22,6 @@ export function Logo({
 
   return (
     <div className={cn("flex items-center gap-2 select-none", className)}>
-      {/* Isotipo Oficial AYNI: dos círculos entrelazados (verde petróleo y dorado) */}
       <div className="relative flex items-center justify-center shrink-0">
         <svg
           viewBox="0 0 72 44"
@@ -32,7 +31,6 @@ export function Logo({
             size === "sm" ? "w-8 h-5" : size === "md" ? "w-10 h-6" : "w-14 h-8"
           )}
         >
-          {/* Círculo 1: Verde Petróleo / Teal */}
           <circle
             cx="24"
             cy="22"
@@ -41,7 +39,6 @@ export function Logo({
             strokeWidth="7"
             fill="none"
           />
-          {/* Círculo 2: Dorado / Ámbar entrelazado */}
           <circle
             cx="48"
             cy="22"
@@ -50,7 +47,6 @@ export function Logo({
             strokeWidth="7"
             fill="none"
           />
-          {/* Arco superpuesto para lograr el efecto entrelazado perfecto */}
           <path
             d="M 33 11 A 16 16 0 0 1 33 33"
             stroke="#087F72"
@@ -61,7 +57,6 @@ export function Logo({
         </svg>
       </div>
 
-      {/* Tipografía Oficial AYNI: 100% independiente de cualquier distrito o ciudad */}
       <div className="flex flex-col">
         <div className="flex items-center leading-none">
           <span className={cn("font-black tracking-tight text-[#172B2A]", current.text)}>

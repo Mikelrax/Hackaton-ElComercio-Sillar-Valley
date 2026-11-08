@@ -21,7 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class PostService {
 
-    /** Puntos "ayni" que gana quien ayuda cuando la publicación se marca como cumplida. */
     public static final int POINTS_PER_HELP = 10;
 
     private final PostRepository posts;
@@ -45,12 +44,10 @@ public class PostService {
         Post p = new Post();
         p.setAuthor(user);
         apply(p, req);
-        // Los vecinos pasan por moderación; las publicaciones de un moderador salen aprobadas.
         p.setStatus(user.getRole() == Role.MODERATOR ? PostStatus.APPROVED : PostStatus.PENDING);
         return mapper.toDto(posts.save(p), true);
     }
 
-    /** Listado público: solo publicaciones APPROVED, con filtros opcionales. */
     @Transactional(readOnly = true)
     public PageResponse<PostDtos.PostResponse> search(Long uid, PostType type, Category category, String q,
                                                       int page, int size) {
@@ -89,7 +86,6 @@ public class PostService {
         User user = currentUser.require(uid);
         Post p = find(id);
         boolean privileged = isOwner(p, uid) || user.getRole() == Role.MODERATOR;
-        // Las no aprobadas solo las ve su autor o un moderador (para el resto "no existe").
         if (p.getStatus() != PostStatus.APPROVED && !privileged) {
             throw ApiException.notFound("Publicación no encontrada");
         }
@@ -107,7 +103,6 @@ public class PostService {
             throw ApiException.conflict("Esta publicación ya no se puede editar");
         }
         apply(p, req);
-        // Si un vecino edita, vuelve a moderación (evita cambiar el contenido después de aprobado).
         p.setStatus(user.getRole() == Role.MODERATOR ? PostStatus.APPROVED : PostStatus.PENDING);
         p.setModerationNote(null);
         return mapper.toDto(p, true);
@@ -127,10 +122,6 @@ public class PostService {
         return mapper.toDto(p, true);
     }
 
-    /**
-     * El autor confirma que la ayuda se dio. Reciprocidad "ayni": quien ayuda suma puntos
-     * y quien recibe suma "ayuda recibida". En un REQUEST ayuda quien responde; en un OFFER ayuda el autor.
-     */
     @Transactional
     public PostDtos.PostResponse fulfill(Long uid, Long id) {
         currentUser.require(uid);
@@ -153,8 +144,6 @@ public class PostService {
         p.setStatus(PostStatus.FULFILLED);
         return mapper.toDto(p, true);
     }
-
-    // ---------- helpers ----------
 
     private void apply(Post p, PostDtos.PostRequest req) {
         p.setType(req.type());

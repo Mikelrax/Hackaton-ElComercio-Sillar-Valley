@@ -80,7 +80,7 @@ class PostServiceTest {
     void publicacionDeVecinoQuedaPendiente() {
         var res = service.create(1L, request(null));
         assertEquals(PostStatus.PENDING, res.status());
-        assertEquals("Necesito ayuda", res.title()); // se recorta el título
+        assertEquals("Necesito ayuda", res.title());
     }
 
     @Test
@@ -105,8 +105,8 @@ class PostServiceTest {
 
         ApiException e = assertThrows(ApiException.class, () -> service.get(3L, 10L));
         assertEquals(HttpStatus.NOT_FOUND, e.getStatus());
-        assertEquals(PostStatus.PENDING, service.get(1L, 10L).status());  // el autor sí
-        assertEquals(PostStatus.PENDING, service.get(2L, 10L).status());  // el moderador sí
+        assertEquals(PostStatus.PENDING, service.get(1L, 10L).status());
+        assertEquals(PostStatus.PENDING, service.get(2L, 10L).status());
     }
 
     @Test
@@ -124,7 +124,7 @@ class PostServiceTest {
 
     @Test
     void cumplirUnPedidoDaPuntosAQuienResponde() {
-        Post p = approvedPost(PostType.REQUEST); // autor = vecino (pide), responde "otro" (ayuda)
+        Post p = approvedPost(PostType.REQUEST);
         HelpResponse r = new HelpResponse();
         r.setPost(p);
         r.setHelper(otro);
@@ -143,7 +143,7 @@ class PostServiceTest {
 
     @Test
     void cumplirUnaOfertaDaPuntosAlAutor() {
-        Post p = approvedPost(PostType.OFFER); // autor = vecino (ofrece), responde "otro" (recibe)
+        Post p = approvedPost(PostType.OFFER);
         HelpResponse r = new HelpResponse();
         r.setPost(p);
         r.setHelper(otro);

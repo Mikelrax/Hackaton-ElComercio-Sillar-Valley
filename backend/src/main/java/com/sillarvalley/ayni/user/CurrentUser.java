@@ -4,11 +4,6 @@ import com.sillarvalley.ayni.common.ApiException;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
 
-/**
- * Carga al usuario autenticado desde la BD. Así un usuario desactivado por un moderador
- * queda bloqueado al instante aunque su JWT todavía no haya expirado.
- * Llamar siempre dentro de una transacción (los servicios ya son @Transactional).
- */
 @Component
 public class CurrentUser {
 

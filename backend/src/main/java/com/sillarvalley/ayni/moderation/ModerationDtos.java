@@ -13,7 +13,6 @@ public final class ModerationDtos {
 
     public record ReportRequest(@NotBlank @Size(max = 500) String reason) {}
 
-    /** removePost=true: la publicación reportada se retira (REJECTED). false: se descarta el reporte. */
     public record ResolveReportRequest(boolean removePost, @Size(max = 500) String note) {}
 
     public record ActiveRequest(boolean active) {}

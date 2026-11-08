@@ -1,6 +1,3 @@
-// Cliente HTTP del backend de AYNI (Spring Boot).
-// Agrega el token JWT, convierte los errores del backend en ApiError y cierra la sesión si el token ya no vale.
-
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
 
 const SESSION_KEY = "ayni_session"
@@ -15,7 +12,6 @@ export class ApiError extends Error {
     this.fieldErrors = fieldErrors
   }
 
-  /** Mensaje para mostrar al vecino: el primer error de campo o el mensaje general. */
   get friendlyMessage(): string {
     const firstField = this.fieldErrors ? Object.values(this.fieldErrors)[0] : undefined
     return firstField || this.message
@@ -35,7 +31,6 @@ function readToken(): string | null {
 interface ApiOptions {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
   body?: unknown
-  /** false para login y registro, que no llevan token. */
   auth?: boolean
 }
 
@@ -59,7 +54,6 @@ export async function apiFetch<T>(path: string, { method = "GET", body, auth = t
   }
 
   if (response.status === 401 && auth && typeof window !== "undefined") {
-    // El token venció o ya no es válido: se cierra la sesión y se vuelve a pedir el ingreso.
     localStorage.removeItem(SESSION_KEY)
     window.location.href = "/login"
   }

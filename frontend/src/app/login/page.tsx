@@ -10,10 +10,8 @@ export const metadata = {
 export default function LoginPage() {
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center p-4 sm:p-6 bg-gradient-to-b from-emerald-50/50 via-background to-background dark:from-emerald-950/20 dark:via-background dark:to-background">
-      {/* Fondo decorativo con retícula sutil */}
       <div className="absolute inset-0 bg-[radial-gradient(#059669_1px,transparent_1px)] [background-size:24px_24px] opacity-10 pointer-events-none" />
 
-      {/* Botón de volver al inicio */}
       <div className="w-full max-w-lg mb-4 flex items-center justify-between relative z-10">
         <Link
           href="/"

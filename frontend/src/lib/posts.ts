@@ -1,4 +1,3 @@
-// Muro solidario conectado al backend: /api/posts, /api/posts/{id}/responses y /api/moderation/posts
 import { apiFetch } from "@/lib/api"
 import { FavorCategory, FavorItem, FavorType } from "@/lib/types"
 
@@ -27,7 +26,6 @@ const LABEL_TO_CATEGORY = Object.fromEntries(
   Object.entries(CATEGORY_LABELS).map(([key, label]) => [label, key])
 ) as Record<FavorCategory, BackendCategory>
 
-/** Categorías del muro en el orden en que se muestran. */
 export const FAVOR_CATEGORIES = Object.values(CATEGORY_LABELS)
 
 export interface BackendPost {
@@ -50,12 +48,10 @@ export interface HelpResponse {
   helper: { id: number; fullName: string }
   message: string
   status: "PENDING" | "ACCEPTED" | "DECLINED" | "WITHDRAWN"
-  /** Teléfono de la otra persona; solo llega cuando la respuesta fue aceptada. */
   contactPhone: string | null
   createdAt: string
 }
 
-/** Enlace de WhatsApp para coordinar con la otra persona. */
 export function whatsappLink(phone: string, text: string): string {
   return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`
 }
@@ -104,13 +100,11 @@ export interface NewFavor {
 }
 
 export const postsApi = {
-  /** Publicaciones aprobadas del muro, las más recientes primero. */
   async listWall(): Promise<FavorItem[]> {
     const page = await apiFetch<PageResponse<BackendPost>>("/api/posts?size=50")
     return page.content.map(toFavor)
   },
 
-  /** Crea un pedido u oferta. Las de vecinos quedan pendientes hasta que un moderador las apruebe. */
   async create(data: NewFavor): Promise<{ favor: FavorItem; pending: boolean }> {
     const text = data.text.trim()
     const title =
@@ -131,23 +125,19 @@ export const postsApi = {
     return { favor: toFavor(post), pending: post.status === "PENDING" }
   },
 
-  /** Responde a una publicación ("Yo te ayudo" / "Me interesa"). */
   async respond(postId: string, message: string): Promise<void> {
     await apiFetch(`/api/posts/${postId}/responses`, { method: "POST", body: { message } })
   },
 
-  // ---------- mi actividad ----------
   async listMine(): Promise<BackendPost[]> {
     const page = await apiFetch<PageResponse<BackendPost>>("/api/posts/mine?size=50")
     return page.content
   },
 
-  /** Respuestas recibidas en una publicación propia. */
   async listResponses(postId: number): Promise<HelpResponse[]> {
     return apiFetch<HelpResponse[]>(`/api/posts/${postId}/responses`)
   },
 
-  /** Respuestas que yo envié; traen el teléfono del autor cuando me aceptaron. */
   async listMyResponses(): Promise<HelpResponse[]> {
     return apiFetch<HelpResponse[]>("/api/responses/mine")
   },
@@ -160,12 +150,10 @@ export const postsApi = {
     await apiFetch(`/api/responses/${responseId}/decline`, { method: "POST" })
   },
 
-  /** El autor confirma que ya recibió la ayuda: quien ayudó suma puntos ayni. */
   async fulfill(postId: number): Promise<void> {
     await apiFetch(`/api/posts/${postId}/fulfill`, { method: "POST" })
   },
 
-  // ---------- moderación ----------
   async listPending(): Promise<BackendPost[]> {
     const page = await apiFetch<PageResponse<BackendPost>>("/api/moderation/posts?status=PENDING&size=50")
     return page.content

@@ -1,5 +1,3 @@
-// src/components/neighbor/DirectoryView.tsx
-// Pantalla 1 del Figma: Inicio y Directorio vecinal
 "use client"
 
 import React, { useState, useMemo } from "react"
@@ -30,7 +28,6 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("Todos")
 
-  // Filtro reactivo en tiempo real
   const filteredBusinesses = useMemo(() => {
     return businesses.filter(b => {
       const matchesSearch =
@@ -45,7 +42,6 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
 
   return (
     <div className="w-full max-w-5xl mx-auto space-y-6">
-      {/* ================= SALUDO Y PÍLDORA DE UBICACIÓN (Figma) ================= */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-[#172B2A] tracking-tight">
@@ -56,12 +52,10 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
           </p>
         </div>
 
-        {/* Píldora de Ubicación con Radio (Figma: píldora con pin de mapa) */}
         <div className="flex items-center gap-1.5 self-start sm:self-auto bg-white border border-gray-200 shadow-2xs px-3 py-1.5 rounded-full text-xs font-semibold text-gray-700">
           <MapPin className="size-3.5 text-[#087F72]" />
           <span>{userNeighborhood}</span>
           <span className="text-gray-300">·</span>
-          {/* Radio selector tipo toggle */}
           <div className="flex items-center gap-1">
             {["500m", "1km", "2km"].map(r => (
               <button
@@ -80,7 +74,6 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
         </div>
       </div>
 
-      {/* ================= BARRA DE BÚSQUEDA (Figma) ================= */}
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
         <input
@@ -100,7 +93,6 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
         )}
       </div>
 
-      {/* ================= CHIPS DE CATEGORÍAS (Figma) ================= */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
         {CATEGORIES.map(cat => {
           const isSelected = selectedCategory === cat
@@ -120,7 +112,6 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
         })}
       </div>
 
-      {/* ================= LISTADO "RECOMENDADOS CERCA DE TI" (Figma) ================= */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-extrabold text-[#172B2A]">Recomendados cerca de ti</h2>
@@ -132,7 +123,6 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
           </button>
         </div>
 
-        {/* Grid de tarjetas responsive: 1 col en móvil, 2 en tablet/desktop */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
           {filteredBusinesses.map(biz => (
             <div
@@ -140,14 +130,12 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
               onClick={() => onSelectBusiness(biz)}
               className="p-4 rounded-2xl bg-white border border-gray-200/90 shadow-2xs hover:shadow-md hover:border-[#087F72]/40 transition-all cursor-pointer flex items-center gap-3.5 group"
             >
-              {/* Avatar con Inicial (Figma: cuadrado suave con color) */}
               <div
                 className={`size-13 rounded-2xl ${biz.colorBg} ${biz.colorText} flex items-center justify-center text-lg font-black shrink-0 transition-transform group-hover:scale-105`}
               >
                 {biz.initial}
               </div>
 
-              {/* Información */}
               <div className="flex-1 min-w-0 space-y-0.5">
                 <h3 className="text-sm font-bold text-[#172B2A] truncate group-hover:text-[#087F72] transition-colors">
                   {biz.name}
@@ -156,7 +144,6 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
                   {biz.category} · {biz.distanceText} · {biz.isOpen ? "Abierto" : "Cerrado"}
                 </p>
 
-                {/* Badge Sello Verde: "👍 Recomendado por X vecinos" */}
                 <div className="pt-1 flex items-center gap-1.5 text-xs font-bold text-[#087F72]">
                   <ThumbsUp className="size-3.5 shrink-0" />
                   <span className="truncate">Recomendado por {biz.recommendationsCount} vecinos</span>
@@ -178,4 +165,3 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
     </div>
   )
 }
-

@@ -31,10 +31,6 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-/**
- * Seguridad: API stateless con JWT (HS256), CORS, BCrypt y roles (NEIGHBOR / MODERATOR).
- * El JWT lleva el claim "roles" y el subject es el id del usuario.
- */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -48,7 +44,6 @@ public class SecurityConfig {
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        // OBSERVACIÓN: respuestas 401/403 en JSON con el mismo estilo del resto de la API.
         AuthenticationEntryPoint entryPoint = (req, res, ex) ->
                 writeJson(res, 401, "Unauthorized", "Token ausente, inválido o expirado");
         AccessDeniedHandler deniedHandler = (req, res, ex) ->
@@ -80,7 +75,6 @@ public class SecurityConfig {
         res.getWriter().write("{\"status\":" + status + ",\"error\":\"" + error + "\",\"message\":\"" + message + "\"}");
     }
 
-    /** Lee el claim "roles" del token y lo convierte en ROLE_NEIGHBOR / ROLE_MODERATOR. */
     private JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtGrantedAuthoritiesConverter authorities = new JwtGrantedAuthoritiesConverter();
         authorities.setAuthoritiesClaimName("roles");

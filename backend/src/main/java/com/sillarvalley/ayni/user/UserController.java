@@ -31,7 +31,6 @@ public class UserController {
         return service.updateProfile(CurrentUser.idOf(jwt), req);
     }
 
-    /** Ranking de reciprocidad (top 20). */
     @GetMapping("/ranking")
     public List<UserDtos.UserSummary> ranking() {
         return service.ranking();

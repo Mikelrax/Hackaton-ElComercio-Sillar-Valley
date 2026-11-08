@@ -1,5 +1,3 @@
-// src/components/neighbor/EmergencySOSView.tsx
-// Pantalla 6 del Figma: Modo Emergencia SOS
 "use client"
 
 import React, { useState } from "react"
@@ -22,7 +20,6 @@ export const EmergencySOSView: React.FC<EmergencySOSViewProps> = ({
   const [reportList, setReportList] = useState(reports)
   const [offlineNotice, setOfflineNotice] = useState(true)
 
-  // Cambio de estado al hacer clic en "Voy en camino"
   const handleAction = (reportId: string) => {
     setReportList(prev =>
       prev.map(r => {
@@ -41,7 +38,6 @@ export const EmergencySOSView: React.FC<EmergencySOSViewProps> = ({
 
   return (
     <div className="w-full max-w-5xl mx-auto space-y-5">
-      {/* ================= BANNER ROJO SUPERIOR: MODO EMERGENCIA SISMO (Figma) ================= */}
       <div className="p-4 sm:p-5 rounded-2xl bg-[#BA1A1A] text-white shadow-md space-y-1">
         <div className="flex items-center gap-2.5">
           <AlertTriangle className="size-6 text-white shrink-0 animate-bounce" />
@@ -56,7 +52,6 @@ export const EmergencySOSView: React.FC<EmergencySOSViewProps> = ({
         </div>
       </div>
 
-      {/* ================= BANNER SIN CONEXIÓN RESILIENTE (Figma: Borde punteado) ================= */}
       {offlineNotice && (
         <div className="p-3 rounded-2xl border-2 border-dashed border-gray-300 bg-white flex items-center justify-between text-xs text-gray-600 font-medium shadow-2xs">
           <div className="flex items-center gap-2">
@@ -72,7 +67,6 @@ export const EmergencySOSView: React.FC<EmergencySOSViewProps> = ({
         </div>
       )}
 
-      {/* ================= BOTONES GRANDES DE ACCIÓN: NECESITO AYUDA / OFREZCO RECURSOS (Figma) ================= */}
       <div className="grid grid-cols-2 gap-3.5">
         <button
           onClick={() => onOpenCreate("emergencia")}
@@ -88,7 +82,6 @@ export const EmergencySOSView: React.FC<EmergencySOSViewProps> = ({
         </button>
       </div>
 
-      {/* ================= REPORTES CERCA (Figma) ================= */}
       <div className="space-y-3 pt-1">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-extrabold text-[#172B2A]">Reportes cerca</h2>
@@ -122,7 +115,6 @@ export const EmergencySOSView: React.FC<EmergencySOSViewProps> = ({
                   </p>
                 </div>
 
-                {/* Botón de respuesta vecinal (Figma: Rojo para Voy en camino, Amarillo para En camino, Verde para Atendido) */}
                 <button
                   onClick={() => handleAction(rep.id)}
                   className={`h-9 px-3.5 rounded-xl text-xs font-extrabold shrink-0 transition-all active:scale-95 shadow-2xs ${
@@ -141,7 +133,6 @@ export const EmergencySOSView: React.FC<EmergencySOSViewProps> = ({
         </div>
       </div>
 
-      {/* ================= PUNTOS DE APOYO (Figma) ================= */}
       <div className="space-y-3 pt-2">
         <h2 className="text-base font-extrabold text-[#172B2A]">Puntos de apoyo</h2>
 
@@ -165,7 +156,6 @@ export const EmergencySOSView: React.FC<EmergencySOSViewProps> = ({
         </div>
       </div>
 
-      {/* ================= TELÉFONOS DE AUXILIO RÁPIDO (Figma: Tarjetas rosadas 105, 116, 106) ================= */}
       <div className="grid grid-cols-3 gap-2.5 pt-2">
         <a
           href="tel:105"
@@ -194,4 +184,3 @@ export const EmergencySOSView: React.FC<EmergencySOSViewProps> = ({
     </div>
   )
 }
-

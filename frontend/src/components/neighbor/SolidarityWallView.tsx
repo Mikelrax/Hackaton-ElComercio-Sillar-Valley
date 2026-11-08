@@ -1,5 +1,3 @@
-// src/components/neighbor/SolidarityWallView.tsx
-// Pantalla 3 del Figma: Muro Solidario (Favores sin dinero entre vecinos), conectado a /api/posts
 "use client"
 
 import React, { useState, useMemo } from "react"
@@ -47,7 +45,6 @@ export const SolidarityWallView: React.FC<SolidarityWallViewProps> = ({
       await onRespond(favor)
       setSentIds(prev => [...prev, favor.id])
     } catch (err) {
-      // 409 = ya habías respondido antes: se muestra como enviado.
       if (err instanceof ApiError && err.status === 409) {
         setSentIds(prev => [...prev, favor.id])
       } else {
@@ -63,7 +60,6 @@ export const SolidarityWallView: React.FC<SolidarityWallViewProps> = ({
 
   return (
     <div className="w-full max-w-5xl mx-auto space-y-6">
-      {/* ================= TÍTULO Y SUBTÍTULO (Figma) ================= */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-[#172B2A] tracking-tight">
@@ -83,10 +79,8 @@ export const SolidarityWallView: React.FC<SolidarityWallViewProps> = ({
         </button>
       </div>
 
-      {/* ================= MI ACTIVIDAD: mis publicaciones, respuestas recibidas y enviadas ================= */}
       <WallActivityPanel />
 
-      {/* ================= TABS PRINCIPALES (Figma: Todo | Necesito | Ofrezco) ================= */}
       <div className="p-1 rounded-2xl bg-gray-100 flex items-center max-w-md">
         <button
           onClick={() => setSelectedType("todo")}
@@ -120,7 +114,6 @@ export const SolidarityWallView: React.FC<SolidarityWallViewProps> = ({
         </button>
       </div>
 
-      {/* ================= CHIPS DE CATEGORÍAS (Figma) ================= */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
         <button
           onClick={() => setSelectedCategory("todas")}
@@ -150,7 +143,6 @@ export const SolidarityWallView: React.FC<SolidarityWallViewProps> = ({
         })}
       </div>
 
-      {/* ================= LISTADO DE PUBLICACIONES SOLIDARIAS (Figma) ================= */}
       <div className="space-y-3.5">
         {status === "loading" && (
           <div className="py-12 flex flex-col items-center gap-3 text-gray-500">
@@ -175,7 +167,6 @@ export const SolidarityWallView: React.FC<SolidarityWallViewProps> = ({
 
         {status === "ready" &&
           filteredFavors.map(favor => {
-            // Si es un caso resuelto (Figma: tarjeta verde menta con check)
             if (favor.isResolved) {
               return (
                 <div
@@ -205,7 +196,6 @@ export const SolidarityWallView: React.FC<SolidarityWallViewProps> = ({
                 key={favor.id}
                 className="p-4 sm:p-5 rounded-2xl bg-white border border-gray-200/90 shadow-2xs space-y-3 hover:border-gray-300 transition-all"
               >
-                {/* Badges superiores: Tipo (Necesito/Ofrezco) y Categoría */}
                 <div className="flex items-center gap-2">
                   <span
                     className={`px-2.5 py-0.5 rounded-md text-[11px] font-bold ${
@@ -220,12 +210,10 @@ export const SolidarityWallView: React.FC<SolidarityWallViewProps> = ({
                   <span className="text-xs font-medium text-gray-500">{favor.category}</span>
                 </div>
 
-                {/* Título de la solicitud */}
                 <h3 className="text-base font-bold text-[#172B2A] leading-snug">
                   {favor.title}
                 </h3>
 
-                {/* Pie de tarjeta con autor, barrio, tiempo y botón de acción (Figma) */}
                 <div className="flex items-center justify-between gap-3 pt-1">
                   <p className="text-xs text-gray-500 font-medium">
                     {favor.author} · {favor.distanceText} · {favor.timeAgo}

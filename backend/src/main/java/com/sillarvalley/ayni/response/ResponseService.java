@@ -45,7 +45,6 @@ public class ResponseService {
         return toDto(responses.save(r), post.getAuthor().getPhone(), false);
     }
 
-    /** Respuestas recibidas en una publicación: solo su autor o un moderador. */
     @Transactional(readOnly = true)
     public List<ResponseDtos.HelpResponseDto> listForPost(Long uid, Long postId) {
         User user = currentUser.require(uid);
@@ -57,7 +56,6 @@ public class ResponseService {
                 .map(r -> toDto(r, null, true)).toList();
     }
 
-    /** Mis respuestas a publicaciones de otros. */
     @Transactional(readOnly = true)
     public List<ResponseDtos.HelpResponseDto> mine(Long uid) {
         currentUser.require(uid);
@@ -93,7 +91,6 @@ public class ResponseService {
         return toDto(r, null, true);
     }
 
-    /** El que respondió retira su respuesta (solo si sigue pendiente). */
     @Transactional
     public ResponseDtos.HelpResponseDto withdraw(Long uid, Long responseId) {
         currentUser.require(uid);
@@ -118,10 +115,6 @@ public class ResponseService {
         return r;
     }
 
-    /**
-     * @param otherPartyPhone teléfono a mostrar cuando está ACCEPTED (si es null y showHelperPhone,
-     *                        se usa el del que respondió: vista del autor de la publicación).
-     */
     private ResponseDtos.HelpResponseDto toDto(HelpResponse r, String otherPartyPhone, boolean showHelperPhone) {
         String phone = null;
         if (r.getStatus() == HelpStatus.ACCEPTED) {

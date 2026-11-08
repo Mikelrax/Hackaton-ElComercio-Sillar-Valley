@@ -1,9 +1,5 @@
-// src/lib/types.ts
-// Tipos unificados para los módulos de AYNI basados en el backlog y Figma
-
 export type AppTab = "inicio" | "mapa" | "muro" | "emergencia"
 
-// F2: Directorio Vecinal y Ficha de Negocio
 export interface BusinessReview {
   id: string
   author: string
@@ -35,12 +31,10 @@ export interface BusinessItem {
   colorBg: string
   colorText: string
   reviews: BusinessReview[]
-  coords: { x: number; y: number } // Coordenadas relativas en el mapa
+  coords: { x: number; y: number }
 }
 
-// F3: Muro Solidario
 export type FavorType = "necesito" | "ofrezco"
-// Etiquetas de las categorías del backend (ver lib/posts.ts)
 export type FavorCategory =
   | "Herramientas"
   | "Hogar"
@@ -68,7 +62,6 @@ export interface FavorItem {
   coords?: { x: number; y: number }
 }
 
-// F4: Modo Emergencia
 export type EmergencySeverity = "alta" | "media" | "baja"
 export type EmergencyStatus = "urgente" | "en_camino" | "atendido"
 
@@ -96,4 +89,3 @@ export interface SupportPointItem {
   isOpen: boolean
   coords: { x: number; y: number }
 }
-

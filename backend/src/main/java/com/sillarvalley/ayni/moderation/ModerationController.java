@@ -18,10 +18,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * /api/moderation/** exige rol MODERATOR (ver SecurityConfig) y además cada servicio lo vuelve a verificar
- * contra la BD. El reporte de una publicación (/api/posts/{id}/reports) lo puede hacer cualquier vecino.
- */
 @RestController
 public class ModerationController {
 
@@ -70,7 +66,6 @@ public class ModerationController {
         return service.setActive(CurrentUser.idOf(jwt), id, req.active());
     }
 
-    /** Cualquier vecino autenticado puede reportar una publicación. */
     @PostMapping("/api/posts/{postId}/reports")
     @ResponseStatus(HttpStatus.CREATED)
     public ModerationDtos.ReportDto report(@AuthenticationPrincipal Jwt jwt, @PathVariable Long postId,

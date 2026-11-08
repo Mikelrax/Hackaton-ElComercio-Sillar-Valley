@@ -1,5 +1,3 @@
-// src/components/dashboard/DashboardView.tsx
-// Dashboard Principal AYNI Responsive (Móvil con Figma Bottom Bar + Desktop Multi-columna)
 "use client"
 
 import React, { useEffect, useState } from "react"
@@ -25,7 +23,6 @@ import {
 } from "@/lib/mockData"
 import { postsApi } from "@/lib/posts"
 
-// Subvistas
 import { DirectoryView } from "@/components/neighbor/DirectoryView"
 import { SolidarityWallView } from "@/components/neighbor/SolidarityWallView"
 import { CommunityMapView } from "@/components/neighbor/CommunityMapView"
@@ -42,7 +39,6 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
   const [activeTab, setActiveTab] = useState<AppTab>("inicio")
   const [activeRadius, setActiveRadius] = useState("1 km")
   const [businesses, setBusinesses] = useState<BusinessItem[]>(INITIAL_BUSINESSES)
-  // Muro solidario: viene del backend (/api/posts)
   const [favors, setFavors] = useState<FavorItem[]>([])
   const [wallStatus, setWallStatus] = useState<"loading" | "ready" | "error">("loading")
   const [wallReloadKey, setWallReloadKey] = useState(0)
@@ -79,13 +75,11 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
   )
   const [supportPoints] = useState<SupportPointItem[]>(INITIAL_SUPPORT_POINTS)
 
-  // Modales
   const [selectedBusiness, setSelectedBusiness] = useState<BusinessItem | null>(null)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [createInitialType, setCreateInitialType] = useState<PostTypeSelection>("necesito")
   const [userRecommendedIds, setUserRecommendedIds] = useState<string[]>([])
 
-  // Recomendar un negocio
   const handleRecommendBusiness = (id: string) => {
     setUserRecommendedIds(prev => [...prev, id])
     setBusinesses(prev =>
@@ -93,7 +87,6 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
     )
   }
 
-  // Crear nueva publicación. Devuelve el mensaje de confirmación que muestra el modal.
   const handleCreatePost = async (data: {
     type: PostTypeSelection
     category: string
@@ -133,7 +126,6 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
       setActiveTab("emergencia")
       return "¡Alerta enviada al barrio!"
     }
-    // Recomendación de negocio (todavía local, sin backend)
     {
       const bizName = data.description || "Negocio recomendado"
       const newBiz: BusinessItem = {
@@ -175,7 +167,6 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F8FAFC] text-[#172B2A] antialiased">
-      {/* ================= CABECERA DE ESCRITORIO & TABLET ================= */}
       <header className="sticky top-0 z-40 bg-white border-b border-gray-200/80 shadow-2xs">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <button
@@ -186,7 +177,6 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
             <Logo size="md" />
           </button>
 
-          {/* Navegación Desktop */}
           <nav className="hidden md:flex items-center gap-1 bg-gray-100/80 p-1 rounded-2xl">
             <button
               onClick={() => setActiveTab("inicio")}
@@ -231,9 +221,7 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
             </button>
           </nav>
 
-          {/* Perfil y Acciones Rápidas */}
           <div className="flex items-center gap-2.5">
-            {/* Botón Desktop Publicar */}
             <button
               onClick={() => {
                 setCreateInitialType("necesito")
@@ -245,13 +233,11 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
               <span>Publicar</span>
             </button>
 
-            {/* Perfil Vecino */}
             <div className="hidden lg:flex flex-col text-right pr-1">
               <span className="text-xs font-bold leading-tight">{user.name}</span>
               <span className="text-[10px] text-gray-500 capitalize">{user.role} · {user.profile}</span>
             </div>
 
-            {/* Cerrar Sesión */}
             <button
               onClick={onLogout}
               title="Cerrar sesión"
@@ -263,7 +249,6 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
         </div>
       </header>
 
-      {/* ================= CONTENIDO PRINCIPAL ================= */}
       <main className="flex-1 px-4 sm:px-6 py-6 pb-28 md:pb-12 max-w-5xl mx-auto w-full">
         {activeTab === "inicio" && (
           <DirectoryView
@@ -313,9 +298,7 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
         )}
       </main>
 
-      {/* ================= BARRA DE NAVEGACIÓN INFERIOR (Figma Bottom Bar para Móviles) ================= */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200/90 px-3 h-18 flex items-center justify-around shadow-lg">
-        {/* 1. Inicio */}
         <button
           onClick={() => setActiveTab("inicio")}
           className={`flex flex-col items-center gap-1 transition-colors ${
@@ -326,7 +309,6 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
           <span className="text-[11px] font-bold">Inicio</span>
         </button>
 
-        {/* 2. Mapa */}
         <button
           onClick={() => setActiveTab("mapa")}
           className={`flex flex-col items-center gap-1 transition-colors ${
@@ -337,7 +319,6 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
           <span className="text-[11px] font-bold">Mapa</span>
         </button>
 
-        {/* 3. Botón Central Flotante (+) Publicar (Figma: botón circular verde petróleo o rojo en emergencia) */}
         <button
           onClick={() => {
             setCreateInitialType(activeTab === "emergencia" ? "emergencia" : "necesito")
@@ -353,7 +334,6 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
           <Plus className="size-7" strokeWidth={2.5} />
         </button>
 
-        {/* 4. Muro */}
         <button
           onClick={() => setActiveTab("muro")}
           className={`flex flex-col items-center gap-1 transition-colors ${
@@ -364,7 +344,6 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
           <span className="text-[11px] font-bold">Muro</span>
         </button>
 
-        {/* 5. Emergencia */}
         <button
           onClick={() => setActiveTab("emergencia")}
           className={`flex flex-col items-center gap-1 transition-colors ${
@@ -376,8 +355,6 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
         </button>
       </nav>
 
-      {/* ================= MODALES GLOBALES ================= */}
-      {/* 1. Ficha Detalle de Negocio (Pantalla 2 Figma) */}
       <BusinessDetailModal
         business={selectedBusiness}
         onClose={() => setSelectedBusiness(null)}
@@ -385,7 +362,6 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
         userHasRecommended={selectedBusiness ? userRecommendedIds.includes(selectedBusiness.id) : false}
       />
 
-      {/* 2. Flujo Publicar en 3 clics (Pantalla 4 Figma) */}
       <CreatePostModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
