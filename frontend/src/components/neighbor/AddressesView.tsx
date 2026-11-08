@@ -8,7 +8,7 @@ import { ArrowLeft, Briefcase, Home, LocateFixed, Lock, MapPin, Plus, Star, User
 import { Address, authService } from "@/lib/auth"
 import { ApiError } from "@/lib/api"
 import { addressesApi, MAX_ADDRESSES } from "@/lib/addresses"
-import { NEIGHBORHOODS } from "@/lib/neighborhoods"
+import { useCatalog } from "@/lib/catalog"
 import { helpClass, inputClass, labelClass, primaryButton, secondaryButton } from "@/lib/form-styles"
 import { FormError } from "@/components/ui/form-error"
 import { SoftBackdrop } from "@/components/layout/SoftBackdrop"
@@ -23,8 +23,6 @@ const PLACE_OPTIONS: BigSelectOption[] = [
   { value: "Familia", label: "Casa de un familiar", icon: Users },
   { value: "Otro", label: "Otro lugar", icon: MapPin },
 ]
-
-const NEIGHBORHOOD_OPTIONS: BigSelectOption[] = NEIGHBORHOODS.map(n => ({ value: n, label: n }))
 
 function iconFor(label: string): LucideIcon {
   const l = label.toLowerCase()
@@ -41,7 +39,10 @@ function errorText(err: unknown): string {
 function AddressForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => void }) {
   const [placeType, setPlaceType] = useState<PlaceType>("Casa")
   const [customLabel, setCustomLabel] = useState("")
-  const [neighborhood, setNeighborhood] = useState(NEIGHBORHOODS[0])
+  const { catalog } = useCatalog()
+  const [chosenNeighborhood, setNeighborhood] = useState("")
+  const neighborhoodOptions: BigSelectOption[] = (catalog?.neighborhoods ?? []).map(n => ({ value: n, label: n }))
+  const neighborhood = chosenNeighborhood || neighborhoodOptions[0]?.value || ""
   const [reference, setReference] = useState("")
   const [gps, setGps] = useState<GpsState>("idle")
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null)
@@ -119,7 +120,8 @@ function AddressForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () 
           id="addr-barrio"
           value={neighborhood}
           onValueChange={setNeighborhood}
-          options={NEIGHBORHOOD_OPTIONS}
+          options={neighborhoodOptions}
+          placeholder="Cargando barrios…"
           icon={MapPin}
         />
       </div>

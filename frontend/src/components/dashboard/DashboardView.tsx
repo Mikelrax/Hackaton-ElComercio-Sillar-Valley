@@ -1,48 +1,63 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
-import {
-  Home,
-  Map,
-  Plus,
-  Heart,
-  AlertTriangle,
-  LogOut,
-  MapPin,
-  Shield,
-  Bell,
-  ChevronRight,
-} from "lucide-react"
+import React, { useEffect, useMemo, useState } from "react"
+import { AlertTriangle, Heart, Home, LogOut, Map, MapPin, Plus } from "lucide-react"
 import Link from "next/link"
 import { Logo } from "@/components/brand/Logo"
 import { User } from "@/lib/auth"
-import { AppTab, BusinessItem, FavorCategory, FavorItem, EmergencyReportItem, SupportPointItem } from "@/lib/types"
-import {
-  INITIAL_BUSINESSES,
-  INITIAL_EMERGENCY_REPORTS,
-  INITIAL_SUPPORT_POINTS,
-} from "@/lib/mockData"
+import { AppTab, BusinessSummary, EmergencyOverview, FavorItem, Option } from "@/lib/types"
 import { postsApi } from "@/lib/posts"
+import { businessesApi } from "@/lib/businesses"
+import { emergencyApi } from "@/lib/emergency"
+import { useCatalog } from "@/lib/catalog"
 
 import { DirectoryView } from "@/components/neighbor/DirectoryView"
 import { SolidarityWallView } from "@/components/neighbor/SolidarityWallView"
 import { CommunityMapView } from "@/components/neighbor/CommunityMapView"
 import { EmergencySOSView } from "@/components/neighbor/EmergencySOSView"
 import { BusinessDetailModal } from "@/components/neighbor/BusinessDetailModal"
-import { CreatePostModal, PostTypeSelection } from "@/components/neighbor/CreatePostModal"
+import {
+  CreatePostModal,
+  EmergencyKindValue,
+  NewPostData,
+  PostTypeSelection,
+} from "@/components/neighbor/CreatePostModal"
 
 interface DashboardViewProps {
   user: User
   onLogout: () => void
 }
 
+type LoadStatus = "loading" | "ready" | "error"
+
+const TABS: { id: AppTab; label: string; icon: typeof Home }[] = [
+  { id: "inicio", label: "Inicio", icon: Home },
+  { id: "mapa", label: "Mapa", icon: Map },
+  { id: "muro", label: "Muro solidario", icon: Heart },
+]
+
 export function DashboardView({ user, onLogout }: DashboardViewProps) {
   const [activeTab, setActiveTab] = useState<AppTab>("inicio")
-  const [activeRadius, setActiveRadius] = useState("1 km")
-  const [businesses, setBusinesses] = useState<BusinessItem[]>(INITIAL_BUSINESSES)
+  const { catalog } = useCatalog()
+  const location = useMemo(() => ({ lat: user.location.lat, lng: user.location.lng }), [user.location.lat, user.location.lng])
+  const neighborhoodName = user.location?.neighborhood || "Tu barrio"
+
   const [favors, setFavors] = useState<FavorItem[]>([])
-  const [wallStatus, setWallStatus] = useState<"loading" | "ready" | "error">("loading")
+  const [wallStatus, setWallStatus] = useState<LoadStatus>("loading")
   const [wallReloadKey, setWallReloadKey] = useState(0)
+
+  const [emergency, setEmergency] = useState<EmergencyOverview | null>(null)
+  const [emergencyStatus, setEmergencyStatus] = useState<LoadStatus>("loading")
+  const [emergencyReloadKey, setEmergencyReloadKey] = useState(0)
+
+  const [mapBusinesses, setMapBusinesses] = useState<BusinessSummary[]>([])
+  const [directoryKey, setDirectoryKey] = useState(0)
+
+  const [selectedBusinessId, setSelectedBusinessId] = useState<number | null>(null)
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [modalKey, setModalKey] = useState(0)
+  const [createInitialType, setCreateInitialType] = useState<PostTypeSelection>("necesito")
+  const [createEmergencyKind, setCreateEmergencyKind] = useState<EmergencyKindValue>("NEED")
 
   useEffect(() => {
     let cancelled = false
@@ -61,9 +76,59 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
     }
   }, [wallReloadKey])
 
+  useEffect(() => {
+    let cancelled = false
+    emergencyApi
+      .overview(user.location)
+      .then(data => {
+        if (cancelled) return
+        setEmergency(data)
+        setEmergencyStatus("ready")
+      })
+      .catch(() => {
+        if (!cancelled) setEmergencyStatus("error")
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [emergencyReloadKey, user.location])
+
+  useEffect(() => {
+    if (activeTab !== "mapa") return
+    let cancelled = false
+    businessesApi
+      .search({ radius: 2200, lat: location.lat, lng: location.lng, size: 50 })
+      .then(data => {
+        if (!cancelled) setMapBusinesses(data.content)
+      })
+      .catch(() => {
+        if (!cancelled) setMapBusinesses([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [activeTab, location, directoryKey])
+
+  const goTo = (tab: AppTab) => {
+    if (tab === "emergencia") setEmergencyReloadKey(k => k + 1)
+    setActiveTab(tab)
+  }
+
   const reloadWall = () => {
     setWallStatus("loading")
     setWallReloadKey(k => k + 1)
+  }
+
+  const reloadEmergency = () => {
+    setEmergencyStatus("loading")
+    setEmergencyReloadKey(k => k + 1)
+  }
+
+  const openCreate = (type: PostTypeSelection, kind: EmergencyKindValue = "NEED") => {
+    setCreateInitialType(type)
+    setCreateEmergencyKind(kind)
+    setModalKey(k => k + 1)
+    setIsCreateModalOpen(true)
   }
 
   const handleRespond = (favor: FavorItem) =>
@@ -71,167 +136,100 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
       favor.id,
       favor.type === "necesito" ? "¡Hola! Yo te puedo ayudar con esto." : "¡Hola! Me interesa lo que ofreces."
     )
-  const [emergencyReports, setEmergencyReports] = useState<EmergencyReportItem[]>(
-    INITIAL_EMERGENCY_REPORTS
+
+  const modalCategories = useMemo<Record<PostTypeSelection, Option[]>>(
+    () => ({
+      necesito: catalog?.postCategories ?? [],
+      ofrezco: catalog?.postCategories ?? [],
+      recomiendo: (catalog?.businessCategories ?? []).map(c => ({ value: c.slug, label: c.name })),
+      emergencia: catalog?.emergencyCategories ?? [],
+    }),
+    [catalog]
   )
-  const [supportPoints] = useState<SupportPointItem[]>(INITIAL_SUPPORT_POINTS)
 
-  const [selectedBusiness, setSelectedBusiness] = useState<BusinessItem | null>(null)
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
-  const [createInitialType, setCreateInitialType] = useState<PostTypeSelection>("necesito")
-  const [userRecommendedIds, setUserRecommendedIds] = useState<string[]>([])
-
-  const handleRecommendBusiness = (id: string) => {
-    setUserRecommendedIds(prev => [...prev, id])
-    setBusinesses(prev =>
-      prev.map(b => (b.id === id ? { ...b, recommendationsCount: b.recommendationsCount + 1 } : b))
-    )
-  }
-
-  const handleCreatePost = async (data: {
-    type: PostTypeSelection
-    category: string
-    description: string
-    location: string
-  }): Promise<string> => {
+  const handleCreatePost = async (data: NewPostData): Promise<string> => {
     if (data.type === "necesito" || data.type === "ofrezco") {
       const { favor, pending } = await postsApi.create({
         type: data.type,
-        category: data.category as FavorCategory,
+        category: data.category,
+        categoryLabel: data.categoryLabel,
         text: data.description,
-        reference: data.location,
+        reference: data.reference,
         neighborhood: user.location?.neighborhood,
       })
-      if (pending) {
-        return "¡Enviado! Un moderador lo revisará y luego aparecerá en el muro."
-      }
+      if (pending) return "¡Enviado! Un moderador lo revisará y luego aparecerá en el muro."
       setFavors(prev => [favor, ...prev])
       setActiveTab("muro")
       return "¡Publicado en el barrio!"
-    } else if (data.type === "emergencia") {
-      const newReport: EmergencyReportItem = {
-        id: "em-" + Date.now(),
-        title: data.description || "Emergencia en el barrio",
-        peopleCount: 1,
-        severity: "alta",
-        status: "urgente",
-        statusText: "Voy en camino",
-        distanceMeters: 150,
-        distanceText: "~150 m",
-        timeAgo: "ahora mismo",
-        reporter: user.name,
-        phone: user.phone,
-        coords: { x: 52, y: 48 },
-      }
-      setEmergencyReports(prev => [newReport, ...prev])
+    }
+
+    if (data.type === "emergencia") {
+      await emergencyApi.report({
+        kind: data.emergencyKind,
+        category: data.category,
+        title: data.description || undefined,
+        peopleCount: data.emergencyKind === "NEED" ? data.peopleCount : undefined,
+      })
+      reloadEmergency()
       setActiveTab("emergencia")
-      return "¡Alerta enviada al barrio!"
+      return "¡Alerta enviada! Tus vecinos ya pueden verla."
     }
-    {
-      const bizName = data.description || "Negocio recomendado"
-      const newBiz: BusinessItem = {
-        id: "biz-" + Date.now(),
-        name: bizName,
-        category: data.category as BusinessItem["category"],
-        distanceMeters: 200,
-        distanceText: "200 m",
-        scheduleText: "Abierto",
-        isOpen: true,
-        recommendationsCount: 1,
-        reputationTags: { goodPrice: 1, punctual: 1, reliable: 1 },
-        description: `Recomendado por ${user.name}: servicio de confianza en ${user.location?.neighborhood || "el barrio"}.`,
-        estimatedPrice: "Precios accesibles",
-        phone: user.phone || "999888777",
-        whatsapp: user.phone || "51999888777",
-        initial: bizName.charAt(0).toUpperCase() || "N",
-        colorBg: "bg-teal-100",
-        colorText: "text-teal-800",
-        coords: { x: 45, y: 45 },
-        reviews: [
-          {
-            id: "rev-" + Date.now(),
-            author: user.name,
-            initials: user.name.substring(0, 2).toUpperCase(),
-            timeAgo: "hace unos momentos",
-            comment: "Excelente servicio, 100% recomendado.",
-            avatarColor: "bg-emerald-200 text-emerald-900",
-          },
-        ],
-      }
-      setBusinesses(prev => [newBiz, ...prev])
-      setActiveTab("inicio")
-      return "¡Recomendación publicada!"
+
+    const created = await businessesApi.create({
+      name: data.description,
+      categorySlug: data.category,
+      phone: data.phone || undefined,
+      reference: data.reference || undefined,
+      recommendation: { goodPrice: false, punctual: false, reliable: false },
+    })
+    if (created.status === "PENDING") {
+      return "¡Gracias! Un moderador revisará tu recomendación antes de publicarla."
     }
+    setDirectoryKey(k => k + 1)
+    setActiveTab("inicio")
+    return "¡Recomendación publicada!"
   }
 
-  const neighborhoodName = user.location?.neighborhood || "Urb. Las Flores"
+  const mode = emergency?.mode
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F8FAFC] text-[#172B2A] antialiased">
       <header className="sticky top-0 z-40 bg-white border-b border-gray-200/80 shadow-2xs">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <button
-            onClick={() => setActiveTab("inicio")}
-            className="flex items-center text-left hover:opacity-85 transition-opacity cursor-pointer focus:outline-none"
-            title="Ir a Inicio"
-          >
+          <button onClick={() => goTo("inicio")} className="flex items-center hover:opacity-85" title="Ir a Inicio">
             <Logo size="md" />
           </button>
 
           <nav className="hidden md:flex items-center gap-1 bg-gray-100/80 p-1 rounded-2xl">
+            {TABS.map(t => (
+              <button
+                key={t.id}
+                onClick={() => goTo(t.id)}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                  activeTab === t.id ? "bg-white text-[#087F72] shadow-xs" : "text-gray-600 hover:text-[#172B2A]"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
             <button
-              onClick={() => setActiveTab("inicio")}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                activeTab === "inicio"
-                  ? "bg-white text-[#087F72] shadow-xs"
-                  : "text-gray-600 hover:text-[#172B2A]"
-              }`}
-            >
-              Inicio
-            </button>
-            <button
-              onClick={() => setActiveTab("mapa")}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                activeTab === "mapa"
-                  ? "bg-white text-[#087F72] shadow-xs"
-                  : "text-gray-600 hover:text-[#172B2A]"
-              }`}
-            >
-              Mapa
-            </button>
-            <button
-              onClick={() => setActiveTab("muro")}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                activeTab === "muro"
-                  ? "bg-white text-[#087F72] shadow-xs"
-                  : "text-gray-600 hover:text-[#172B2A]"
-              }`}
-            >
-              Muro solidario
-            </button>
-            <button
-              onClick={() => setActiveTab("emergencia")}
+              onClick={() => goTo("emergencia")}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                activeTab === "emergencia"
-                  ? "bg-[#BA1A1A] text-white shadow-xs"
-                  : "text-[#BA1A1A] hover:bg-rose-50"
+                activeTab === "emergencia" ? "bg-[#BA1A1A] text-white shadow-xs" : "text-[#BA1A1A] hover:bg-rose-50"
               }`}
             >
               <AlertTriangle className="size-3.5" />
-              <span>Emergencia SOS</span>
+              Emergencia SOS
             </button>
           </nav>
 
           <div className="flex items-center gap-2.5">
             <button
-              onClick={() => {
-                setCreateInitialType("necesito")
-                setIsCreateModalOpen(true)
-              }}
-              className="hidden sm:flex h-9 px-4 rounded-xl bg-[#087F72] hover:bg-[#075E54] active:scale-98 text-white font-bold text-xs items-center gap-1.5 shadow-sm transition-all"
+              onClick={() => openCreate("necesito")}
+              className="hidden sm:flex h-9 px-4 rounded-xl bg-[#087F72] hover:bg-[#075E54] text-white font-bold text-xs items-center gap-1.5 shadow-sm"
             >
               <Plus className="size-4" />
-              <span>Publicar</span>
+              Publicar
             </button>
 
             <Link
@@ -250,7 +248,7 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
             <button
               onClick={onLogout}
               title="Cerrar sesión"
-              className="size-9 rounded-xl text-gray-400 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center transition-colors"
+              className="size-9 rounded-xl text-gray-400 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center"
             >
               <LogOut className="size-4" />
             </button>
@@ -258,25 +256,36 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
         </div>
       </header>
 
+      {mode?.active && activeTab !== "emergencia" && (
+        <button
+          onClick={() => goTo("emergencia")}
+          className="w-full bg-[#BA1A1A] text-white px-4 py-2.5 text-sm font-bold flex items-center justify-center gap-2"
+        >
+          <AlertTriangle className="size-4" />
+          Modo emergencia activo: {mode.title}. Toca para ver reportes y puntos de apoyo.
+        </button>
+      )}
+
       <main className="flex-1 px-4 sm:px-6 py-6 pb-28 md:pb-12 max-w-5xl mx-auto w-full">
         {activeTab === "inicio" && (
           <DirectoryView
+            key={directoryKey}
             userName={user.name}
             userNeighborhood={neighborhoodName}
-            businesses={businesses}
-            onSelectBusiness={biz => setSelectedBusiness(biz)}
-            onOpenMap={() => setActiveTab("mapa")}
-            activeRadius={activeRadius}
-            onChangeRadius={r => setActiveRadius(r)}
+            location={location}
+            onSelectBusiness={setSelectedBusinessId}
+            onOpenMap={() => goTo("mapa")}
+            onRecommendNew={() => openCreate("recomiendo")}
           />
         )}
 
         {activeTab === "mapa" && (
           <CommunityMapView
-            businesses={businesses}
-            favors={favors}
-            supportPoints={supportPoints}
-            onSelectBusiness={biz => setSelectedBusiness(biz)}
+            center={location}
+            businesses={mapBusinesses}
+            reports={emergency?.reports ?? []}
+            supportPoints={emergency?.supportPoints ?? []}
+            onSelectBusiness={setSelectedBusinessId}
           />
         )}
 
@@ -286,78 +295,59 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
             status={wallStatus}
             onRetry={reloadWall}
             currentUserId={user.id}
+            categories={catalog?.postCategories ?? []}
             onRespond={handleRespond}
-            onOpenCreate={type => {
-              setCreateInitialType(type || "necesito")
-              setIsCreateModalOpen(true)
-            }}
+            onOpenCreate={type => openCreate(type || "necesito")}
           />
         )}
 
         {activeTab === "emergencia" && (
           <EmergencySOSView
-            reports={emergencyReports}
-            supportPoints={supportPoints}
-            onOpenCreate={type => {
-              setCreateInitialType(type || "emergencia")
-              setIsCreateModalOpen(true)
-            }}
-            onOpenMap={() => setActiveTab("mapa")}
+            overview={emergency}
+            status={emergencyStatus}
+            emergencyNumbers={catalog?.emergencyNumbers ?? []}
+            onRetry={reloadEmergency}
+            onChanged={() => setEmergencyReloadKey(k => k + 1)}
+            onOpenCreate={kind => openCreate("emergencia", kind)}
+            onOpenMap={() => goTo("mapa")}
           />
         )}
       </main>
 
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200/90 px-3 h-18 flex items-center justify-around shadow-lg">
         <button
-          onClick={() => setActiveTab("inicio")}
-          className={`flex flex-col items-center gap-1 transition-colors ${
-            activeTab === "inicio" ? "text-[#087F72]" : "text-gray-500 hover:text-gray-800"
-          }`}
+          onClick={() => goTo("inicio")}
+          className={`flex flex-col items-center gap-1 ${activeTab === "inicio" ? "text-[#087F72]" : "text-gray-500"}`}
         >
           <Home className="size-5" />
           <span className="text-[11px] font-bold">Inicio</span>
         </button>
-
         <button
-          onClick={() => setActiveTab("mapa")}
-          className={`flex flex-col items-center gap-1 transition-colors ${
-            activeTab === "mapa" ? "text-[#087F72]" : "text-gray-500 hover:text-gray-800"
-          }`}
+          onClick={() => goTo("mapa")}
+          className={`flex flex-col items-center gap-1 ${activeTab === "mapa" ? "text-[#087F72]" : "text-gray-500"}`}
         >
           <Map className="size-5" />
           <span className="text-[11px] font-bold">Mapa</span>
         </button>
-
         <button
-          onClick={() => {
-            setCreateInitialType(activeTab === "emergencia" ? "emergencia" : "necesito")
-            setIsCreateModalOpen(true)
-          }}
-          className={`size-13 -mt-6 rounded-full text-white shadow-lg flex items-center justify-center transition-transform active:scale-90 ${
-            activeTab === "emergencia"
-              ? "bg-[#BA1A1A] hover:bg-[#9B1414] ring-4 ring-white"
-              : "bg-[#087F72] hover:bg-[#075E54] ring-4 ring-white"
+          onClick={() => openCreate(activeTab === "emergencia" ? "emergencia" : "necesito")}
+          className={`size-13 -mt-6 rounded-full text-white shadow-lg flex items-center justify-center ring-4 ring-white ${
+            activeTab === "emergencia" ? "bg-[#BA1A1A]" : "bg-[#087F72]"
           }`}
-          aria-label="Publicar en 3 clics"
+          aria-label="Publicar"
         >
           <Plus className="size-7" strokeWidth={2.5} />
         </button>
-
         <button
-          onClick={() => setActiveTab("muro")}
-          className={`flex flex-col items-center gap-1 transition-colors ${
-            activeTab === "muro" ? "text-[#087F72]" : "text-gray-500 hover:text-gray-800"
-          }`}
+          onClick={() => goTo("muro")}
+          className={`flex flex-col items-center gap-1 ${activeTab === "muro" ? "text-[#087F72]" : "text-gray-500"}`}
         >
           <Heart className="size-5" />
           <span className="text-[11px] font-bold">Muro</span>
         </button>
-
         <button
-          onClick={() => setActiveTab("emergencia")}
-          className={`flex flex-col items-center gap-1 transition-colors ${
-            activeTab === "emergencia" ? "text-[#BA1A1A]" : "text-gray-500 hover:text-[#BA1A1A]"
-          }`}
+          onClick={() => goTo("emergencia")}
+          className={`flex flex-col items-center gap-1 ${activeTab === "emergencia" ? "text-[#BA1A1A]" : "text-gray-500"}`}
         >
           <AlertTriangle className="size-5" />
           <span className="text-[11px] font-bold">Emergencia</span>
@@ -365,17 +355,21 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
       </nav>
 
       <BusinessDetailModal
-        business={selectedBusiness}
-        onClose={() => setSelectedBusiness(null)}
-        onRecommend={handleRecommendBusiness}
-        userHasRecommended={selectedBusiness ? userRecommendedIds.includes(selectedBusiness.id) : false}
+        businessId={selectedBusinessId}
+        location={location}
+        onClose={() => setSelectedBusinessId(null)}
+        onChanged={() => setDirectoryKey(k => k + 1)}
       />
 
       <CreatePostModal
+        key={modalKey}
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         initialType={createInitialType}
+        initialEmergencyKind={createEmergencyKind}
         userNeighborhood={neighborhoodName}
+        categories={modalCategories}
+        emergencyKinds={catalog?.emergencyKinds ?? []}
         onSubmitPost={handleCreatePost}
       />
     </div>

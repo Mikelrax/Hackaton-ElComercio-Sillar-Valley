@@ -1,178 +1,269 @@
 "use client"
 
-import React, { useState } from "react"
-import { ArrowLeft, Phone, ThumbsUp, Wrench, Utensils, Scissors, Store, Sparkles, Check, Share2, MessageCircle } from "lucide-react"
-import { BusinessItem } from "@/lib/types"
+import React, { useEffect, useState } from "react"
+import { ArrowLeft, Check, MessageCircle, Phone, ThumbsUp } from "lucide-react"
+import { BusinessDetail } from "@/lib/types"
+import { ApiError } from "@/lib/api"
+import { businessesApi, RecommendInput } from "@/lib/businesses"
+import { formatDistance } from "@/lib/catalog"
+import { timeAgo, whatsappLink } from "@/lib/posts"
+import { CategoryIcon, categoryTone } from "@/components/ui/category-icon"
 
 interface BusinessDetailModalProps {
-  business: BusinessItem | null
+  businessId: number | null
+  location: { lat: number; lng: number }
   onClose: () => void
-  onRecommend: (businessId: string) => void
-  userHasRecommended?: boolean
+  onChanged: () => void
 }
 
-export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({
-  business,
-  onClose,
-  onRecommend,
-  userHasRecommended = false,
-}) => {
-  const [recommended, setRecommended] = useState(userHasRecommended)
-  const [recommendCount, setRecommendCount] = useState(business?.recommendationsCount || 0)
+const TAGS: { key: keyof Omit<RecommendInput, "comment">; label: string }[] = [
+  { key: "goodPrice", label: "Buen precio" },
+  { key: "punctual", label: "Puntual" },
+  { key: "reliable", label: "Confiable" },
+]
 
-  if (!business) return null
+function initials(name: string): string {
+  return name.slice(0, 2).toUpperCase()
+}
 
-  const handleRecommendClick = () => {
-    if (!recommended) {
-      setRecommended(true)
-      setRecommendCount(prev => prev + 1)
-      onRecommend(business.id)
+export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({ businessId, location, onClose, onChanged }) => {
+  const [business, setBusiness] = useState<BusinessDetail | null>(null)
+  const [error, setError] = useState("")
+  const [recommending, setRecommending] = useState(false)
+  const [form, setForm] = useState<RecommendInput>({ goodPrice: false, punctual: false, reliable: false, comment: "" })
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (businessId === null) return
+    let cancelled = false
+    businessesApi
+      .detail(businessId, location)
+      .then(data => {
+        if (!cancelled) setBusiness(data)
+      })
+      .catch(err => {
+        if (!cancelled) setError(err instanceof ApiError ? err.friendlyMessage : "No pudimos cargar este negocio.")
+      })
+    return () => {
+      cancelled = true
     }
+  }, [businessId, location])
+
+  if (businessId === null) return null
+
+  const close = () => {
+    setBusiness(null)
+    setError("")
+    setRecommending(false)
+    setForm({ goodPrice: false, punctual: false, reliable: false, comment: "" })
+    onClose()
   }
 
-  const getCategoryIcon = () => {
-    switch (business.category) {
-      case "Gasfitería":
-        return <Wrench className="size-16 text-[#087F72]" strokeWidth={1.8} />
-      case "Comida casera":
-        return <Utensils className="size-16 text-[#F2A900]" strokeWidth={1.8} />
-      case "Costura":
-        return <Scissors className="size-16 text-indigo-600" strokeWidth={1.8} />
-      case "Bodega":
-        return <Store className="size-16 text-rose-600" strokeWidth={1.8} />
-      default:
-        return <Sparkles className="size-16 text-[#087F72]" strokeWidth={1.8} />
+  const submitRecommendation = async () => {
+    if (!business) return
+    setSaving(true)
+    setError("")
+    try {
+      const updated = await businessesApi.recommend(business.id, { ...form, comment: form.comment?.trim() || undefined })
+      setBusiness({ ...updated, distanceMeters: business.distanceMeters })
+      setRecommending(false)
+      onChanged()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.friendlyMessage : "No pudimos guardar tu recomendación.")
+    } finally {
+      setSaving(false)
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg min-h-screen sm:min-h-0 sm:max-h-[92vh] bg-white sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden">
-        <div className="relative h-48 sm:h-52 bg-[#d7f5f0] flex items-center justify-center shrink-0">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4 overflow-y-auto animate-in fade-in duration-200"
+      onClick={close}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={business?.name ?? "Ficha del negocio"}
+        onClick={e => e.stopPropagation()}
+        className="relative w-full max-w-lg min-h-screen sm:min-h-0 sm:max-h-[92vh] bg-white sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden"
+      >
+        <div className={`relative h-40 flex items-center justify-center shrink-0 ${business ? categoryTone(business.categorySlug) : "bg-gray-100"}`}>
           <button
-            onClick={onClose}
+            onClick={close}
             className="absolute top-4 left-4 size-10 rounded-full bg-white text-gray-700 shadow-md flex items-center justify-center hover:bg-gray-100 transition-colors z-10"
-            aria-label="Volver atrás"
+            aria-label="Volver"
           >
             <ArrowLeft className="size-5" />
           </button>
-
-          <div className="size-28 rounded-3xl bg-white/70 backdrop-blur-sm flex items-center justify-center shadow-inner">
-            {getCategoryIcon()}
-          </div>
+          {business && (
+            <div className="size-24 rounded-3xl bg-white/70 flex items-center justify-center shadow-inner">
+              <CategoryIcon name={business.categoryIcon} className="size-12" />
+            </div>
+          )}
         </div>
 
-        <div className="p-5 sm:p-6 overflow-y-auto space-y-5 flex-1">
-          <div>
-            <h2 className="text-2xl font-black text-[#172B2A] tracking-tight">{business.name}</h2>
-            <p className="text-xs text-gray-500 font-medium mt-1">
-              {business.category} · a {business.distanceText} · {business.scheduleText}
-            </p>
+        {!business && !error && (
+          <div className="p-8 flex items-center gap-2 text-sm text-gray-500">
+            <div className="size-5 rounded-full border-2 border-[#087F72] border-t-transparent animate-spin" />
+            Cargando…
           </div>
+        )}
 
-          <div className="p-3.5 rounded-2xl bg-[#EAF5F1] border border-[#087F72]/20 flex items-center gap-3">
-            <div className="flex -space-x-2 shrink-0">
-              <span className="size-7 rounded-full bg-amber-200 text-amber-900 text-[10px] font-bold flex items-center justify-center border-2 border-white shadow-xs">
-                CR
-              </span>
-              <span className="size-7 rounded-full bg-indigo-200 text-indigo-900 text-[10px] font-bold flex items-center justify-center border-2 border-white shadow-xs">
-                JP
-              </span>
-              <span className="size-7 rounded-full bg-rose-200 text-rose-900 text-[10px] font-bold flex items-center justify-center border-2 border-white shadow-xs">
-                AL
-              </span>
+        {error && !business && <p className="p-6 text-sm font-semibold text-rose-600">{error}</p>}
+
+        {business && (
+          <div className="p-5 sm:p-6 overflow-y-auto space-y-5 flex-1">
+            <div>
+              <h2 className="text-2xl font-black text-[#172B2A] tracking-tight">{business.name}</h2>
+              <p className="text-xs text-gray-500 font-medium mt-1">
+                {business.categoryName}
+                {business.distanceMeters !== null && ` · a ${formatDistance(business.distanceMeters)}`}
+                {" · "}
+                <span className={business.openNow ? "text-emerald-700 font-bold" : ""}>{business.scheduleText}</span>
+              </p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {business.neighborhood}
+                {business.reference && ` · ${business.reference}`}
+              </p>
             </div>
-            <p className="text-xs font-bold text-[#087F72] leading-tight">
-              Recomendado por {recommendCount} vecinos de tu zona
-            </p>
-          </div>
 
-          <div className="flex flex-wrap gap-2">
-            <span className="px-3 py-1.5 rounded-full bg-white border border-gray-200 text-xs font-medium text-gray-700 shadow-2xs">
-              Buen precio · {business.reputationTags.goodPrice}
-            </span>
-            <span className="px-3 py-1.5 rounded-full bg-white border border-gray-200 text-xs font-medium text-gray-700 shadow-2xs">
-              Puntual · {business.reputationTags.punctual}
-            </span>
-            <span className="px-3 py-1.5 rounded-full bg-white border border-gray-200 text-xs font-medium text-gray-700 shadow-2xs">
-              Confiable · {business.reputationTags.reliable}
-            </span>
-          </div>
+            <div className="p-3.5 rounded-2xl bg-[#EAF5F1] border border-[#087F72]/20 flex items-center gap-3">
+              <div className="flex -space-x-2 shrink-0">
+                {business.recommendations.slice(0, 3).map((r, i) => (
+                  <span
+                    key={i}
+                    className="size-7 rounded-full bg-white text-[#087F72] text-[10px] font-bold flex items-center justify-center border-2 border-[#EAF5F1]"
+                  >
+                    {initials(r.author)}
+                  </span>
+                ))}
+              </div>
+              <p className="text-xs font-bold text-[#087F72] leading-tight">
+                {business.recommendationsCount === 1
+                  ? "Recomendado por 1 vecino"
+                  : `Recomendado por ${business.recommendationsCount} vecinos`}
+              </p>
+            </div>
 
-          <div className="text-xs text-gray-600 leading-relaxed space-y-1">
-            <p>{business.description}</p>
-            <p className="font-semibold text-gray-800">
-              Rango estimado: <span className="text-[#087F72]">{business.estimatedPrice}</span>
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 pt-1">
-            <a
-              href={`https://wa.me/${business.whatsapp}?text=Hola%20${encodeURIComponent(business.name)}%2C%20te%20contacto%20a%20trav%C3%A9s%20de%20AYNI`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="h-11 rounded-xl bg-[#087F72] text-white font-bold text-xs flex items-center justify-center gap-2 hover:bg-[#075E54] active:scale-98 transition-all shadow-sm"
-            >
-              <MessageCircle className="size-4" />
-              <span>WhatsApp</span>
-            </a>
-            <a
-              href={`tel:${business.phone}`}
-              className="h-11 rounded-xl bg-white border border-[#087F72] text-[#087F72] font-bold text-xs flex items-center justify-center gap-2 hover:bg-[#EAF5F1] active:scale-98 transition-all shadow-sm"
-            >
-              <Phone className="size-4" />
-              <span>Llamar</span>
-            </a>
-          </div>
-
-          <button
-            onClick={handleRecommendClick}
-            disabled={recommended}
-            className={`w-full h-12 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-sm ${
-              recommended
-                ? "bg-amber-100 text-amber-800 border border-amber-300 cursor-default"
-                : "bg-[#F9DA73] hover:bg-[#F2A900] text-[#7A4B00] hover:text-[#523200] active:scale-98"
-            }`}
-          >
-            {recommended ? (
-              <>
-                <Check className="size-4 text-emerald-700" />
-                <span>¡Recomendado por ti!</span>
-              </>
-            ) : (
-              <>
-                <ThumbsUp className="size-4" />
-                <span>Lo recomiendo</span>
-              </>
-            )}
-          </button>
-
-          <div className="space-y-3 pt-2 border-t border-gray-100">
-            <h3 className="text-sm font-extrabold text-[#172B2A]">Lo que dicen los vecinos</h3>
-
-            <div className="space-y-2.5">
-              {business.reviews.map(rev => (
-                <div
-                  key={rev.id}
-                  className="p-3.5 rounded-2xl bg-white border border-gray-200/80 shadow-2xs space-y-1.5"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className={`size-7 rounded-full ${rev.avatarColor} text-[10px] font-bold flex items-center justify-center shrink-0`}>
-                      {rev.initials}
-                    </span>
-                    <div>
-                      <p className="text-xs font-bold text-gray-800">{rev.author}</p>
-                      <p className="text-[10px] text-gray-400">{rev.timeAgo}</p>
-                    </div>
-                  </div>
-                  <p className="text-xs text-gray-600 pl-9 leading-relaxed">
-                    «{rev.comment}»
-                  </p>
-                </div>
+            <div className="flex flex-wrap gap-2">
+              {TAGS.map(t => (
+                <span key={t.key} className="px-3 py-1.5 rounded-full bg-white border border-gray-200 text-xs font-medium text-gray-700">
+                  {t.label} · {business.tags[t.key]}
+                </span>
               ))}
             </div>
+
+            {(business.description || business.priceHint) && (
+              <div className="text-sm text-gray-600 leading-relaxed space-y-1">
+                {business.description && <p>{business.description}</p>}
+                {business.priceHint && (
+                  <p className="font-semibold text-gray-800">
+                    Precio aproximado: <span className="text-[#087F72]">{business.priceHint}</span>
+                  </p>
+                )}
+              </div>
+            )}
+
+            {business.phone && (
+              <div className="grid grid-cols-2 gap-3">
+                <a
+                  href={whatsappLink(business.phone, `Hola ${business.name}, te escribo porque te recomendaron en AYNI.`)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="h-11 rounded-xl bg-[#087F72] text-white font-bold text-sm flex items-center justify-center gap-2 hover:bg-[#075E54]"
+                >
+                  <MessageCircle className="size-4" />
+                  WhatsApp
+                </a>
+                <a
+                  href={`tel:+${business.phone}`}
+                  className="h-11 rounded-xl bg-white border border-[#087F72] text-[#087F72] font-bold text-sm flex items-center justify-center gap-2 hover:bg-[#EAF5F1]"
+                >
+                  <Phone className="size-4" />
+                  Llamar
+                </a>
+              </div>
+            )}
+
+            {business.recommendedByMe ? (
+              <p className="h-12 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 font-bold text-sm flex items-center justify-center gap-2">
+                <Check className="size-4 text-emerald-700" />
+                Ya lo recomendaste
+              </p>
+            ) : recommending ? (
+              <div className="rounded-2xl border-2 border-[#F2A900]/50 p-4 space-y-3">
+                <p className="text-sm font-bold text-[#172B2A]">¿Qué destacas de este lugar?</p>
+                <div className="flex flex-wrap gap-2">
+                  {TAGS.map(t => (
+                    <button
+                      key={t.key}
+                      type="button"
+                      aria-pressed={form[t.key]}
+                      onClick={() => setForm(f => ({ ...f, [t.key]: !f[t.key] }))}
+                      className={`h-10 px-4 rounded-full border-2 text-sm font-semibold ${
+                        form[t.key] ? "border-[#087F72] bg-[#EAF5F1] text-[#087F72]" : "border-gray-200 text-gray-700"
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+                <textarea
+                  rows={2}
+                  value={form.comment}
+                  onChange={e => setForm(f => ({ ...f, comment: e.target.value }))}
+                  maxLength={500}
+                  placeholder="Cuéntale a tus vecinos tu experiencia (opcional)"
+                  className="w-full p-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#087F72]/30 resize-none"
+                />
+                {error && <p className="text-xs font-semibold text-rose-600">{error}</p>}
+                <div className="grid grid-cols-2 gap-2">
+                  <button onClick={() => setRecommending(false)} className="h-11 rounded-xl border border-gray-300 text-sm font-bold text-gray-700">
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={submitRecommendation}
+                    disabled={saving}
+                    className="h-11 rounded-xl bg-[#F9DA73] hover:bg-[#F2A900] text-[#7A4B00] text-sm font-bold disabled:opacity-60"
+                  >
+                    {saving ? "Guardando…" : "Recomendar"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setRecommending(true)}
+                className="w-full h-12 rounded-xl font-bold text-sm flex items-center justify-center gap-2 bg-[#F9DA73] hover:bg-[#F2A900] text-[#7A4B00]"
+              >
+                <ThumbsUp className="size-4" />
+                Lo recomiendo
+              </button>
+            )}
+
+            <div className="space-y-3 pt-2 border-t border-gray-100">
+              <h3 className="text-sm font-extrabold text-[#172B2A]">Lo que dicen los vecinos</h3>
+              {business.recommendations.filter(r => r.comment).length === 0 && (
+                <p className="text-xs text-gray-500">Todavía nadie dejó un comentario.</p>
+              )}
+              {business.recommendations
+                .filter(r => r.comment)
+                .map((r, i) => (
+                  <div key={i} className="p-3.5 rounded-2xl bg-white border border-gray-200/80 space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="size-7 rounded-full bg-[#EAF5F1] text-[#087F72] text-[10px] font-bold flex items-center justify-center shrink-0">
+                        {initials(r.author)}
+                      </span>
+                      <div>
+                        <p className="text-xs font-bold text-gray-800">{r.author}</p>
+                        <p className="text-[10px] text-gray-400">{timeAgo(r.createdAt)}</p>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600 pl-9 leading-relaxed">«{r.comment}»</p>
+                  </div>
+                ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   )

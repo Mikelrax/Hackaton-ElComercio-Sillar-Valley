@@ -1,167 +1,398 @@
 "use client"
 
-import React, { useState, useMemo } from "react"
-import { Search, MapPin, ThumbsUp } from "lucide-react"
-import { BusinessItem } from "@/lib/types"
+import React, { useEffect, useMemo, useState } from "react"
+import Link from "next/link"
+import { Check, MapPin, RefreshCw, Search, SlidersHorizontal, Store, ThumbsUp, X } from "lucide-react"
+import { BusinessSearchResult } from "@/lib/types"
+import { businessesApi } from "@/lib/businesses"
+import { formatDistance } from "@/lib/catalog"
+import { CategoryIcon, categoryTone } from "@/components/ui/category-icon"
 
 interface DirectoryViewProps {
   userName: string
   userNeighborhood: string
-  businesses: BusinessItem[]
-  onSelectBusiness: (business: BusinessItem) => void
+  location: { lat: number; lng: number }
+  onSelectBusiness: (id: number) => void
   onOpenMap: () => void
-  activeRadius: string
-  onChangeRadius: (radius: string) => void
+  onRecommendNew: () => void
 }
 
-const CATEGORIES = ["Todos", "Comida casera", "Gasfitería", "Bodega", "Costura", "Técnico"]
+type Sort = "recommended" | "distance"
+
+const RADIUS_OPTIONS: { value: number | null; label: string }[] = [
+  { value: 500, label: "500 m" },
+  { value: 1000, label: "1 km" },
+  { value: 2000, label: "2 km" },
+  { value: null, label: "Toda la ciudad" },
+]
+const DEFAULT_RADIUS = 2000
+
+function radiusLabel(radius: number | null): string {
+  return RADIUS_OPTIONS.find(o => o.value === radius)?.label ?? "Toda la ciudad"
+}
 
 export const DirectoryView: React.FC<DirectoryViewProps> = ({
   userName,
   userNeighborhood,
-  businesses,
+  location,
   onSelectBusiness,
   onOpenMap,
-  activeRadius,
-  onChangeRadius,
+  onRecommendNew,
 }) => {
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState("Todos")
+  const [query, setQuery] = useState("")
+  const [category, setCategory] = useState<string | null>(null)
+  const [radius, setRadius] = useState<number | null>(DEFAULT_RADIUS)
+  const [openNow, setOpenNow] = useState(false)
+  const [sort, setSort] = useState<Sort>("recommended")
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [result, setResult] = useState<BusinessSearchResult | null>(null)
+  const [error, setError] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
+  const [loading, setLoading] = useState(true)
 
-  const filteredBusinesses = useMemo(() => {
-    return businesses.filter(b => {
-      const matchesSearch =
-        b.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        b.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        b.description.toLowerCase().includes(searchTerm.toLowerCase())
-      const matchesCategory =
-        selectedCategory === "Todos" || b.category.toLowerCase() === selectedCategory.toLowerCase()
-      return matchesSearch && matchesCategory
+  useEffect(() => {
+    const timer = setTimeout(() => setQuery(searchTerm), 350)
+    return () => clearTimeout(timer)
+  }, [searchTerm])
+
+  useEffect(() => {
+    let cancelled = false
+    businessesApi
+      .search({ q: query, category, radius, openNow, sort, lat: location.lat, lng: location.lng })
+      .then(data => {
+        if (cancelled) return
+        setResult(data)
+        setError(false)
+        setLoading(false)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setError(true)
+        setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [query, category, radius, openNow, sort, location.lat, location.lng, reloadKey])
+
+  const facets = useMemo(() => result?.categories ?? [], [result])
+  const totalAllCategories = facets.reduce((n, f) => n + f.count, 0)
+  const visibleFacets = facets.filter(f => f.count > 0 || f.slug === category)
+  const activeFilterCount = (radius !== DEFAULT_RADIUS ? 1 : 0) + (openNow ? 1 : 0) + (sort !== "recommended" ? 1 : 0)
+  const firstName = userName.split(" ")[0] || userName
+
+  const update = (fn: () => void) => {
+    setLoading(true)
+    fn()
+  }
+
+  const clearFilters = () =>
+    update(() => {
+      setRadius(DEFAULT_RADIUS)
+      setOpenNow(false)
+      setSort("recommended")
+      setCategory(null)
+      setSearchTerm("")
     })
-  }, [businesses, searchTerm, selectedCategory])
 
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div className="w-full max-w-5xl mx-auto space-y-5">
+      <div className="space-y-3">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-[#172B2A] tracking-tight">
-            Hola, {userName.split(" ")[0] || "Vecino"}
-          </h1>
-          <p className="text-xs sm:text-sm text-gray-500 font-medium mt-0.5">
-            ¿Qué necesitas hoy cerca de casa?
-          </p>
+          <h1 className="text-2xl sm:text-3xl font-black text-[#172B2A] tracking-tight">Hola, {firstName}</h1>
+          <p className="text-sm text-gray-500 font-medium">¿Qué necesitas hoy cerca de casa?</p>
         </div>
-
-        <div className="flex items-center gap-1.5 self-start sm:self-auto bg-white border border-gray-200 shadow-2xs px-3 py-1.5 rounded-full text-xs font-semibold text-gray-700">
+        <Link
+          href="/direcciones"
+          className="inline-flex items-center gap-1.5 h-9 px-3 rounded-full bg-white border border-gray-200 text-xs font-bold text-[#172B2A] hover:border-[#087F72]"
+        >
           <MapPin className="size-3.5 text-[#087F72]" />
-          <span>{userNeighborhood}</span>
-          <span className="text-gray-300">·</span>
-          <div className="flex items-center gap-1">
-            {["500m", "1km", "2km"].map(r => (
-              <button
-                key={r}
-                onClick={() => onChangeRadius(r)}
-                className={`px-1.5 py-0.5 rounded-md text-[11px] font-bold transition-all ${
-                  activeRadius === r
-                    ? "bg-[#087F72] text-white"
-                    : "text-gray-500 hover:text-gray-800"
-                }`}
-              >
-                {r}
-              </button>
-            ))}
-          </div>
+          {userNeighborhood}
+          <span className="font-semibold text-[#087F72]">· Cambiar</span>
+        </Link>
+      </div>
+
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
+          <input
+            type="search"
+            value={searchTerm}
+            onChange={e => {
+              setLoading(true)
+              setSearchTerm(e.target.value)
+            }}
+            placeholder="Gasfitero, menú, costura…"
+            aria-label="Buscar negocios y servicios"
+            className="w-full h-12 pl-11 pr-10 rounded-2xl bg-white border border-gray-200 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#087F72]/30 shadow-2xs"
+          />
+          {searchTerm && (
+            <button
+              onClick={() => update(() => setSearchTerm(""))}
+              aria-label="Borrar búsqueda"
+              className="absolute right-3 top-1/2 -translate-y-1/2 size-7 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100"
+            >
+              <X className="size-4" />
+            </button>
+          )}
         </div>
+        <button
+          onClick={() => setFiltersOpen(true)}
+          className="relative h-12 px-4 rounded-2xl bg-white border border-gray-200 text-sm font-bold text-[#172B2A] flex items-center gap-2 hover:border-[#087F72] shadow-2xs"
+        >
+          <SlidersHorizontal className="size-4 text-[#087F72]" />
+          <span className="hidden sm:inline">Filtros</span>
+          {activeFilterCount > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 size-5 rounded-full bg-[#087F72] text-white text-[11px] font-bold flex items-center justify-center">
+              {activeFilterCount}
+            </span>
+          )}
+        </button>
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
-          placeholder="Gasfitero, bodega, costura..."
-          className="w-full h-12 pl-11 pr-4 rounded-2xl bg-white border border-gray-200/90 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#087F72]/30 focus:border-[#087F72] shadow-2xs transition-all"
-        />
-        {searchTerm && (
-          <button
-            onClick={() => setSearchTerm("")}
-            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400 hover:text-gray-600 bg-gray-100 rounded-full size-5 flex items-center justify-center"
-          >
-            ×
-          </button>
-        )}
-      </div>
-
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-        {CATEGORIES.map(cat => {
-          const isSelected = selectedCategory === cat
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none" role="list" aria-label="Categorías">
+        <button
+          role="listitem"
+          onClick={() => update(() => setCategory(null))}
+          className={`shrink-0 h-9 px-3.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all ${
+            category === null ? "bg-[#087F72] text-white" : "bg-white text-gray-700 border border-gray-200 hover:border-gray-300"
+          }`}
+        >
+          Todas
+          <span className={category === null ? "text-white/80" : "text-gray-400"}>{totalAllCategories}</span>
+        </button>
+        {visibleFacets.map(f => {
+          const selected = category === f.slug
           return (
             <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all shadow-2xs ${
-                isSelected
-                  ? "bg-[#087F72] text-white shadow-sm"
-                  : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300 hover:text-gray-800"
+              role="listitem"
+              key={f.slug}
+              onClick={() => update(() => setCategory(selected ? null : f.slug))}
+              className={`shrink-0 h-9 px-3.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all ${
+                selected ? "bg-[#087F72] text-white" : "bg-white text-gray-700 border border-gray-200 hover:border-gray-300"
               }`}
             >
-              {cat}
+              <CategoryIcon name={f.icon} className="size-3.5" />
+              {f.name}
+              <span className={selected ? "text-white/80" : "text-gray-400"}>{f.count}</span>
             </button>
           )
         })}
       </div>
 
+      {activeFilterCount > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          {radius !== DEFAULT_RADIUS && (
+            <button
+              onClick={() => update(() => setRadius(DEFAULT_RADIUS))}
+              className="h-8 px-3 rounded-full bg-[#EAF5F1] text-[#087F72] text-xs font-bold flex items-center gap-1"
+            >
+              {radius === null ? "Toda la ciudad" : `A ${radiusLabel(radius)}`}
+              <X className="size-3.5" />
+            </button>
+          )}
+          {openNow && (
+            <button
+              onClick={() => update(() => setOpenNow(false))}
+              className="h-8 px-3 rounded-full bg-[#EAF5F1] text-[#087F72] text-xs font-bold flex items-center gap-1"
+            >
+              Abierto ahora
+              <X className="size-3.5" />
+            </button>
+          )}
+          {sort !== "recommended" && (
+            <button
+              onClick={() => update(() => setSort("recommended"))}
+              className="h-8 px-3 rounded-full bg-[#EAF5F1] text-[#087F72] text-xs font-bold flex items-center gap-1"
+            >
+              Más cerca primero
+              <X className="size-3.5" />
+            </button>
+          )}
+          <button onClick={clearFilters} className="text-xs font-bold text-gray-500 hover:text-gray-800 underline">
+            Limpiar filtros
+          </button>
+        </div>
+      )}
+
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-extrabold text-[#172B2A]">Recomendados cerca de ti</h2>
-          <button
-            onClick={onOpenMap}
-            className="text-xs font-bold text-[#087F72] hover:underline flex items-center gap-1"
-          >
+          <h2 className="text-base font-extrabold text-[#172B2A]">
+            {result ? `${result.totalElements} ${result.totalElements === 1 ? "lugar" : "lugares"}` : "Buscando…"}
+            {radius !== null && <span className="font-medium text-gray-500"> a menos de {radiusLabel(radius)}</span>}
+          </h2>
+          <button onClick={onOpenMap} className="text-xs font-bold text-[#087F72] hover:underline">
             Ver en el mapa
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-          {filteredBusinesses.map(biz => (
-            <div
-              key={biz.id}
-              onClick={() => onSelectBusiness(biz)}
-              className="p-4 rounded-2xl bg-white border border-gray-200/90 shadow-2xs hover:shadow-md hover:border-[#087F72]/40 transition-all cursor-pointer flex items-center gap-3.5 group"
+        {error && (
+          <div className="py-10 text-center bg-white rounded-2xl border border-gray-200/70 p-6 space-y-3">
+            <p className="text-sm font-bold text-gray-700">No pudimos cargar los negocios</p>
+            <button
+              onClick={() => update(() => setReloadKey(k => k + 1))}
+              className="mx-auto h-9 px-4 rounded-xl border border-[#087F72] text-[#087F72] font-bold text-xs flex items-center gap-1.5"
             >
-              <div
-                className={`size-13 rounded-2xl ${biz.colorBg} ${biz.colorText} flex items-center justify-center text-lg font-black shrink-0 transition-transform group-hover:scale-105`}
+              <RefreshCw className="size-3.5" />
+              Reintentar
+            </button>
+          </div>
+        )}
+
+        {!error && (
+          <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 transition-opacity ${loading ? "opacity-60" : ""}`}>
+            {result?.content.map(biz => (
+              <button
+                key={biz.id}
+                onClick={() => onSelectBusiness(biz.id)}
+                className="text-left p-4 rounded-2xl bg-white border border-gray-200/90 shadow-2xs hover:border-[#087F72]/50 transition-all flex gap-3.5"
               >
-                {biz.initial}
-              </div>
+                <span className={`size-12 shrink-0 rounded-2xl flex items-center justify-center ${categoryTone(biz.categorySlug)}`}>
+                  <CategoryIcon name={biz.categoryIcon} className="size-6" />
+                </span>
+                <span className="min-w-0 flex-1 space-y-1">
+                  <span className="block text-sm font-extrabold text-[#172B2A] truncate">{biz.name}</span>
+                  <span className="block text-[11px] text-gray-500 font-medium">
+                    {biz.categoryName}
+                    {biz.distanceMeters !== null && ` · ${formatDistance(biz.distanceMeters)}`}
+                    {" · "}
+                    <span className={biz.openNow ? "text-emerald-700 font-bold" : ""}>{biz.scheduleText}</span>
+                  </span>
+                  <span className="flex items-center gap-1.5 text-xs font-bold text-[#087F72]">
+                    <ThumbsUp className="size-3.5 shrink-0" />
+                    {biz.recommendationsCount === 1
+                      ? "Recomendado por 1 vecino"
+                      : `Recomendado por ${biz.recommendationsCount} vecinos`}
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
 
-              <div className="flex-1 min-w-0 space-y-0.5">
-                <h3 className="text-sm font-bold text-[#172B2A] truncate group-hover:text-[#087F72] transition-colors">
-                  {biz.name}
-                </h3>
-                <p className="text-[11px] text-gray-500 font-medium">
-                  {biz.category} · {biz.distanceText} · {biz.isOpen ? "Abierto" : "Cerrado"}
-                </p>
-
-                <div className="pt-1 flex items-center gap-1.5 text-xs font-bold text-[#087F72]">
-                  <ThumbsUp className="size-3.5 shrink-0" />
-                  <span className="truncate">Recomendado por {biz.recommendationsCount} vecinos</span>
-                </div>
-              </div>
+        {!error && result && result.totalElements === 0 && (
+          <div className="py-10 text-center bg-white rounded-2xl border border-gray-200/70 p-6 space-y-3">
+            <Store className="size-10 text-gray-300 mx-auto" />
+            <p className="text-sm font-bold text-gray-700">No encontramos lugares con esos filtros</p>
+            <p className="text-xs text-gray-500">Prueba con otra palabra, otra categoría o una distancia mayor.</p>
+            <div className="flex flex-wrap justify-center gap-2 pt-1">
+              <button
+                onClick={clearFilters}
+                className="h-9 px-4 rounded-xl border border-[#087F72] text-[#087F72] font-bold text-xs"
+              >
+                Quitar filtros
+              </button>
+              <button
+                onClick={onRecommendNew}
+                className="h-9 px-4 rounded-xl bg-[#087F72] text-white font-bold text-xs"
+              >
+                Recomendar un negocio
+              </button>
             </div>
-          ))}
-
-          {filteredBusinesses.length === 0 && (
-            <div className="col-span-full py-12 text-center bg-white rounded-2xl border border-gray-200/70 p-6 space-y-2">
-              <p className="text-sm font-bold text-gray-700">No encontramos negocios en esta categoría</p>
-              <p className="text-xs text-gray-400">
-                Prueba buscando otro término o sé el primero en recomendar un servicio del barrio.
-              </p>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
+
+      {filtersOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center"
+          onClick={() => setFiltersOpen(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Filtros"
+            onClick={e => e.stopPropagation()}
+            className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-6 shadow-2xl"
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-black text-[#172B2A]">Filtros</h2>
+              <button
+                onClick={() => setFiltersOpen(false)}
+                aria-label="Cerrar filtros"
+                className="size-9 rounded-full bg-gray-100 flex items-center justify-center"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <fieldset className="space-y-2">
+              <legend className="text-sm font-bold text-[#172B2A] mb-2">Qué tan cerca</legend>
+              <div className="grid grid-cols-2 gap-2">
+                {RADIUS_OPTIONS.map(o => (
+                  <button
+                    key={o.label}
+                    onClick={() => update(() => setRadius(o.value))}
+                    aria-pressed={radius === o.value}
+                    className={`h-11 rounded-xl border-2 text-sm font-bold transition-colors ${
+                      radius === o.value
+                        ? "border-[#087F72] bg-[#EAF5F1] text-[#087F72]"
+                        : "border-gray-200 text-gray-700 hover:border-gray-300"
+                    }`}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+
+            <label className="flex items-center justify-between gap-3 cursor-pointer">
+              <span>
+                <span className="block text-sm font-bold text-[#172B2A]">Solo abiertos ahora</span>
+                <span className="block text-xs text-gray-500">Según el horario que indicó cada negocio</span>
+              </span>
+              <input
+                type="checkbox"
+                checked={openNow}
+                onChange={e => update(() => setOpenNow(e.target.checked))}
+                className="size-6 accent-[#087F72] cursor-pointer"
+              />
+            </label>
+
+            <fieldset className="space-y-2">
+              <legend className="text-sm font-bold text-[#172B2A] mb-2">Ordenar por</legend>
+              <div className="grid grid-cols-2 gap-2">
+                {(
+                  [
+                    { value: "recommended", label: "Más recomendados" },
+                    { value: "distance", label: "Más cerca" },
+                  ] as const
+                ).map(o => (
+                  <button
+                    key={o.value}
+                    onClick={() => update(() => setSort(o.value))}
+                    aria-pressed={sort === o.value}
+                    className={`h-11 rounded-xl border-2 text-sm font-bold transition-colors ${
+                      sort === o.value
+                        ? "border-[#087F72] bg-[#EAF5F1] text-[#087F72]"
+                        : "border-gray-200 text-gray-700 hover:border-gray-300"
+                    }`}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button
+                onClick={clearFilters}
+                className="h-12 rounded-xl border border-gray-300 text-sm font-bold text-gray-700"
+              >
+                Limpiar
+              </button>
+              <button
+                onClick={() => setFiltersOpen(false)}
+                className="h-12 rounded-xl bg-[#087F72] text-white text-sm font-bold flex items-center justify-center gap-1.5"
+              >
+                <Check className="size-4" />
+                Ver {result?.totalElements ?? 0} resultados
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,186 +1,270 @@
 "use client"
 
-import React, { useState } from "react"
-import { AlertTriangle, WifiOff, PhoneCall, Check, MapPin, ShieldAlert, HeartPulse } from "lucide-react"
-import { EmergencyReportItem, SupportPointItem } from "@/lib/types"
+import React, { useState, useSyncExternalStore } from "react"
+import { AlertTriangle, BadgeCheck, Phone, RefreshCw, ShieldCheck, WifiOff } from "lucide-react"
+import { EmergencyOverview, EmergencyReport, Option } from "@/lib/types"
+import { ApiError } from "@/lib/api"
+import { emergencyApi } from "@/lib/emergency"
+import { formatDistance } from "@/lib/catalog"
+import { timeAgo } from "@/lib/posts"
 
 interface EmergencySOSViewProps {
-  reports: EmergencyReportItem[]
-  supportPoints: SupportPointItem[]
-  onOpenCreate: (initialType?: "emergencia") => void
+  overview: EmergencyOverview | null
+  status: "loading" | "ready" | "error"
+  emergencyNumbers: Option[]
+  onRetry: () => void
+  onChanged: () => void
+  onOpenCreate: (kind: "NEED" | "OFFER") => void
   onOpenMap: () => void
 }
 
+function subscribeOnline(callback: () => void) {
+  window.addEventListener("online", callback)
+  window.addEventListener("offline", callback)
+  return () => {
+    window.removeEventListener("online", callback)
+    window.removeEventListener("offline", callback)
+  }
+}
+
+function useOnline(): boolean {
+  return useSyncExternalStore(subscribeOnline, () => navigator.onLine, () => true)
+}
+
+const SEVERITY_STYLE: Record<EmergencyReport["severity"], string> = {
+  HIGH: "bg-rose-100 text-rose-700",
+  MEDIUM: "bg-amber-100 text-amber-800",
+  LOW: "bg-gray-100 text-gray-600",
+}
+
 export const EmergencySOSView: React.FC<EmergencySOSViewProps> = ({
-  reports,
-  supportPoints,
+  overview,
+  status,
+  emergencyNumbers,
+  onRetry,
+  onChanged,
   onOpenCreate,
   onOpenMap,
 }) => {
-  const [reportList, setReportList] = useState(reports)
-  const [offlineNotice, setOfflineNotice] = useState(true)
+  const online = useOnline()
+  const [busyId, setBusyId] = useState<number | null>(null)
+  const [error, setError] = useState("")
 
-  const handleAction = (reportId: string) => {
-    setReportList(prev =>
-      prev.map(r => {
-        if (r.id === reportId) {
-          if (r.status === "urgente") {
-            return { ...r, status: "en_camino" as const, statusText: "En camino" }
-          }
-          if (r.status === "en_camino") {
-            return { ...r, status: "atendido" as const, statusText: "Atendido" }
-          }
-        }
-        return r
-      })
-    )
+  const act = async (id: number, action: () => Promise<unknown>) => {
+    setBusyId(id)
+    setError("")
+    try {
+      await action()
+      onChanged()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.friendlyMessage : "No pudimos guardar el cambio.")
+    } finally {
+      setBusyId(null)
+    }
   }
+
+  const mode = overview?.mode
 
   return (
     <div className="w-full max-w-5xl mx-auto space-y-5">
-      <div className="p-4 sm:p-5 rounded-2xl bg-[#BA1A1A] text-white shadow-md space-y-1">
-        <div className="flex items-center gap-2.5">
-          <AlertTriangle className="size-6 text-white shrink-0 animate-bounce" />
+      {mode?.active ? (
+        <div className="p-4 sm:p-5 rounded-2xl bg-[#BA1A1A] text-white shadow-md space-y-1">
+          <div className="flex items-start gap-2.5">
+            <AlertTriangle className="size-6 text-white shrink-0" />
+            <div>
+              <h1 className="text-base sm:text-lg font-black tracking-tight">Modo emergencia: {mode.title}</h1>
+              <p className="text-xs text-rose-100 font-medium">
+                Activado por {mode.activatedBy} de la junta vecinal · {mode.activatedAt && timeAgo(mode.activatedAt)}
+              </p>
+              {mode.message && <p className="text-sm mt-1.5">{mode.message}</p>}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-gray-200 flex items-start gap-3">
+          <ShieldCheck className="size-6 text-[#087F72] shrink-0" />
           <div>
-            <h1 className="text-base sm:text-lg font-black tracking-tight">
-              Modo emergencia: sismo
-            </h1>
-            <p className="text-xs text-rose-100 font-medium">
-              Activado por la junta vecinal · hace 20 min
+            <h1 className="text-base font-black text-[#172B2A]">No hay una emergencia activa</h1>
+            <p className="text-xs text-gray-500 font-medium">
+              Si alguien necesita ayuda urgente, avísalo aquí y tus vecinos lo verán.
             </p>
           </div>
         </div>
-      </div>
+      )}
 
-      {offlineNotice && (
-        <div className="p-3 rounded-2xl border-2 border-dashed border-gray-300 bg-white flex items-center justify-between text-xs text-gray-600 font-medium shadow-2xs">
-          <div className="flex items-center gap-2">
-            <WifiOff className="size-4 text-gray-500 shrink-0" />
-            <span>Sin señal: tus reportes se enviarán al reconectar</span>
-          </div>
-          <button
-            onClick={() => setOfflineNotice(false)}
-            className="text-[11px] font-bold text-gray-400 hover:text-gray-700"
-          >
-            Entendido
-          </button>
+      {!online && (
+        <div className="p-3 rounded-2xl border-2 border-dashed border-gray-300 bg-white flex items-center gap-2 text-xs text-gray-600 font-medium">
+          <WifiOff className="size-4 text-gray-500 shrink-0" />
+          Sin conexión: los reportes se podrán enviar cuando vuelva la señal. Llama a los números de abajo si es urgente.
         </div>
       )}
 
       <div className="grid grid-cols-2 gap-3.5">
         <button
-          onClick={() => onOpenCreate("emergencia")}
-          className="h-14 sm:h-16 rounded-2xl bg-[#BA1A1A] hover:bg-[#9B1414] active:scale-98 text-white font-black text-sm sm:text-base shadow-md flex items-center justify-center transition-all"
+          onClick={() => onOpenCreate("NEED")}
+          className="h-14 sm:h-16 rounded-2xl bg-[#BA1A1A] hover:bg-[#9B1414] text-white font-black text-sm sm:text-base shadow-md"
         >
           Necesito ayuda
         </button>
         <button
-          onClick={() => onOpenCreate("emergencia")}
-          className="h-14 sm:h-16 rounded-2xl bg-white border-2 border-[#172B2A] text-[#172B2A] hover:bg-gray-50 active:scale-98 font-black text-sm sm:text-base shadow-sm flex items-center justify-center transition-all"
+          onClick={() => onOpenCreate("OFFER")}
+          className="h-14 sm:h-16 rounded-2xl bg-white border-2 border-[#172B2A] text-[#172B2A] hover:bg-gray-50 font-black text-sm sm:text-base shadow-sm"
         >
           Ofrezco recursos
         </button>
       </div>
 
-      <div className="space-y-3 pt-1">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-extrabold text-[#172B2A]">Reportes cerca</h2>
+      {status === "loading" && (
+        <div className="py-8 flex items-center justify-center gap-2 text-xs text-gray-500">
+          <div className="size-5 rounded-full border-2 border-[#BA1A1A] border-t-transparent animate-spin" />
+          Cargando reportes…
+        </div>
+      )}
+
+      {status === "error" && (
+        <div className="py-8 text-center bg-white rounded-2xl border border-gray-200 space-y-3">
+          <p className="text-sm font-bold text-gray-700">No pudimos cargar los reportes</p>
           <button
-            onClick={onOpenMap}
-            className="text-xs font-bold text-[#BA1A1A] hover:underline"
+            onClick={onRetry}
+            className="mx-auto h-9 px-4 rounded-xl border border-[#BA1A1A] text-[#BA1A1A] font-bold text-xs flex items-center gap-1.5"
           >
-            Ver en el mapa
+            <RefreshCw className="size-3.5" />
+            Reintentar
           </button>
         </div>
+      )}
 
-        <div className="space-y-3">
-          {reportList.map(rep => {
-            const isUrgente = rep.status === "urgente"
-            const isEnCamino = rep.status === "en_camino"
-            const isAtendido = rep.status === "atendido"
-
-            return (
-              <div
-                key={rep.id}
-                className={`p-4 rounded-2xl bg-white border shadow-2xs flex items-center justify-between gap-3 transition-all ${
-                  isUrgente
-                    ? "border-rose-300 ring-1 ring-rose-100"
-                    : "border-gray-200/90"
-                }`}
-              >
-                <div className="space-y-1">
-                  <h3 className="text-sm font-bold text-[#172B2A]">{rep.title}</h3>
-                  <p className="text-xs text-gray-500 font-medium">
-                    {rep.severity === "alta" ? "Urgente" : "Prioritario"} · a {rep.distanceText} · {rep.timeAgo}
-                  </p>
-                </div>
-
-                <button
-                  onClick={() => handleAction(rep.id)}
-                  className={`h-9 px-3.5 rounded-xl text-xs font-extrabold shrink-0 transition-all active:scale-95 shadow-2xs ${
-                    isUrgente
-                      ? "bg-[#BA1A1A] text-white hover:bg-[#991515]"
-                      : isEnCamino
-                      ? "bg-amber-100 text-amber-800 border border-amber-300 hover:bg-amber-200"
-                      : "bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-emerald-200"
-                  }`}
+      {overview && (
+        <>
+          <div className="space-y-3 pt-1">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-extrabold text-[#172B2A]">Reportes cerca</h2>
+              <button onClick={onOpenMap} className="text-xs font-bold text-[#BA1A1A] hover:underline">
+                Ver en el mapa
+              </button>
+            </div>
+            {error && <p className="text-xs font-semibold text-rose-600">{error}</p>}
+            {overview.reports.length === 0 && (
+              <p className="text-sm text-gray-500 bg-white rounded-2xl border border-gray-200 p-4">No hay reportes por ahora.</p>
+            )}
+            {overview.reports.map(rep => {
+              const busy = busyId === rep.id
+              return (
+                <div
+                  key={rep.id}
+                  className={`p-4 rounded-2xl bg-white border shadow-2xs space-y-2 ${
+                    rep.status === "URGENT" ? "border-rose-300 ring-1 ring-rose-100" : "border-gray-200/90"
+                  } ${rep.status === "ATTENDED" ? "opacity-70" : ""}`}
                 >
-                  {rep.statusText}
-                </button>
-              </div>
-            )
-          })}
-        </div>
-      </div>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <h3 className="text-sm font-bold text-[#172B2A] flex items-center gap-1.5">
+                        {rep.title}
+                        {rep.verified && <BadgeCheck className="size-4 text-[#087F72]" aria-label="Verificado por la junta" />}
+                      </h3>
+                      <p className="text-xs text-gray-500 font-medium">
+                        {rep.kind === "OFFER" ? "Ofrece" : `${rep.peopleCount} ${rep.peopleCount === 1 ? "persona" : "personas"}`} ·{" "}
+                        {rep.categoryLabel}
+                        {rep.distanceMeters !== null && ` · a ${formatDistance(rep.distanceMeters)}`} · {timeAgo(rep.createdAt)}
+                      </p>
+                    </div>
+                    <span className={`shrink-0 px-2 py-0.5 rounded-md text-[11px] font-bold ${SEVERITY_STYLE[rep.severity]}`}>
+                      {rep.kind === "OFFER" ? "Recurso" : rep.severityLabel}
+                    </span>
+                  </div>
 
-      <div className="space-y-3 pt-2">
-        <h2 className="text-base font-extrabold text-[#172B2A]">Puntos de apoyo</h2>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {rep.status === "URGENT" && !rep.mine && (
+                      <button
+                        disabled={busy}
+                        onClick={() => act(rep.id, () => emergencyApi.onTheWay(rep.id))}
+                        className="h-9 px-3.5 rounded-xl bg-[#BA1A1A] text-white text-xs font-extrabold hover:bg-[#991515] disabled:opacity-60"
+                      >
+                        {busy ? "Avisando…" : "Voy en camino"}
+                      </button>
+                    )}
+                    {rep.status === "URGENT" && rep.mine && (
+                      <span className="text-xs font-bold text-rose-700">Esperando que alguien responda</span>
+                    )}
+                    {rep.status === "ON_THE_WAY" && (
+                      <span className="h-9 px-3 rounded-xl bg-amber-100 text-amber-800 border border-amber-300 text-xs font-bold flex items-center">
+                        {rep.helper ? `${rep.helper} va en camino` : rep.statusLabel}
+                      </span>
+                    )}
+                    {rep.status !== "ATTENDED" && (rep.mine || rep.helpingByMe) && (
+                      <button
+                        disabled={busy}
+                        onClick={() => act(rep.id, () => emergencyApi.attended(rep.id))}
+                        className="h-9 px-3.5 rounded-xl bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-bold disabled:opacity-60"
+                      >
+                        Ya está atendido
+                      </button>
+                    )}
+                    {rep.status === "ATTENDED" && (
+                      <span className="h-9 px-3 rounded-xl bg-emerald-50 text-emerald-800 text-xs font-bold flex items-center">
+                        Atendido
+                      </span>
+                    )}
+                    {rep.reporterPhone && !rep.mine && rep.status !== "ATTENDED" && (
+                      <a
+                        href={`tel:+${rep.reporterPhone}`}
+                        className="h-9 px-3.5 rounded-xl border border-[#172B2A] text-[#172B2A] text-xs font-bold flex items-center gap-1.5"
+                      >
+                        <Phone className="size-3.5" />
+                        Llamar a {rep.reporter}
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
 
-        <div className="space-y-2.5">
-          {supportPoints.map(point => (
-            <div
-              key={point.id}
-              className="p-3.5 rounded-2xl bg-white border border-gray-200/90 shadow-2xs flex items-center justify-between"
-            >
-              <div className="flex items-center gap-3">
-                <span className="size-3.5 rounded-sm bg-blue-600 shrink-0" />
-                <span className="text-xs sm:text-sm font-bold text-gray-800">
-                  {point.name}
+          <div className="space-y-3 pt-2">
+            <h2 className="text-base font-extrabold text-[#172B2A]">Puntos de apoyo</h2>
+            {overview.supportPoints.length === 0 && (
+              <p className="text-sm text-gray-500 bg-white rounded-2xl border border-gray-200 p-4">
+                La junta todavía no registró puntos de apoyo.
+              </p>
+            )}
+            {overview.supportPoints.map(point => (
+              <div
+                key={point.id}
+                className="p-3.5 rounded-2xl bg-white border border-gray-200/90 shadow-2xs flex items-center justify-between gap-3"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className={`size-3 rounded-sm shrink-0 ${point.open ? "bg-blue-600" : "bg-gray-300"}`} />
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-gray-800 truncate">{point.name}</p>
+                    <p className="text-[11px] text-gray-500">
+                      {point.typeLabel}
+                      {point.address && ` · ${point.address}`}
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs text-gray-500 font-medium shrink-0">
+                  {formatDistance(point.distanceMeters)} · {point.open ? "Abierto" : "Cerrado"}
                 </span>
               </div>
-              <span className="text-xs text-gray-500 font-medium shrink-0">
-                {point.distanceText} · {point.isOpen ? "Abierto" : "Cerrado"}
-              </span>
-            </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {emergencyNumbers.length > 0 && (
+        <div className="grid grid-cols-3 gap-2.5 pt-2">
+          {emergencyNumbers.map(n => (
+            <a
+              key={n.value}
+              href={`tel:${n.value}`}
+              className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-center hover:bg-rose-100"
+            >
+              <p className="text-base sm:text-lg font-black text-[#BA1A1A]">{n.value}</p>
+              <p className="text-[11px] font-bold text-rose-900 mt-0.5">{n.label}</p>
+            </a>
           ))}
         </div>
-      </div>
-
-      <div className="grid grid-cols-3 gap-2.5 pt-2">
-        <a
-          href="tel:105"
-          className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-center hover:bg-rose-100 transition-all shadow-2xs"
-        >
-          <p className="text-base sm:text-lg font-black text-[#BA1A1A]">105</p>
-          <p className="text-[11px] font-bold text-rose-900 mt-0.5">Policía</p>
-        </a>
-
-        <a
-          href="tel:116"
-          className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-center hover:bg-rose-100 transition-all shadow-2xs"
-        >
-          <p className="text-base sm:text-lg font-black text-[#BA1A1A]">116</p>
-          <p className="text-[11px] font-bold text-rose-900 mt-0.5">Bomberos</p>
-        </a>
-
-        <a
-          href="tel:106"
-          className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-center hover:bg-rose-100 transition-all shadow-2xs"
-        >
-          <p className="text-base sm:text-lg font-black text-[#BA1A1A]">106</p>
-          <p className="text-[11px] font-bold text-rose-900 mt-0.5">SAMU</p>
-        </a>
-      </div>
+      )}
     </div>
   )
 }

@@ -1,243 +1,190 @@
 "use client"
 
-import React, { useState } from "react"
-import { Search, MapPin, Store, Heart, ShieldAlert, Navigation, ChevronRight, X } from "lucide-react"
-import { BusinessItem, FavorItem, SupportPointItem } from "@/lib/types"
+import React, { useMemo, useState } from "react"
+import { Navigation, X } from "lucide-react"
+import { BusinessSummary, EmergencyReport, SupportPoint } from "@/lib/types"
+import { formatDistance } from "@/lib/catalog"
 
 interface CommunityMapViewProps {
-  businesses: BusinessItem[]
-  favors: FavorItem[]
-  supportPoints: SupportPointItem[]
-  onSelectBusiness: (business: BusinessItem) => void
+  center: { lat: number; lng: number }
+  businesses: BusinessSummary[]
+  reports: EmergencyReport[]
+  supportPoints: SupportPoint[]
+  onSelectBusiness: (id: number) => void
 }
 
-type MapLayer = "negocios" | "favores" | "puntos_apoyo"
+type MapLayer = "negocios" | "emergencias" | "puntos_apoyo"
+
+interface Pin {
+  key: string
+  layer: MapLayer
+  title: string
+  subtitle: string
+  latitude: number
+  longitude: number
+  businessId?: number
+}
+
+const EXTENT_METERS = 2200
+
+function project(center: { lat: number; lng: number }, lat: number, lng: number): { x: number; y: number } | null {
+  const dx = (lng - center.lng) * 111320 * Math.cos((center.lat * Math.PI) / 180)
+  const dy = (lat - center.lat) * 110540
+  const x = 50 + (dx / EXTENT_METERS) * 50
+  const y = 50 - (dy / EXTENT_METERS) * 50
+  if (x < 3 || x > 97 || y < 3 || y > 97) return null
+  return { x, y }
+}
+
+const LAYER_STYLE: Record<MapLayer, { label: string; active: string; dot: string; pin: string }> = {
+  negocios: { label: "Negocios", active: "bg-[#087F72] text-white", dot: "bg-emerald-300", pin: "bg-[#087F72]" },
+  emergencias: { label: "Emergencias", active: "bg-[#BA1A1A] text-white", dot: "bg-rose-300", pin: "bg-[#BA1A1A]" },
+  puntos_apoyo: { label: "Puntos de apoyo", active: "bg-blue-600 text-white", dot: "bg-blue-300", pin: "bg-blue-600" },
+}
 
 export const CommunityMapView: React.FC<CommunityMapViewProps> = ({
+  center,
   businesses,
-  favors,
+  reports,
   supportPoints,
   onSelectBusiness,
 }) => {
   const [activeLayers, setActiveLayers] = useState<Record<MapLayer, boolean>>({
     negocios: true,
-    favores: true,
+    emergencias: true,
     puntos_apoyo: true,
   })
-  const [searchTerm, setSearchTerm] = useState("")
-  const [selectedPoint, setSelectedPoint] = useState<{
-    id: string
-    title: string
-    subtitle: string
-    layer: MapLayer
-    rawItem: any
-  } | null>(() => {
-    const biz = businesses[0]
-    return biz
-      ? {
-          id: biz.id,
-          title: biz.name,
-          subtitle: `${biz.category} · ${biz.distanceText} · Recomendado por ${biz.recommendationsCount} vecinos`,
-          layer: "negocios",
-          rawItem: biz,
-        }
-      : null
-  })
+  const [selected, setSelected] = useState<Pin | null>(null)
 
-  const toggleLayer = (layer: MapLayer) => {
-    setActiveLayers(prev => ({ ...prev, [layer]: !prev[layer] }))
-  }
+  const pins = useMemo<Pin[]>(
+    () => [
+      ...businesses.map(b => ({
+        key: `b-${b.id}`,
+        layer: "negocios" as const,
+        title: b.name,
+        subtitle: `${b.categoryName} · ${formatDistance(b.distanceMeters)} · ${b.scheduleText}`,
+        latitude: b.latitude,
+        longitude: b.longitude,
+        businessId: b.id,
+      })),
+      ...reports
+        .filter(r => r.status !== "ATTENDED")
+        .map(r => ({
+          key: `r-${r.id}`,
+          layer: "emergencias" as const,
+          title: r.title,
+          subtitle: `${r.statusLabel} · ${r.categoryLabel} · ${formatDistance(r.distanceMeters)}`,
+          latitude: r.latitude,
+          longitude: r.longitude,
+        })),
+      ...supportPoints.map(p => ({
+        key: `p-${p.id}`,
+        layer: "puntos_apoyo" as const,
+        title: p.name,
+        subtitle: `${p.typeLabel} · ${formatDistance(p.distanceMeters)} · ${p.open ? "Abierto" : "Cerrado"}`,
+        latitude: p.latitude,
+        longitude: p.longitude,
+      })),
+    ],
+    [businesses, reports, supportPoints]
+  )
+
+  const directionsUrl = (pin: Pin) =>
+    `https://www.google.com/maps/dir/?api=1&destination=${pin.latitude},${pin.longitude}&travelmode=walking`
 
   return (
     <div className="w-full max-w-5xl mx-auto space-y-4">
-      <div className="relative">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
-          placeholder="Buscar en el mapa"
-          className="w-full h-11 pl-11 pr-4 rounded-2xl bg-white border border-gray-200 text-xs placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#087F72]/30 shadow-2xs"
-        />
-      </div>
-
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-        <button
-          onClick={() => toggleLayer("negocios")}
-          className={`px-3.5 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs ${
-            activeLayers.negocios
-              ? "bg-[#087F72] text-white"
-              : "bg-white text-gray-600 border border-gray-200"
-          }`}
-        >
-          <span className="size-2 rounded-full bg-emerald-300" />
-          <span>Negocios</span>
-        </button>
-
-        <button
-          onClick={() => toggleLayer("favores")}
-          className={`px-3.5 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs ${
-            activeLayers.favores
-              ? "bg-[#F2A900] text-white"
-              : "bg-white text-gray-600 border border-gray-200"
-          }`}
-        >
-          <span className="size-2 rounded-full bg-amber-200" />
-          <span>Favores</span>
-        </button>
-
-        <button
-          onClick={() => toggleLayer("puntos_apoyo")}
-          className={`px-3.5 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs ${
-            activeLayers.puntos_apoyo
-              ? "bg-blue-600 text-white"
-              : "bg-white text-gray-600 border border-gray-200"
-          }`}
-        >
-          <span className="size-2 rounded-full bg-blue-300" />
-          <span>Puntos de apoyo</span>
-        </button>
+        {(Object.keys(LAYER_STYLE) as MapLayer[]).map(layer => (
+          <button
+            key={layer}
+            onClick={() => setActiveLayers(prev => ({ ...prev, [layer]: !prev[layer] }))}
+            aria-pressed={activeLayers[layer]}
+            className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs ${
+              activeLayers[layer] ? LAYER_STYLE[layer].active : "bg-white text-gray-600 border border-gray-200"
+            }`}
+          >
+            <span className={`size-2 rounded-full ${LAYER_STYLE[layer].dot}`} />
+            {LAYER_STYLE[layer].label}
+          </button>
+        ))}
       </div>
 
       <div className="relative w-full h-[460px] sm:h-[520px] rounded-3xl bg-[#E8EFE9] border border-gray-200 overflow-hidden shadow-sm">
-        <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-60">
+        <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-60" aria-hidden="true">
           <defs>
             <pattern id="grid" width="80" height="80" patternUnits="userSpaceOnUse">
               <path d="M 80 0 L 0 0 0 80" fill="none" stroke="#FFFFFF" strokeWidth="6" />
             </pattern>
           </defs>
           <rect width="100%" height="100%" fill="url(#grid)" />
-          <rect x="60%" y="40%" width="25%" height="22%" rx="12" fill="#D3E7D3" />
-          <line x1="0%" y1="90%" x2="100%" y2="25%" stroke="#FFFFFF" strokeWidth="12" />
         </svg>
 
-        <div
-          className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none z-10"
-          style={{ left: "50%", top: "45%" }}
-        >
-          <div className="size-8 rounded-full bg-blue-500/20 flex items-center justify-center animate-ping" />
+        <div className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none z-10" style={{ left: "50%", top: "50%" }}>
+          <div className="size-8 rounded-full bg-blue-500/20 animate-ping" />
           <div className="absolute inset-0 m-auto size-4 rounded-full bg-blue-600 border-2 border-white shadow-md" />
         </div>
 
-        {activeLayers.negocios &&
-          businesses.map(biz => (
-            <button
-              key={biz.id}
-              onClick={() =>
-                setSelectedPoint({
-                  id: biz.id,
-                  title: biz.name,
-                  subtitle: `${biz.category} · ${biz.distanceText} · Recomendado por ${biz.recommendationsCount} vecinos`,
-                  layer: "negocios",
-                  rawItem: biz,
-                })
-              }
-              style={{ left: `${biz.coords.x}%`, top: `${biz.coords.y}%` }}
-              className={`absolute -translate-x-1/2 -translate-y-1/2 z-20 group transition-transform ${
-                selectedPoint?.id === biz.id ? "scale-125 z-30" : "hover:scale-110"
-              }`}
-            >
-              <div className="size-7 rounded-full bg-[#087F72] border-2 border-white shadow-md flex items-center justify-center">
-                <div className="size-2 rounded-full bg-white" />
-              </div>
-            </button>
-          ))}
-
-        {activeLayers.favores &&
-          favors
-            .filter(f => f.coords)
-            .map(fav => (
+        {pins
+          .filter(pin => activeLayers[pin.layer])
+          .map(pin => {
+            const pos = project(center, pin.latitude, pin.longitude)
+            if (!pos) return null
+            return (
               <button
-                key={fav.id}
-                onClick={() =>
-                  setSelectedPoint({
-                    id: fav.id,
-                    title: fav.title,
-                    subtitle: `${fav.author} · ${fav.distanceText} · ${fav.timeAgo}`,
-                    layer: "favores",
-                    rawItem: fav,
-                  })
-                }
-                style={{ left: `${fav.coords!.x}%`, top: `${fav.coords!.y}%` }}
-                className={`absolute -translate-x-1/2 -translate-y-1/2 z-20 group transition-transform ${
-                  selectedPoint?.id === fav.id ? "scale-125 z-30" : "hover:scale-110"
+                key={pin.key}
+                onClick={() => setSelected(pin)}
+                aria-label={pin.title}
+                style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
+                className={`absolute -translate-x-1/2 -translate-y-1/2 z-20 transition-transform ${
+                  selected?.key === pin.key ? "scale-125 z-30" : "hover:scale-110"
                 }`}
               >
-                <div className="size-7 rounded-full bg-[#D97706] border-2 border-white shadow-md flex items-center justify-center">
+                <div className={`size-7 rounded-full border-2 border-white shadow-md flex items-center justify-center ${LAYER_STYLE[pin.layer].pin}`}>
                   <div className="size-2 rounded-full bg-white" />
                 </div>
               </button>
-            ))}
+            )
+          })}
 
-        {activeLayers.puntos_apoyo &&
-          supportPoints.map(point => (
-            <button
-              key={point.id}
-              onClick={() =>
-                setSelectedPoint({
-                  id: point.id,
-                  title: point.name,
-                  subtitle: `${point.type.toUpperCase()} · ${point.distanceText} · ${point.isOpen ? "Abierto" : "Cerrado"}`,
-                  layer: "puntos_apoyo",
-                  rawItem: point,
-                })
-              }
-              style={{ left: `${point.coords.x}%`, top: `${point.coords.y}%` }}
-              className={`absolute -translate-x-1/2 -translate-y-1/2 z-20 group transition-transform ${
-                selectedPoint?.id === point.id ? "scale-125 z-30" : "hover:scale-110"
-              }`}
-            >
-              <div className="size-7 rounded-full bg-blue-600 border-2 border-white shadow-md flex items-center justify-center">
-                <div className="size-2 rounded-full bg-white" />
-              </div>
-            </button>
-          ))}
+        <p className="absolute top-3 right-3 z-10 rounded-full bg-white/90 px-3 py-1 text-[11px] font-semibold text-gray-600 shadow-sm">
+          Lugares a unos 2 km de tu casa
+        </p>
 
-        {selectedPoint && (
-          <div className="absolute bottom-4 left-4 right-4 z-40 bg-white rounded-3xl p-4 sm:p-5 shadow-xl border border-gray-100 max-w-lg mx-auto animate-in slide-in-from-bottom duration-200">
+        {selected && (
+          <div className="absolute bottom-4 left-4 right-4 z-40 bg-white rounded-3xl p-4 sm:p-5 shadow-xl border border-gray-100 max-w-lg mx-auto">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <h3 className="text-base font-extrabold text-[#172B2A] leading-tight">
-                  {selectedPoint.title}
-                </h3>
-                <p className="text-xs text-gray-500 font-medium mt-0.5">
-                  {selectedPoint.subtitle}
-                </p>
+                <h3 className="text-base font-extrabold text-[#172B2A] leading-tight">{selected.title}</h3>
+                <p className="text-xs text-gray-500 font-medium mt-0.5">{selected.subtitle}</p>
               </div>
               <button
-                onClick={() => setSelectedPoint(null)}
+                onClick={() => setSelected(null)}
+                aria-label="Cerrar"
                 className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
               >
                 <X className="size-4" />
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 pt-3">
-              {selectedPoint.layer === "negocios" ? (
+            <div className={`grid gap-3 pt-3 ${selected.businessId ? "grid-cols-2" : "grid-cols-1"}`}>
+              {selected.businessId && (
                 <button
-                  onClick={() => onSelectBusiness(selectedPoint.rawItem)}
-                  className="h-10 rounded-xl bg-[#087F72] text-white font-bold text-xs flex items-center justify-center hover:bg-[#075E54] active:scale-98 transition-all shadow-xs"
+                  onClick={() => onSelectBusiness(selected.businessId!)}
+                  className="h-10 rounded-xl bg-[#087F72] text-white font-bold text-xs flex items-center justify-center hover:bg-[#075E54]"
                 >
                   Ver ficha
                 </button>
-              ) : (
-                <button
-                  onClick={() => alert(`Detalle de ${selectedPoint.title}`)}
-                  className="h-10 rounded-xl bg-[#087F72] text-white font-bold text-xs flex items-center justify-center hover:bg-[#075E54] active:scale-98 transition-all shadow-xs"
-                >
-                  Ver detalle
-                </button>
               )}
-
-              <button
-                onClick={() =>
-                  alert(`Iniciando navegación guiada a ${selectedPoint.title}...`)
-                }
-                className="h-10 rounded-xl bg-white border border-[#087F72] text-[#087F72] font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-[#EAF5F1] active:scale-98 transition-all shadow-xs"
+              <a
+                href={directionsUrl(selected)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="h-10 rounded-xl bg-white border border-[#087F72] text-[#087F72] font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-[#EAF5F1]"
               >
                 <Navigation className="size-3.5" />
-                <span>Cómo llegar</span>
-              </button>
+                Cómo llegar
+              </a>
             </div>
           </div>
         )}

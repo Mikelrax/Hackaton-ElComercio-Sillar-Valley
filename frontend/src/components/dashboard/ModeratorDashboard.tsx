@@ -1,145 +1,236 @@
 "use client";
 
 import * as React from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  ShieldAlert,
-  MapPin,
-  Users,
-  Settings,
-  LogOut,
-  ChevronRight,
   AlertTriangle,
-  Home,
-  Menu,
-  X,
-  Flame,
-  Droplet,
-  HeartPulse,
-  PhoneCall,
+  BadgeCheck,
   CheckCircle2,
   Clock,
-  Eye,
+  Home,
+  LogOut,
+  MapPin,
+  Menu,
+  PhoneCall,
+  Plus,
   Radio,
+  RefreshCw,
   Shield,
-  Waves,
-  Package,
-  Hospital,
+  ShieldAlert,
   Siren,
+  Users,
+  X,
+  type LucideIcon,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Logo } from "@/components/brand/Logo";
 import { User } from "@/lib/auth";
+import { ApiError } from "@/lib/api";
+import { AdminUser, emergencyApi } from "@/lib/emergency";
+import { formatDistance, useCatalog } from "@/lib/catalog";
+import { timeAgo } from "@/lib/posts";
+import { EmergencyOverview, EmergencyReport, ModerationStats } from "@/lib/types";
 import { PendingPostsPanel } from "@/components/dashboard/PendingPostsPanel";
+import { BigSelect } from "@/components/ui/big-select";
 
 interface ModeratorDashboardProps {
   user: User;
   onLogout: () => void;
 }
 
-const DEMO_REPORTS = [
-  {
-    id: 1,
-    type: "Incendio forestal",
-    icon: Flame,
-    iconClass: "bg-rose-50 text-rose-600",
-    severity: "alta",
-    location: "Cerro Colorado, Sector 5",
-    time: "Hace 10 min",
-    status: "pendiente",
-    reporter: "María Quispe",
-  },
-  {
-    id: 2,
-    type: "Inundación parcial",
-    icon: Waves,
-    iconClass: "bg-sky-50 text-sky-600",
-    severity: "media",
-    location: "Calle Antiquilla, Yanahuara",
-    time: "Hace 35 min",
-    status: "verificado",
-    reporter: "Carlos Medina",
-  },
-  {
-    id: 3,
-    type: "Derrumbe menor",
-    icon: AlertTriangle,
-    iconClass: "bg-amber-50 text-amber-600",
-    severity: "baja",
-    location: "Av. Ejército cuadra 8",
-    time: "Hace 2 horas",
-    status: "resuelto",
-    reporter: "Junta Vecinal Sector 3",
-  },
+type Section = "dashboard" | "posts" | "reports" | "resources" | "users" | "emergency";
+
+const SIDEBAR_ITEMS: { id: Section; label: string; icon: LucideIcon }[] = [
+  { id: "dashboard", label: "Panel general", icon: Home },
+  { id: "posts", label: "Por aprobar", icon: CheckCircle2 },
+  { id: "reports", label: "Reportes de emergencia", icon: AlertTriangle },
+  { id: "resources", label: "Puntos de apoyo", icon: MapPin },
+  { id: "users", label: "Vecinos", icon: Users },
+  { id: "emergency", label: "Modo emergencia", icon: Siren },
 ];
 
-const DEMO_RESOURCES = [
-  { id: 1, name: "Punto de agua potable", location: "Plaza Yanahuara", status: "activo", icon: Droplet, iconClass: "bg-sky-50 text-sky-600" },
-  { id: 2, name: "Centro de acopio", location: "Colegio San José", status: "activo", icon: Package, iconClass: "bg-amber-50 text-amber-600" },
-  { id: 3, name: "Albergue temporal", location: "Polideportivo Municipal", status: "preparado", icon: Home, iconClass: "bg-emerald-50 text-emerald-600" },
-  { id: 4, name: "Botiquín comunitario", location: "Calle Los Arcos 210", status: "activo", icon: Hospital, iconClass: "bg-rose-50 text-rose-600" },
-];
+const SEVERITY_STYLE: Record<EmergencyReport["severity"], string> = {
+  HIGH: "bg-rose-100 text-rose-700",
+  MEDIUM: "bg-amber-100 text-amber-800",
+  LOW: "bg-emerald-100 text-emerald-700",
+};
 
-const DEMO_USERS = [
-  { id: 1, name: "Ana María Condori", role: "vecino", profile: "familia", neighborhood: "Yanahuara", status: "verificado" },
-  { id: 2, name: "Don Mario Zúñiga", role: "emprendedor", profile: "adulto", neighborhood: "Yanahuara", status: "verificado" },
-  { id: 3, name: "Carmen Flores", role: "vecino", profile: "mayor", neighborhood: "Cayma", status: "pendiente" },
-];
+const STATUS_STYLE: Record<EmergencyReport["status"], string> = {
+  URGENT: "bg-rose-50 text-rose-700",
+  ON_THE_WAY: "bg-amber-50 text-amber-800",
+  ATTENDED: "bg-emerald-50 text-emerald-800",
+};
 
-const SIDEBAR_ITEMS = [
-  { id: "dashboard", label: "Panel General", icon: Home },
-  { id: "posts", label: "Muro: por aprobar", icon: CheckCircle2 },
-  { id: "reports", label: "Reportes de Emergencia", icon: AlertTriangle },
-  { id: "resources", label: "Recursos Críticos", icon: MapPin },
-  { id: "users", label: "Gestión de Usuarios", icon: Users },
-  { id: "settings", label: "Configuración", icon: Settings },
-];
-
-function severityColor(severity: string) {
-  switch (severity) {
-    case "alta":
-      return "bg-rose-100 text-rose-700 border-rose-300";
-    case "media":
-      return "bg-amber-100 text-amber-700 border-amber-300";
-    case "baja":
-      return "bg-emerald-100 text-emerald-700 border-emerald-300";
-    default:
-      return "bg-gray-100 text-gray-700 border-gray-300";
-  }
+function errorText(err: unknown): string {
+  return err instanceof ApiError ? err.friendlyMessage : "Algo salió mal. Intenta otra vez.";
 }
 
-function statusColor(status: string) {
-  switch (status) {
-    case "pendiente":
-      return "bg-amber-100 text-amber-800";
-    case "verificado":
-      return "bg-blue-100 text-blue-800";
-    case "resuelto":
-      return "bg-emerald-100 text-emerald-800";
-    case "activo":
-      return "bg-emerald-100 text-emerald-800";
-    case "preparado":
-      return "bg-blue-100 text-blue-800";
-    default:
-      return "bg-gray-100 text-gray-800";
-  }
+function Loading({ label }: { label: string }) {
+  return (
+    <div className="py-6 flex items-center gap-2 text-xs text-gray-500">
+      <div className="size-4 rounded-full border-2 border-[#087F72] border-t-transparent animate-spin" />
+      {label}
+    </div>
+  );
+}
+
+function SectionHeader({ title, onRefresh }: { title: string; onRefresh?: () => void }) {
+  return (
+    <div className="flex items-center justify-between">
+      <h2 className="text-lg font-bold">{title}</h2>
+      {onRefresh && (
+        <button onClick={onRefresh} className="text-xs font-semibold text-[#087F72] hover:underline flex items-center gap-1">
+          <RefreshCw className="size-3.5" />
+          Actualizar
+        </button>
+      )}
+    </div>
+  );
+}
+
+function ReportCard({ report, onAction, busy }: { report: EmergencyReport; busy: boolean; onAction: (kind: "verify" | "attended") => void }) {
+  return (
+    <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm space-y-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-base font-bold flex items-center gap-1.5">
+            {report.title}
+            {report.verified && <BadgeCheck className="size-4 text-[#087F72]" aria-label="Verificado" />}
+          </p>
+          <p className="text-xs text-gray-500 flex items-center gap-1">
+            <MapPin className="size-3" />
+            {report.neighborhood} · {report.categoryLabel} · {report.kindLabel}
+          </p>
+        </div>
+        <span className={`shrink-0 px-2 py-0.5 rounded-md text-[11px] font-bold ${SEVERITY_STYLE[report.severity]}`}>
+          {report.severityLabel}
+        </span>
+      </div>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
+        <span className="flex items-center gap-1">
+          <Clock className="size-3" />
+          {timeAgo(report.createdAt)}
+        </span>
+        <span>Reportó: {report.reporter}{report.reporterPhone ? ` · +${report.reporterPhone}` : ""}</span>
+        {report.helper && <span>Ayuda: {report.helper}</span>}
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className={`px-2 py-1 rounded-md text-[11px] font-bold ${STATUS_STYLE[report.status]}`}>{report.statusLabel}</span>
+        <div className="flex-1" />
+        {!report.verified && (
+          <button
+            disabled={busy}
+            onClick={() => onAction("verify")}
+            className="h-8 px-3 rounded-lg border border-[#087F72] text-[#087F72] text-xs font-bold disabled:opacity-60"
+          >
+            Verificar
+          </button>
+        )}
+        {report.status !== "ATTENDED" && (
+          <button
+            disabled={busy}
+            onClick={() => onAction("attended")}
+            className="h-8 px-3 rounded-lg bg-emerald-600 text-white text-xs font-bold disabled:opacity-60"
+          >
+            Marcar atendido
+          </button>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) {
-  const [activeSection, setActiveSection] = useState("dashboard");
+  const [activeSection, setActiveSection] = useState<Section>("dashboard");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [emergencyMode, setEmergencyMode] = useState(false);
+  const { catalog } = useCatalog();
+
+  const [stats, setStats] = useState<ModerationStats | null>(null);
+  const [overview, setOverview] = useState<EmergencyOverview | null>(null);
+  const [users, setUsers] = useState<AdminUser[] | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [error, setError] = useState("");
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+
+  const [modeTitle, setModeTitle] = useState("");
+  const [modeMessage, setModeMessage] = useState("");
+  const [pointName, setPointName] = useState("");
+  const [pointType, setPointType] = useState("");
+  const [pointAddress, setPointAddress] = useState("");
+  const [pointFormOpen, setPointFormOpen] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([emergencyApi.stats(), emergencyApi.overview(user.location), emergencyApi.users()])
+      .then(([s, o, u]) => {
+        if (cancelled) return;
+        setStats(s);
+        setOverview(o);
+        setUsers(u);
+        setError("");
+      })
+      .catch(err => {
+        if (!cancelled) setError(errorText(err));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadKey, user.location]);
+
+  const refresh = () => setReloadKey(k => k + 1);
+
+  const run = async (key: string, action: () => Promise<unknown>) => {
+    setBusyKey(key);
+    setError("");
+    try {
+      await action();
+      refresh();
+      return true;
+    } catch (err) {
+      setError(errorText(err));
+      return false;
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
+  const mode = overview?.mode;
+  const pendingReports = overview?.reports.filter(r => r.status !== "ATTENDED") ?? [];
+  const supportTypes = catalog?.supportPointTypes ?? [];
+  const currentPointType = pointType || supportTypes[0]?.value || "";
+
+  const go = (section: Section) => {
+    setActiveSection(section);
+    setMobileMenuOpen(false);
+  };
+
+  const navButtons = (onPick: (s: Section) => void) =>
+    SIDEBAR_ITEMS.map(item => {
+      const Icon = item.icon;
+      const isActive = activeSection === item.id;
+      return (
+        <button
+          key={item.id}
+          onClick={() => onPick(item.id)}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+            isActive ? "bg-[#EAF5F1] text-[#087F72] font-semibold" : "text-gray-600 hover:bg-gray-50 hover:text-[#172B2A]"
+          }`}
+        >
+          <Icon className="size-4" />
+          <span>{item.label}</span>
+          {item.id === "reports" && pendingReports.length > 0 && (
+            <span className="ml-auto rounded-full bg-rose-100 text-rose-700 text-[10px] font-bold px-2 py-0.5">
+              {pendingReports.length}
+            </span>
+          )}
+        </button>
+      );
+    });
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-[#F8FAFC] text-[#172B2A] antialiased">
       <aside className="hidden md:flex md:w-64 flex-col bg-white border-r border-gray-200 shadow-sm">
         <div className="p-5 border-b border-gray-100">
-          <button
-            onClick={() => setActiveSection("dashboard")}
-            className="flex items-center text-left hover:opacity-85 transition-opacity cursor-pointer focus:outline-none"
-            title="Ir al Panel General"
-          >
+          <button onClick={() => go("dashboard")} className="flex items-center hover:opacity-85" title="Ir al panel general">
             <Logo size="md" />
           </button>
           <div className="mt-3 flex items-center gap-2">
@@ -147,109 +238,48 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
               {user.name.charAt(0)}
             </div>
             <div>
-              <p className="text-sm font-bold text-[#172B2A] leading-tight">{user.name}</p>
-              <p className="text-[11px] text-gray-500 capitalize">
-                <Shield className="size-3 inline mr-0.5" />
-                {user.role}
+              <p className="text-sm font-bold leading-tight">{user.name}</p>
+              <p className="text-[11px] text-gray-500 flex items-center gap-0.5">
+                <Shield className="size-3" />
+                Moderador
               </p>
             </div>
           </div>
         </div>
-
-        <nav className="flex-1 p-3 space-y-1">
-          {SIDEBAR_ITEMS.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeSection === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => setActiveSection(item.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                  isActive
-                    ? "bg-[#EAF5F1] text-[#087F72] font-semibold"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-[#172B2A]"
-                }`}
-              >
-                <Icon className="size-4" />
-                <span>{item.label}</span>
-                {item.id === "reports" && (
-                  <Badge className="ml-auto bg-rose-100 text-rose-700 border-0 text-[10px] h-5">
-                    {DEMO_REPORTS.filter((r) => r.status === "pendiente").length}
-                  </Badge>
-                )}
-              </button>
-            );
-          })}
-        </nav>
-
+        <nav className="flex-1 p-3 space-y-1">{navButtons(go)}</nav>
         <div className="p-3 border-t border-gray-100">
-          <Button
-            variant="ghost"
-            size="sm"
+          <button
             onClick={onLogout}
-            className="w-full justify-start text-gray-500 hover:text-rose-600 hover:bg-rose-50 h-10 rounded-xl"
+            className="w-full flex items-center gap-2 px-3 h-10 rounded-xl text-sm text-gray-500 hover:text-rose-600 hover:bg-rose-50"
           >
-            <LogOut className="size-4 mr-2" />
-            <span>Cerrar sesión</span>
-          </Button>
+            <LogOut className="size-4" />
+            Cerrar sesión
+          </button>
         </div>
       </aside>
 
       <header className="md:hidden sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
         <div className="flex items-center justify-between px-4 h-14">
-          <button
-            onClick={() => {
-              setActiveSection("dashboard")
-              setMobileMenuOpen(false)
-            }}
-            className="flex items-center text-left hover:opacity-85 transition-opacity cursor-pointer focus:outline-none"
-            title="Ir al Panel General"
-          >
+          <button onClick={() => go("dashboard")} className="flex items-center" title="Ir al panel general">
             <Logo size="sm" />
           </button>
-          <div className="flex items-center gap-2">
-            <Badge className="bg-[#EAF5F1] text-[#087F72] border-0 text-[10px]">
-              <Shield className="size-3 mr-1" />
-              Moderador
-            </Badge>
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="size-9 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              {mobileMenuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
-            </button>
-          </div>
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label="Menú"
+            className="size-9 flex items-center justify-center rounded-lg hover:bg-gray-100"
+          >
+            {mobileMenuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
+          </button>
         </div>
-
         {mobileMenuOpen && (
           <div className="bg-white border-t border-gray-100 px-4 py-3 space-y-1 shadow-lg">
-            {SIDEBAR_ITEMS.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeSection === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => {
-                    setActiveSection(item.id);
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                    isActive
-                      ? "bg-[#EAF5F1] text-[#087F72] font-semibold"
-                      : "text-gray-600 hover:bg-gray-50"
-                  }`}
-                >
-                  <Icon className="size-4" />
-                  <span>{item.label}</span>
-                </button>
-              );
-            })}
+            {navButtons(go)}
             <button
               onClick={onLogout}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-rose-600 hover:bg-rose-50 transition-all"
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-rose-600 hover:bg-rose-50"
             >
               <LogOut className="size-4" />
-              <span>Cerrar sesión</span>
+              Cerrar sesión
             </button>
           </div>
         )}
@@ -259,137 +289,83 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
         <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
           <div className="max-w-5xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#172B2A]">
-                Panel de Moderador
-              </h1>
-              <p className="text-xs text-gray-500 mt-0.5">
-                Gestión comunitaria · {user.location?.neighborhood || "Arequipa"}
-              </p>
+              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight">Panel de moderador</h1>
+              <p className="text-xs text-gray-500 mt-0.5">Gestión comunitaria · {user.location?.neighborhood || "Arequipa"}</p>
             </div>
-            <Button
-              variant={emergencyMode ? "destructive" : "outline"}
-              size="sm"
-              onClick={() => setEmergencyMode(!emergencyMode)}
-              className={`h-9 px-4 rounded-xl font-bold text-xs gap-1.5 transition-all shadow-sm ${
-                emergencyMode
-                  ? "bg-rose-600 text-white hover:bg-rose-700 animate-pulse"
-                  : "border-rose-400 text-rose-600 hover:bg-rose-50"
+            <button
+              onClick={() => go("emergency")}
+              className={`h-9 px-4 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm ${
+                mode?.active ? "bg-rose-600 text-white" : "border border-rose-400 text-rose-600 hover:bg-rose-50"
               }`}
             >
-              {emergencyMode ? <Siren className="size-4" /> : <ShieldAlert className="size-4" />}
-              {emergencyMode ? "MODO SOS ACTIVO" : "Activar Modo Emergencia"}
-            </Button>
+              {mode?.active ? <Siren className="size-4" /> : <ShieldAlert className="size-4" />}
+              {mode?.active ? `Emergencia activa: ${mode.title}` : "Activar modo emergencia"}
+            </button>
           </div>
         </div>
 
-        {emergencyMode && (
-          <div className="bg-rose-600 text-white px-4 py-3">
-            <div className="max-w-5xl mx-auto flex items-center gap-3">
-              <Flame className="size-5 shrink-0" />
-              <div>
-                <p className="text-sm font-bold">ALERTA COMUNITARIA ACTIVA</p>
-                <p className="text-xs text-rose-100">
-                  Tablero humanitario activado para {user.location?.neighborhood || "tu zona"}.
-                  Todos los vecinos verán el modo emergencia.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+          {error && <p className="text-sm font-semibold text-rose-600">{error}</p>}
 
           {activeSection === "dashboard" && (
             <>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="size-8 rounded-lg bg-rose-100 flex items-center justify-center">
-                      <AlertTriangle className="size-4 text-rose-600" />
-                    </div>
-                  </div>
-                  <p className="text-2xl font-extrabold text-[#172B2A]">{DEMO_REPORTS.length}</p>
-                  <p className="text-[11px] text-gray-500">Reportes activos</p>
-                </div>
-                <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="size-8 rounded-lg bg-emerald-100 flex items-center justify-center">
-                      <MapPin className="size-4 text-emerald-600" />
-                    </div>
-                  </div>
-                  <p className="text-2xl font-extrabold text-[#172B2A]">{DEMO_RESOURCES.length}</p>
-                  <p className="text-[11px] text-gray-500">Recursos activos</p>
-                </div>
-                <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="size-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                      <Users className="size-4 text-blue-600" />
-                    </div>
-                  </div>
-                  <p className="text-2xl font-extrabold text-[#172B2A]">{DEMO_USERS.length}</p>
-                  <p className="text-[11px] text-gray-500">Vecinos registrados</p>
-                </div>
-                <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="size-8 rounded-lg bg-[#FFF7E0] flex items-center justify-center">
-                      <Radio className="size-4 text-[#F2A900]" />
-                    </div>
-                  </div>
-                  <p className="text-2xl font-extrabold text-[#172B2A]">
-                    {emergencyMode ? "SOS" : "Normal"}
-                  </p>
-                  <p className="text-[11px] text-gray-500">Estado de la zona</p>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm">
-                <div className="p-5 border-b border-gray-100 flex items-center justify-between">
-                  <h2 className="text-base font-bold flex items-center gap-2">
-                    <AlertTriangle className="size-4 text-rose-600" />
-                    Últimos Reportes
-                  </h2>
-                  <button
-                    onClick={() => setActiveSection("reports")}
-                    className="text-xs font-semibold text-[#087F72] hover:underline flex items-center gap-1"
-                  >
-                    Ver todos <ChevronRight className="size-3" />
-                  </button>
-                </div>
-                <div className="divide-y divide-gray-50">
-                  {DEMO_REPORTS.map((r) => (
-                    <div key={r.id} className="px-5 py-3.5 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <span className={`size-8 shrink-0 rounded-lg flex items-center justify-center ${r.iconClass}`}>
-                          <r.icon className="size-4" aria-hidden="true" />
-                        </span>
-                        <div>
-                          <p className="text-sm font-semibold">{r.type}</p>
-                          <p className="text-[11px] text-gray-500">{r.location}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge className={`text-[10px] h-5 border ${severityColor(r.severity)}`}>
-                          {r.severity}
-                        </Badge>
-                        <span className="text-[11px] text-gray-400">{r.time}</span>
-                      </div>
-                    </div>
+              {!stats ? (
+                <Loading label="Cargando resumen…" />
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {[
+                    { label: "Reportes sin cerrar", value: stats.activeReports, icon: AlertTriangle, tone: "bg-rose-100 text-rose-600", to: "reports" as Section },
+                    { label: "Puntos de apoyo abiertos", value: stats.openSupportPoints, icon: MapPin, tone: "bg-emerald-100 text-emerald-600", to: "resources" as Section },
+                    { label: "Vecinos registrados", value: stats.users, icon: Users, tone: "bg-blue-100 text-blue-600", to: "users" as Section },
+                    { label: "Estado de la zona", value: stats.emergencyActive ? "Emergencia" : "Normal", icon: Radio, tone: "bg-amber-100 text-amber-600", to: "emergency" as Section },
+                  ].map(card => (
+                    <button
+                      key={card.label}
+                      onClick={() => go(card.to)}
+                      className="text-left bg-white rounded-2xl border border-gray-200 p-4 shadow-sm hover:border-[#087F72]/50"
+                    >
+                      <span className={`size-8 rounded-lg flex items-center justify-center mb-2 ${card.tone}`}>
+                        <card.icon className="size-4" />
+                      </span>
+                      <p className="text-2xl font-extrabold">{card.value}</p>
+                      <p className="text-[11px] text-gray-500">{card.label}</p>
+                    </button>
                   ))}
                 </div>
+              )}
+
+              <div className="space-y-3">
+                <SectionHeader title="Reportes sin atender" />
+                {overview && pendingReports.length === 0 && (
+                  <p className="text-sm text-gray-500 bg-white rounded-2xl border border-gray-200 p-4">No hay reportes abiertos.</p>
+                )}
+                {pendingReports.slice(0, 3).map(r => (
+                  <ReportCard
+                    key={r.id}
+                    report={r}
+                    busy={busyKey === `r-${r.id}`}
+                    onAction={kind =>
+                      run(`r-${r.id}`, () => (kind === "verify" ? emergencyApi.verify(r.id) : emergencyApi.attended(r.id)))
+                    }
+                  />
+                ))}
               </div>
 
-              <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
-                <div className="flex items-center gap-2 mb-3">
-                  <PhoneCall className="size-4 text-[#087F72]" />
-                  <span className="text-sm font-semibold">Números de emergencia</span>
+              {(catalog?.emergencyNumbers.length ?? 0) > 0 && (
+                <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
+                  <p className="text-sm font-semibold mb-3 flex items-center gap-2">
+                    <PhoneCall className="size-4 text-[#087F72]" />
+                    Números de emergencia
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {catalog?.emergencyNumbers.map(n => (
+                      <a key={n.value} href={`tel:${n.value}`} className="px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200 text-xs font-bold">
+                        {n.label}: {n.value}
+                      </a>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <span className="px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200 text-xs font-bold">PNP: 105</span>
-                  <span className="px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200 text-xs font-bold">Bomberos: 116</span>
-                  <span className="px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200 text-xs font-bold">SAMU: 106</span>
-                  <span className="px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200 text-xs font-bold">Serenazgo AQP: (054) 205050</span>
-                </div>
-              </div>
+              )}
             </>
           )}
 
@@ -397,198 +373,236 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
 
           {activeSection === "reports" && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold">Reportes de Emergencia</h2>
-                <Badge className="bg-gray-100 text-gray-600 border-0 text-[10px]">
-                  Datos de demostración
-                </Badge>
-              </div>
-              {DEMO_REPORTS.map((r) => (
-                <div
+              <SectionHeader title="Reportes de emergencia" onRefresh={refresh} />
+              {!overview && <Loading label="Cargando reportes…" />}
+              {overview?.reports.length === 0 && (
+                <p className="text-sm text-gray-500 bg-white rounded-2xl border border-gray-200 p-4">Todavía no hay reportes.</p>
+              )}
+              {overview?.reports.map(r => (
+                <ReportCard
                   key={r.id}
-                  className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-3"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className={`size-10 shrink-0 rounded-xl flex items-center justify-center ${r.iconClass}`}>
-                        <r.icon className="size-5" aria-hidden="true" />
-                      </span>
-                      <div>
-                        <p className="text-base font-bold">{r.type}</p>
-                        <p className="text-xs text-gray-500 flex items-center gap-1">
-                          <MapPin className="size-3" /> {r.location}
-                        </p>
-                      </div>
-                    </div>
-                    <Badge className={`text-[10px] h-5 border ${severityColor(r.severity)}`}>
-                      Severidad: {r.severity}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-gray-500">
-                    <span className="flex items-center gap-1">
-                      <Clock className="size-3" /> {r.time}
-                    </span>
-                    <span>Reportado por: {r.reporter}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge className={`text-[10px] h-5 ${statusColor(r.status)}`}>
-                      {r.status}
-                    </Badge>
-                    <div className="flex-1" />
-                    <Button variant="outline" size="sm" className="h-8 text-xs rounded-lg">
-                      <Eye className="size-3 mr-1" /> Revisar
-                    </Button>
-                    <Button variant="outline" size="sm" className="h-8 text-xs rounded-lg text-emerald-700 border-emerald-300 hover:bg-emerald-50">
-                      <CheckCircle2 className="size-3 mr-1" /> Verificar
-                    </Button>
-                  </div>
-                </div>
+                  report={r}
+                  busy={busyKey === `r-${r.id}`}
+                  onAction={kind =>
+                    run(`r-${r.id}`, () => (kind === "verify" ? emergencyApi.verify(r.id) : emergencyApi.attended(r.id)))
+                  }
+                />
               ))}
             </div>
           )}
 
           {activeSection === "resources" && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold">Recursos Críticos y Puntos de Apoyo</h2>
-                <Badge className="bg-gray-100 text-gray-600 border-0 text-[10px]">
-                  Datos de demostración
-                </Badge>
-              </div>
-
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                <div className="h-48 sm:h-64 bg-gradient-to-br from-emerald-50 to-teal-50 flex items-center justify-center">
-                  <div className="text-center space-y-2">
-                    <MapPin className="size-10 text-[#087F72] mx-auto opacity-40" />
-                    <p className="text-sm text-gray-400 font-medium">Mapa interactivo de recursos</p>
-                    <p className="text-[11px] text-gray-400">(Próximamente)</p>
-                  </div>
-                </div>
-              </div>
-
+              <SectionHeader title="Puntos de apoyo" onRefresh={refresh} />
+              {!overview && <Loading label="Cargando puntos…" />}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {DEMO_RESOURCES.map((res) => (
-                  <div
-                    key={res.id}
-                    className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm flex items-start gap-3"
-                  >
-                    <span className={`size-10 shrink-0 rounded-xl flex items-center justify-center ${res.iconClass}`}>
-                      <res.icon className="size-5" aria-hidden="true" />
-                    </span>
-                    <div className="flex-1">
-                      <p className="text-sm font-bold">{res.name}</p>
-                      <p className="text-[11px] text-gray-500 flex items-center gap-1 mt-0.5">
-                        <MapPin className="size-3" /> {res.location}
-                      </p>
+                {overview?.supportPoints.map(p => (
+                  <div key={p.id} className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-bold">{p.name}</p>
+                        <p className="text-[11px] text-gray-500">
+                          {p.typeLabel} · {p.address ?? p.neighborhood}
+                          {p.distanceMeters !== null && ` · ${formatDistance(p.distanceMeters)}`}
+                        </p>
+                      </div>
+                      <span className={`shrink-0 px-2 py-0.5 rounded-md text-[11px] font-bold ${p.open ? "bg-emerald-100 text-emerald-800" : "bg-gray-100 text-gray-600"}`}>
+                        {p.open ? "Abierto" : "Cerrado"}
+                      </span>
                     </div>
-                    <Badge className={`text-[10px] h-5 ${statusColor(res.status)}`}>
-                      {res.status}
-                    </Badge>
+                    <button
+                      disabled={busyKey !== null}
+                      onClick={() => run(`p-${p.id}`, () => emergencyApi.setSupportPointOpen(p.id, !p.open))}
+                      className="text-xs font-bold text-[#087F72] hover:underline disabled:opacity-60"
+                    >
+                      {p.open ? "Marcar como cerrado" : "Marcar como abierto"}
+                    </button>
                   </div>
                 ))}
               </div>
+
+              {pointFormOpen ? (
+                <form
+                  className="bg-white rounded-2xl border-2 border-[#087F72]/40 p-4 space-y-3"
+                  onSubmit={async e => {
+                    e.preventDefault();
+                    const ok = await run("new-point", () =>
+                      emergencyApi.addSupportPoint({ name: pointName, type: currentPointType, address: pointAddress || undefined })
+                    );
+                    if (ok) {
+                      setPointName("");
+                      setPointAddress("");
+                      setPointFormOpen(false);
+                    }
+                  }}
+                >
+                  <p className="text-base font-bold">Nuevo punto de apoyo</p>
+                  <input
+                    required
+                    value={pointName}
+                    onChange={e => setPointName(e.target.value)}
+                    placeholder="Nombre, ej. Albergue Colegio San José"
+                    aria-label="Nombre del punto"
+                    className="w-full h-11 px-3 rounded-xl border border-gray-300 text-sm"
+                  />
+                  <BigSelect
+                    value={currentPointType}
+                    onValueChange={setPointType}
+                    options={supportTypes.map(t => ({ value: t.value, label: t.label }))}
+                    ariaLabel="Tipo de punto"
+                    placeholder="Cargando tipos…"
+                  />
+                  <input
+                    value={pointAddress}
+                    onChange={e => setPointAddress(e.target.value)}
+                    placeholder="Dirección o referencia (opcional)"
+                    aria-label="Dirección"
+                    className="w-full h-11 px-3 rounded-xl border border-gray-300 text-sm"
+                  />
+                  <p className="text-[11px] text-gray-500">Se ubica en el mapa según tu dirección principal.</p>
+                  <div className="flex gap-2">
+                    <button
+                      type="submit"
+                      disabled={busyKey !== null || !pointName.trim()}
+                      className="h-10 px-4 rounded-xl bg-[#087F72] text-white text-sm font-bold disabled:opacity-60"
+                    >
+                      Guardar
+                    </button>
+                    <button type="button" onClick={() => setPointFormOpen(false)} className="h-10 px-4 rounded-xl border border-gray-300 text-sm font-bold">
+                      Cancelar
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <button
+                  onClick={() => setPointFormOpen(true)}
+                  className="h-11 px-4 rounded-xl border-2 border-[#087F72] text-[#087F72] text-sm font-bold flex items-center gap-2"
+                >
+                  <Plus className="size-4" />
+                  Agregar punto de apoyo
+                </button>
+              )}
             </div>
           )}
 
           {activeSection === "users" && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold">Gestión de Usuarios</h2>
-                <Badge className="bg-gray-100 text-gray-600 border-0 text-[10px]">
-                  Datos de demostración
-                </Badge>
-              </div>
-
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
+              <SectionHeader title="Vecinos registrados" onRefresh={refresh} />
+              {!users && <Loading label="Cargando vecinos…" />}
+              {users && (
+                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                   <table className="w-full text-sm">
-                    <thead>
-                      <tr className="bg-gray-50 border-b border-gray-200">
-                        <th className="text-left px-5 py-3 font-semibold text-gray-600 text-xs">Nombre</th>
-                        <th className="text-left px-5 py-3 font-semibold text-gray-600 text-xs">Rol</th>
-                        <th className="text-left px-5 py-3 font-semibold text-gray-600 text-xs hidden sm:table-cell">Perfil</th>
-                        <th className="text-left px-5 py-3 font-semibold text-gray-600 text-xs hidden sm:table-cell">Barrio</th>
-                        <th className="text-left px-5 py-3 font-semibold text-gray-600 text-xs">Estado</th>
-                        <th className="text-right px-5 py-3 font-semibold text-gray-600 text-xs">Acciones</th>
+                    <thead className="bg-gray-50 text-xs text-gray-500">
+                      <tr>
+                        <th className="text-left px-4 py-3 font-semibold">Nombre</th>
+                        <th className="text-left px-4 py-3 font-semibold hidden sm:table-cell">Barrio</th>
+                        <th className="text-left px-4 py-3 font-semibold hidden sm:table-cell">Rol</th>
+                        <th className="text-left px-4 py-3 font-semibold">Estado</th>
+                        <th className="px-4 py-3" />
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-50">
-                      {DEMO_USERS.map((u) => (
-                        <tr key={u.id} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-5 py-3.5 font-medium">{u.name}</td>
-                          <td className="px-5 py-3.5 capitalize text-gray-600">{u.role}</td>
-                          <td className="px-5 py-3.5 capitalize text-gray-600 hidden sm:table-cell">{u.profile}</td>
-                          <td className="px-5 py-3.5 text-gray-600 hidden sm:table-cell">{u.neighborhood}</td>
-                          <td className="px-5 py-3.5">
-                            <Badge className={`text-[10px] h-5 ${statusColor(u.status)}`}>
-                              {u.status}
-                            </Badge>
+                    <tbody className="divide-y divide-gray-100">
+                      {users.map(u => (
+                        <tr key={u.id}>
+                          <td className="px-4 py-3">
+                            <p className="font-medium">{u.fullName}</p>
+                            <p className="text-[11px] text-gray-400">+{u.phone} · {u.ayniPoints} puntos ayni</p>
                           </td>
-                          <td className="px-5 py-3.5 text-right">
-                            <Button variant="ghost" size="sm" className="h-7 text-xs text-[#087F72] hover:bg-[#EAF5F1]">
-                              Ver perfil
-                            </Button>
+                          <td className="px-4 py-3 text-gray-600 hidden sm:table-cell">{u.primaryAddress?.neighborhood ?? "—"}</td>
+                          <td className="px-4 py-3 text-gray-600 hidden sm:table-cell">{u.role === "MODERATOR" ? "Moderador" : "Vecino"}</td>
+                          <td className="px-4 py-3">
+                            <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold ${u.active ? "bg-emerald-100 text-emerald-800" : "bg-gray-100 text-gray-600"}`}>
+                              {u.active ? "Activo" : "Desactivado"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            {u.role !== "MODERATOR" && (
+                              <button
+                                disabled={busyKey !== null}
+                                onClick={() => run(`u-${u.id}`, () => emergencyApi.setUserActive(u.id, !u.active))}
+                                className="text-xs font-bold text-[#087F72] hover:underline disabled:opacity-60"
+                              >
+                                {u.active ? "Desactivar" : "Activar"}
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-              </div>
+              )}
             </div>
           )}
 
-          {activeSection === "settings" && (
-            <div className="space-y-4">
-              <h2 className="text-lg font-bold">Configuración</h2>
-              <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold">Activar modo emergencia</p>
-                    <p className="text-[11px] text-gray-500">
-                      Al activar, todos los vecinos de {user.location?.neighborhood || "tu zona"} verán el tablero de emergencia.
-                    </p>
-                  </div>
-                  <Button
-                    variant={emergencyMode ? "destructive" : "outline"}
-                    size="sm"
-                    onClick={() => setEmergencyMode(!emergencyMode)}
-                    className="h-9 rounded-xl text-xs font-bold"
+          {activeSection === "emergency" && (
+            <div className="space-y-4 max-w-xl">
+              <SectionHeader title="Modo emergencia" />
+              {!overview && <Loading label="Cargando estado…" />}
+              {mode?.active && (
+                <div className="bg-rose-600 text-white rounded-2xl p-5 space-y-3">
+                  <p className="text-sm font-bold flex items-center gap-2">
+                    <Siren className="size-5" />
+                    Emergencia activa: {mode.title}
+                  </p>
+                  {mode.message && <p className="text-sm text-rose-50">{mode.message}</p>}
+                  <p className="text-xs text-rose-100">
+                    Activada por {mode.activatedBy} · {mode.activatedAt && timeAgo(mode.activatedAt)}
+                  </p>
+                  <button
+                    disabled={busyKey !== null}
+                    onClick={() => run("deactivate", () => emergencyApi.deactivate())}
+                    className="h-10 px-4 rounded-xl bg-white text-rose-700 text-sm font-bold disabled:opacity-60"
                   >
-                    {emergencyMode ? "Desactivar SOS" : "Activar SOS"}
-                  </Button>
+                    Desactivar modo emergencia
+                  </button>
                 </div>
-                <div className="border-t border-gray-100 pt-4">
-                  <p className="text-sm font-semibold">Radio de cobertura</p>
-                  <p className="text-[11px] text-gray-500 mb-2">
-                    Área de vigilancia y moderación asignada.
+              )}
+              {overview && !mode?.active && (
+                <form
+                  className="bg-white rounded-2xl border border-gray-200 p-5 space-y-3"
+                  onSubmit={async e => {
+                    e.preventDefault();
+                    const ok = await run("activate", () => emergencyApi.activate(modeTitle.trim(), modeMessage.trim() || undefined));
+                    if (ok) {
+                      setModeTitle("");
+                      setModeMessage("");
+                    }
+                  }}
+                >
+                  <p className="text-sm text-gray-600">
+                    Al activarlo, todos los vecinos verán un aviso rojo y la pantalla de emergencia con reportes y puntos de apoyo.
                   </p>
-                  <div className="flex gap-2">
-                    {["500m", "1km", "2km", "5km"].map((r) => (
-                      <button
-                        key={r}
-                        className="px-3 py-1.5 text-xs font-bold rounded-lg border border-gray-200 hover:bg-[#EAF5F1] hover:text-[#087F72] hover:border-[#087F72]/30 transition-all"
-                      >
-                        {r}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="border-t border-gray-100 pt-4">
-                  <p className="text-sm font-semibold">Zona asignada</p>
-                  <p className="text-[11px] text-gray-500">
-                    {user.location?.neighborhood || "Sin asignar"} – {user.location?.address || "Sin dirección"}
-                  </p>
-                </div>
-              </div>
+                  <input
+                    required
+                    value={modeTitle}
+                    onChange={e => setModeTitle(e.target.value)}
+                    maxLength={80}
+                    placeholder="¿Qué pasa? Ej. Sismo, lluvias fuertes, incendio"
+                    aria-label="Tipo de emergencia"
+                    className="w-full h-11 px-3 rounded-xl border border-gray-300 text-sm"
+                  />
+                  <textarea
+                    value={modeMessage}
+                    onChange={e => setModeMessage(e.target.value)}
+                    maxLength={500}
+                    rows={3}
+                    placeholder="Mensaje para los vecinos (opcional)"
+                    aria-label="Mensaje para los vecinos"
+                    className="w-full p-3 rounded-xl border border-gray-300 text-sm resize-none"
+                  />
+                  <button
+                    type="submit"
+                    disabled={busyKey !== null || !modeTitle.trim()}
+                    className="h-11 px-5 rounded-xl bg-rose-600 text-white text-sm font-bold flex items-center gap-2 disabled:opacity-60"
+                  >
+                    <Siren className="size-4" />
+                    Activar modo emergencia
+                  </button>
+                </form>
+              )}
             </div>
           )}
-
-          <footer className="pt-4 border-t border-gray-100 text-center">
-            <p className="text-[11px] text-gray-400">
-              AYNI · Conectamos vecinos, compartimos soluciones · Panel de Moderador
-            </p>
-          </footer>
         </div>
       </main>
     </div>

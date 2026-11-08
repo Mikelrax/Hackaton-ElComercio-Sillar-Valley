@@ -2,9 +2,8 @@
 
 import React, { useState, useMemo } from "react"
 import { Check, CheckCircle2, HeartHandshake, Plus, RefreshCw } from "lucide-react"
-import { FavorItem, FavorType } from "@/lib/types"
+import { FavorItem, FavorType, Option } from "@/lib/types"
 import { ApiError } from "@/lib/api"
-import { FAVOR_CATEGORIES } from "@/lib/posts"
 import { WallActivityPanel } from "@/components/neighbor/WallActivityPanel"
 
 interface SolidarityWallViewProps {
@@ -12,6 +11,7 @@ interface SolidarityWallViewProps {
   status: "loading" | "ready" | "error"
   onRetry: () => void
   currentUserId: string
+  categories: Option[]
   onRespond: (favor: FavorItem) => Promise<void>
   onOpenCreate: (initialType?: "necesito" | "ofrezco") => void
 }
@@ -21,6 +21,7 @@ export const SolidarityWallView: React.FC<SolidarityWallViewProps> = ({
   status,
   onRetry,
   currentUserId,
+  categories,
   onRespond,
   onOpenCreate,
 }) => {
@@ -125,19 +126,19 @@ export const SolidarityWallView: React.FC<SolidarityWallViewProps> = ({
         >
           Todas
         </button>
-        {FAVOR_CATEGORIES.map(cat => {
-          const isSelected = selectedCategory === cat
+        {categories.map(cat => {
+          const isSelected = selectedCategory === cat.value
           return (
             <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
+              key={cat.value}
+              onClick={() => setSelectedCategory(cat.value)}
               className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
                 isSelected
                   ? "bg-[#087F72] text-white shadow-xs"
                   : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300"
               }`}
             >
-              {cat}
+              {cat.label}
             </button>
           )
         })}
@@ -207,7 +208,7 @@ export const SolidarityWallView: React.FC<SolidarityWallViewProps> = ({
                     {isNecesito ? "Necesito" : "Ofrezco"}
                   </span>
                   <span className="text-xs font-medium text-gray-400">·</span>
-                  <span className="text-xs font-medium text-gray-500">{favor.category}</span>
+                  <span className="text-xs font-medium text-gray-500">{favor.categoryLabel}</span>
                 </div>
 
                 <h3 className="text-base font-bold text-[#172B2A] leading-snug">

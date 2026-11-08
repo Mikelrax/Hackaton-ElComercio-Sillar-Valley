@@ -1,91 +1,149 @@
 export type AppTab = "inicio" | "mapa" | "muro" | "emergencia"
 
-export interface BusinessReview {
-  id: string
-  author: string
-  initials: string
-  timeAgo: string
-  comment: string
-  avatarColor: string
+export interface Option {
+  value: string
+  label: string
 }
 
-export interface BusinessItem {
-  id: string
+export interface CategoryFacet {
+  slug: string
   name: string
-  category: "Gasfitería" | "Comida casera" | "Costura" | "Bodega" | "Técnico" | "Salud" | "Otros"
-  distanceMeters: number
-  distanceText: string
+  icon: string
+  count: number
+}
+
+export interface Catalog {
+  neighborhoods: string[]
+  postCategories: Option[]
+  businessCategories: CategoryFacet[]
+  emergencyKinds: Option[]
+  emergencyCategories: Option[]
+  supportPointTypes: Option[]
+  emergencyNumbers: Option[]
+}
+
+export interface ReputationTags {
+  goodPrice: number
+  punctual: number
+  reliable: number
+}
+
+export interface BusinessSummary {
+  id: number
+  name: string
+  categorySlug: string
+  categoryName: string
+  categoryIcon: string
+  neighborhood: string
+  distanceMeters: number | null
+  openNow: boolean | null
   scheduleText: string
-  isOpen: boolean
   recommendationsCount: number
-  reputationTags: {
-    goodPrice: number
-    punctual: number
-    reliable: number
-  }
-  description: string
-  estimatedPrice: string
-  phone: string
-  whatsapp: string
-  initial: string
-  colorBg: string
-  colorText: string
-  reviews: BusinessReview[]
-  coords: { x: number; y: number }
+  tags: ReputationTags
+  latitude: number
+  longitude: number
+}
+
+export interface BusinessRecommendation {
+  author: string
+  goodPrice: boolean
+  punctual: boolean
+  reliable: boolean
+  comment: string | null
+  createdAt: string
+}
+
+export interface BusinessDetail extends BusinessSummary {
+  description: string | null
+  phone: string | null
+  reference: string | null
+  priceHint: string | null
+  status: "PENDING" | "APPROVED" | "REJECTED"
+  moderationNote: string | null
+  createdBy: string
+  recommendedByMe: boolean
+  recommendations: BusinessRecommendation[]
+  createdAt: string
+}
+
+export interface BusinessSearchResult {
+  content: BusinessSummary[]
+  totalElements: number
+  categories: CategoryFacet[]
 }
 
 export type FavorType = "necesito" | "ofrezco"
-export type FavorCategory =
-  | "Herramientas"
-  | "Hogar"
-  | "Cuidado"
-  | "Alimentos"
-  | "Educación"
-  | "Movilidad"
-  | "Salud"
-  | "Otros"
 
 export interface FavorItem {
   id: string
   type: FavorType
-  category: FavorCategory
+  category: string
+  categoryLabel: string
   title: string
   description?: string
   author: string
   authorId?: string
-  distanceMeters: number
   distanceText: string
   timeAgo: string
-  whatsapp?: string
   isResolved?: boolean
   resolvedNote?: string
-  coords?: { x: number; y: number }
 }
 
-export type EmergencySeverity = "alta" | "media" | "baja"
-export type EmergencyStatus = "urgente" | "en_camino" | "atendido"
+export interface EmergencyMode {
+  active: boolean
+  title: string | null
+  message: string | null
+  activatedAt: string | null
+  activatedBy: string | null
+}
 
-export interface EmergencyReportItem {
-  id: string
+export interface EmergencyReport {
+  id: number
+  kind: "NEED" | "OFFER"
+  kindLabel: string
+  category: string
+  categoryLabel: string
   title: string
   peopleCount: number
-  severity: EmergencySeverity
-  status: EmergencyStatus
-  statusText: string
-  distanceMeters: number
-  distanceText: string
-  timeAgo: string
+  severity: "HIGH" | "MEDIUM" | "LOW"
+  severityLabel: string
+  status: "URGENT" | "ON_THE_WAY" | "ATTENDED"
+  statusLabel: string
+  verified: boolean
   reporter: string
-  phone?: string
-  coords?: { x: number; y: number }
+  reporterPhone: string | null
+  helper: string | null
+  mine: boolean
+  helpingByMe: boolean
+  neighborhood: string
+  distanceMeters: number | null
+  latitude: number
+  longitude: number
+  createdAt: string
 }
 
-export interface SupportPointItem {
-  id: string
+export interface SupportPoint {
+  id: number
   name: string
-  type: "albergue" | "salud" | "agua" | "acopio"
-  distanceMeters: number
-  distanceText: string
-  isOpen: boolean
-  coords: { x: number; y: number }
+  type: string
+  typeLabel: string
+  neighborhood: string
+  address: string | null
+  open: boolean
+  distanceMeters: number | null
+  latitude: number
+  longitude: number
+}
+
+export interface EmergencyOverview {
+  mode: EmergencyMode
+  reports: EmergencyReport[]
+  supportPoints: SupportPoint[]
+}
+
+export interface ModerationStats {
+  activeReports: number
+  openSupportPoints: number
+  users: number
+  emergencyActive: boolean
 }

@@ -18,7 +18,7 @@ import {
 } from "lucide-react"
 import { authService } from "@/lib/auth"
 import { ApiError } from "@/lib/api"
-import { NEIGHBORHOODS } from "@/lib/neighborhoods"
+import { useCatalog } from "@/lib/catalog"
 import { helpClass, inputClass, labelClass, primaryButton, secondaryButton } from "@/lib/form-styles"
 import { FormError } from "@/components/ui/form-error"
 import { SoftBackdrop } from "@/components/layout/SoftBackdrop"
@@ -78,7 +78,10 @@ export function RegisterFlow() {
 
   const [gps, setGps] = useState<GpsState>("idle")
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null)
-  const [neighborhood, setNeighborhood] = useState(NEIGHBORHOODS[0])
+  const { catalog } = useCatalog()
+  const [chosenNeighborhood, setNeighborhood] = useState("")
+  const neighborhoodOptions = (catalog?.neighborhoods ?? []).map(n => ({ value: n, label: n }))
+  const neighborhood = chosenNeighborhood || neighborhoodOptions[0]?.value || ""
   const [reference, setReference] = useState("")
   const [accepted, setAccepted] = useState(false)
   const [showInvite, setShowInvite] = useState(false)
@@ -340,7 +343,8 @@ export function RegisterFlow() {
                   id="reg-barrio"
                   value={neighborhood}
                   onValueChange={setNeighborhood}
-                  options={NEIGHBORHOODS.map(n => ({ value: n, label: n }))}
+                  options={neighborhoodOptions}
+                  placeholder="Cargando barrios…"
                   icon={Home}
                 />
               </div>
