@@ -7,6 +7,9 @@ import com.sillarvalley.ayni.common.PageResponse;
 import com.sillarvalley.ayni.response.HelpResponse;
 import com.sillarvalley.ayni.response.HelpResponseRepository;
 import com.sillarvalley.ayni.response.HelpStatus;
+import com.sillarvalley.ayni.review.AutoReview;
+import com.sillarvalley.ayni.review.ReviewQueue;
+import com.sillarvalley.ayni.review.ReviewSubject;
 import com.sillarvalley.ayni.storage.StorageService;
 import com.sillarvalley.ayni.user.CurrentUser;
 import com.sillarvalley.ayni.user.Role;
@@ -31,15 +34,17 @@ public class PostService {
     private final StorageService storage;
     private final PostMapper mapper;
     private final Locations locations;
+    private final ReviewQueue reviews;
 
     public PostService(PostRepository posts, HelpResponseRepository responses, CurrentUser currentUser,
-                       StorageService storage, PostMapper mapper, Locations locations) {
+                       StorageService storage, PostMapper mapper, Locations locations, ReviewQueue reviews) {
         this.posts = posts;
         this.responses = responses;
         this.currentUser = currentUser;
         this.storage = storage;
         this.mapper = mapper;
         this.locations = locations;
+        this.reviews = reviews;
     }
 
     @Transactional
@@ -49,7 +54,9 @@ public class PostService {
         p.setAuthor(user);
         apply(p, req);
         p.setStatus(user.getRole() == Role.MODERATOR ? PostStatus.APPROVED : PostStatus.PENDING);
-        return mapper.toDto(posts.save(p), true);
+        posts.save(p);
+        queueReview(p);
+        return mapper.toDto(p, true);
     }
 
     @Transactional(readOnly = true)
@@ -109,6 +116,9 @@ public class PostService {
         apply(p, req);
         p.setStatus(user.getRole() == Role.MODERATOR ? PostStatus.APPROVED : PostStatus.PENDING);
         p.setModerationNote(null);
+        p.setAutoReview(null);
+        p.setAutoReviewNote(null);
+        queueReview(p);
         return mapper.toDto(p, true);
     }
 
@@ -165,6 +175,12 @@ public class PostService {
             }
         }
         p.setImages(new ArrayList<>(images));
+    }
+
+    private void queueReview(Post p) {
+        if (p.getStatus() == PostStatus.PENDING && reviews.enqueue(ReviewSubject.POST, p.getId())) {
+            p.setAutoReview(AutoReview.QUEUED);
+        }
     }
 
     private Post find(Long id) {

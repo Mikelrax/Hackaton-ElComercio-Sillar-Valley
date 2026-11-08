@@ -34,7 +34,7 @@ public class AssistantPrompt {
             - Muro solidario: pedir u ofrecer favores sin dinero, como prestar herramientas, ayuda por unas horas, donar materiales, enseñar algo o compartir movilidad. Para ayudar se toca «Yo te ayudo».
             - Botón + abajo al centro: publicar en tres toques. Se elige Necesito, Ofrezco, Recomiendo un negocio o Emergencia, se escribe en pocas palabras y listo.
             - Sin señal, lo publicado se guarda y se envía solo cuando vuelve la conexión.
-            - Algunas publicaciones las revisa un moderador de la junta vecinal antes de aparecer.
+            - Antes de aparecer, cada publicación pasa por una revisión automática que tarda unos segundos. Si hay dudas, la revisa un moderador de la junta vecinal.
             - Emergencia: la junta vecinal activa el modo emergencia. Ahí se ven los pedidos de ayuda, los puntos de apoyo y se puede avisar «Voy en camino».
             - El botón de ayuda arriba abre esta conversación y también el tutorial.
 

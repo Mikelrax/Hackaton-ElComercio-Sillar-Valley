@@ -1,5 +1,6 @@
 package com.sillarvalley.ayni.post;
 
+import com.sillarvalley.ayni.review.AutoReview;
 import com.sillarvalley.ayni.user.User;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
@@ -66,6 +67,13 @@ public class Post {
     @Column(length = 500)
     private String moderationNote;
 
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private AutoReview autoReview;
+
+    @Column(length = 300)
+    private String autoReviewNote;
+
     @ElementCollection
     @CollectionTable(name = "post_images", joinColumns = @JoinColumn(name = "post_id"))
     @Column(name = "file_name", nullable = false, length = 60)
@@ -106,6 +114,10 @@ public class Post {
     public void setStatus(PostStatus status) { this.status = status; }
     public String getModerationNote() { return moderationNote; }
     public void setModerationNote(String moderationNote) { this.moderationNote = moderationNote; }
+    public AutoReview getAutoReview() { return autoReview; }
+    public void setAutoReview(AutoReview autoReview) { this.autoReview = autoReview; }
+    public String getAutoReviewNote() { return autoReviewNote; }
+    public void setAutoReviewNote(String autoReviewNote) { this.autoReviewNote = autoReviewNote; }
     public List<String> getImages() { return images; }
     public void setImages(List<String> images) { this.images = images; }
     public Instant getCreatedAt() { return createdAt; }

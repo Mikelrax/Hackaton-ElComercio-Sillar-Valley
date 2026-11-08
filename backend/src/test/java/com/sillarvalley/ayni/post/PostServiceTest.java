@@ -2,7 +2,11 @@ package com.sillarvalley.ayni.post;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -14,6 +18,9 @@ import com.sillarvalley.ayni.common.ApiException;
 import com.sillarvalley.ayni.response.HelpResponse;
 import com.sillarvalley.ayni.response.HelpResponseRepository;
 import com.sillarvalley.ayni.response.HelpStatus;
+import com.sillarvalley.ayni.review.AutoReview;
+import com.sillarvalley.ayni.review.ReviewQueue;
+import com.sillarvalley.ayni.review.ReviewSubject;
 import com.sillarvalley.ayni.storage.StorageService;
 import com.sillarvalley.ayni.user.CurrentUser;
 import com.sillarvalley.ayni.user.Role;
@@ -31,6 +38,7 @@ class PostServiceTest {
     private HelpResponseRepository responses;
     private CurrentUser currentUser;
     private StorageService storage;
+    private ReviewQueue reviews;
     private PostService service;
 
     private User vecino;
@@ -52,8 +60,9 @@ class PostServiceTest {
         responses = mock(HelpResponseRepository.class);
         currentUser = mock(CurrentUser.class);
         storage = mock(StorageService.class);
+        reviews = mock(ReviewQueue.class);
         service = new PostService(posts, responses, currentUser, storage, new PostMapper(storage),
-                new Locations(mock(NeighborhoodRepository.class), TestProps.create()));
+                new Locations(mock(NeighborhoodRepository.class), TestProps.create()), reviews);
 
         vecino = user(1, Role.NEIGHBOR);
         moderador = user(2, Role.MODERATOR);
@@ -135,6 +144,31 @@ class PostServiceTest {
     void publicacionDeModeradorSaleAprobada() {
         var res = service.create(2L, request(List.of()));
         assertEquals(PostStatus.APPROVED, res.status());
+        verify(reviews, never()).enqueue(any(), any());
+    }
+
+    @Test
+    void publicacionPendienteEntraALaColaDeRevision() {
+        when(posts.save(any(Post.class))).thenAnswer(inv -> {
+            Post p = inv.getArgument(0);
+            ReflectionTestUtils.setField(p, "id", 77L);
+            return p;
+        });
+        when(reviews.enqueue(ReviewSubject.POST, 77L)).thenReturn(true);
+
+        var res = service.create(1L, request(null));
+
+        assertEquals(PostStatus.PENDING, res.status());
+        assertEquals(AutoReview.QUEUED, res.autoReview().state());
+        assertNull(res.autoReview().note());
+    }
+
+    @Test
+    void sinRevisionAutomaticaQuedaParaElModerador() {
+        var res = service.create(1L, request(null));
+
+        verify(reviews).enqueue(eq(ReviewSubject.POST), any());
+        assertNull(res.autoReview());
     }
 
     @Test

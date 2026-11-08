@@ -1,6 +1,6 @@
 import { apiFetch } from "@/lib/api"
 import { Where } from "@/lib/map"
-import { FavorItem, FavorType } from "@/lib/types"
+import { AutoReviewInfo, FavorItem, FavorType } from "@/lib/types"
 
 export interface BackendPost {
   id: number
@@ -15,6 +15,7 @@ export interface BackendPost {
   author: { id: number; fullName: string }
   moderationNote: string | null
   createdAt: string
+  autoReview: AutoReviewInfo | null
 }
 
 export interface HelpResponse {
@@ -100,7 +101,7 @@ export const postsApi = {
     return page.content.map(p => ({ ...toFavor(p), respondedByMe: responded.has(p.id) }))
   },
 
-  async create(data: NewFavor): Promise<{ favor: FavorItem; pending: boolean }> {
+  async create(data: NewFavor): Promise<{ favor: FavorItem; pending: boolean; reviewing: boolean }> {
     const text = data.text.trim()
     const fallback =
       data.type === "necesito" ? `Necesito ayuda: ${data.categoryLabel}` : `Ofrezco ayuda: ${data.categoryLabel}`
@@ -119,7 +120,11 @@ export const postsApi = {
         ...(data.where ?? {}),
       },
     })
-    return { favor: toFavor(post), pending: post.status === "PENDING" }
+    return {
+      favor: toFavor(post),
+      pending: post.status === "PENDING",
+      reviewing: post.autoReview?.state === "QUEUED",
+    }
   },
 
   async get(postId: number): Promise<FavorItem> {

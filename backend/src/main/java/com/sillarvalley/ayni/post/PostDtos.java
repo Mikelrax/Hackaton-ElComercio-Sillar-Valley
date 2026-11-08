@@ -1,5 +1,6 @@
 package com.sillarvalley.ayni.post;
 
+import com.sillarvalley.ayni.review.AutoReviewInfo;
 import com.sillarvalley.ayni.user.UserDtos;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
@@ -27,5 +28,5 @@ public final class PostDtos {
             Long id, PostType type, Category category, String categoryLabel, String title, String description,
             String neighborhood, PostStatus status, String statusLabel, List<String> imageUrls,
             UserDtos.UserSummary author,
-            String moderationNote, Instant createdAt, Instant updatedAt) {}
+            String moderationNote, Instant createdAt, Instant updatedAt, AutoReviewInfo autoReview) {}
 }
