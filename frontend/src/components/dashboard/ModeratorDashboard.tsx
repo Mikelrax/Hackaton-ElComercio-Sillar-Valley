@@ -28,7 +28,7 @@ import {
 import { Logo } from "@/components/brand/Logo";
 import { User } from "@/lib/auth";
 import { ApiError } from "@/lib/api";
-import { AdminUser, emergencyApi } from "@/lib/emergency";
+import { AbuseAlert, AdminUser, emergencyApi } from "@/lib/emergency";
 import { formatDistance, useCatalog } from "@/lib/catalog";
 import { postsApi, timeAgo } from "@/lib/posts";
 import { businessesApi } from "@/lib/businesses";
@@ -295,6 +295,7 @@ export function ModeratorDashboard({ user, onLogout, onOpenNeighborView }: Moder
   const [stats, setStats] = useState<ModerationStats | null>(null);
   const [overview, setOverview] = useState<EmergencyOverview | null>(null);
   const [users, setUsers] = useState<AdminUser[] | null>(null);
+  const [abuseAlerts, setAbuseAlerts] = useState<AbuseAlert[]>([]);
   const [reloadKey, setReloadKey] = useState(0);
   const [error, setError] = useState("");
   const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -323,12 +324,14 @@ export function ModeratorDashboard({ user, onLogout, onOpenNeighborView }: Moder
       emergencyApi.users(),
       postsApi.listPending(),
       businessesApi.pending(),
+      emergencyApi.abuseAlerts().catch(() => [] as AbuseAlert[]),
     ])
       .then(([s, o, u, pendingPosts, pendingBusinesses]) => {
         if (cancelled) return;
         setStats(s);
         setOverview(o);
         setUsers(u);
+        setAbuseAlerts(alerts);
         setPendingCount(pendingPosts.length + pendingBusinesses.length);
         setError("");
       })
@@ -763,6 +766,26 @@ export function ModeratorDashboard({ user, onLogout, onOpenNeighborView }: Moder
                   >
                     Listo, ya se la di
                   </button>
+                </div>
+              )}
+              {abuseAlerts.length > 0 && (
+                <div className="rounded-2xl bg-amber-50 border border-amber-200 p-4 space-y-3" role="status">
+                  <p className="text-sm font-bold text-[#8A5800] flex items-center gap-2">
+                    <ShieldAlert className="size-4" />
+                    Puntos ayni para revisar ({abuseAlerts.length})
+                  </p>
+                  <ul className="space-y-2">
+                    {abuseAlerts.map(a => (
+                      <li key={`${a.kind}-${a.users.map(u => u.id).join("-")}`} className="text-sm">
+                        <p className="font-semibold text-[#172B2A]">{a.title}</p>
+                        <p className="text-xs text-gray-600">{a.detail}</p>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-xs text-gray-500">
+                    Las ayudas entre estas personas quedaron registradas, pero los puntos extra se limitan solos.
+                    Revisa si son cuentas reales antes de actuar.
+                  </p>
                 </div>
               )}
               {!users && <Loading label="Cargando vecinos…" />}

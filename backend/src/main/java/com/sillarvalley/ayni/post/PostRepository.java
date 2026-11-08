@@ -13,4 +13,6 @@ public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificat
     Page<Post> findByStatusOrderByCreatedAtAsc(PostStatus status, Pageable pageable);
 
     List<Post> findByStatusAndAutoReviewIsNull(PostStatus status);
+
+    List<Post> findByStatusAndFulfilledAtBefore(PostStatus status, java.time.Instant before);
 }

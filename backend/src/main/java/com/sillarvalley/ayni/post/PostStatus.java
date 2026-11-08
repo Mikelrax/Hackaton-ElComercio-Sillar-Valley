@@ -4,6 +4,7 @@ public enum PostStatus {
     PENDING("En revisión"),
     APPROVED("Publicada"),
     REJECTED("No aprobada"),
+    TO_CONFIRM("Por confirmar"),
     FULFILLED("Cumplida"),
     CANCELLED("Cancelada");
 

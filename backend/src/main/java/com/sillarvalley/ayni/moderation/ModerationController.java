@@ -60,6 +60,11 @@ public class ModerationController {
         return service.resolve(CurrentUser.idOf(jwt), id, req.removePost(), req.note());
     }
 
+    @GetMapping("/api/moderation/abuse-alerts")
+    public java.util.List<ModerationDtos.AbuseAlertDto> abuseAlerts(@AuthenticationPrincipal Jwt jwt) {
+        return service.abuseAlerts(CurrentUser.idOf(jwt));
+    }
+
     @GetMapping("/api/moderation/users")
     public java.util.List<UserDtos.UserResponse> users(@AuthenticationPrincipal Jwt jwt) {
         return service.listUsers(CurrentUser.idOf(jwt));

@@ -1,13 +1,16 @@
 package com.sillarvalley.ayni.response;
 
+import com.sillarvalley.ayni.award.AwardService;
 import com.sillarvalley.ayni.common.ApiException;
 import com.sillarvalley.ayni.post.Post;
 import com.sillarvalley.ayni.post.PostRepository;
 import com.sillarvalley.ayni.post.PostStatus;
+import com.sillarvalley.ayni.post.PostType;
 import com.sillarvalley.ayni.user.CurrentUser;
 import com.sillarvalley.ayni.user.Role;
 import com.sillarvalley.ayni.user.User;
 import com.sillarvalley.ayni.user.UserDtos;
+import java.time.Instant;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,10 +22,14 @@ public class ResponseService {
     private final PostRepository posts;
     private final CurrentUser currentUser;
 
-    public ResponseService(HelpResponseRepository responses, PostRepository posts, CurrentUser currentUser) {
+    private final AwardService awards;
+
+    public ResponseService(HelpResponseRepository responses, PostRepository posts, CurrentUser currentUser,
+                           AwardService awards) {
         this.responses = responses;
         this.posts = posts;
         this.currentUser = currentUser;
+        this.awards = awards;
     }
 
     @Transactional
@@ -77,7 +84,33 @@ public class ResponseService {
             throw ApiException.conflict("Ya aceptaste a otra persona en esta publicación");
         }
         r.setStatus(HelpStatus.ACCEPTED);
+        r.setAcceptedAt(Instant.now());
         return toDto(r, null, true);
+    }
+
+    @Transactional
+    public ResponseDtos.ConfirmResponse confirm(Long uid, Long responseId) {
+        currentUser.require(uid);
+        HelpResponse r = responses.findById(responseId)
+                .orElseThrow(() -> ApiException.notFound("Respuesta no encontrada"));
+        if (!r.getHelper().getId().equals(uid)) {
+            throw ApiException.forbidden("Solo quien respondió puede confirmar");
+        }
+        if (r.getStatus() != HelpStatus.ACCEPTED) {
+            throw ApiException.conflict("Solo se puede confirmar una respuesta aceptada");
+        }
+        Post post = r.getPost();
+        if (post.getStatus() != PostStatus.TO_CONFIRM) {
+            throw ApiException.conflict("El autor todavía no marcó el favor como cumplido");
+        }
+        boolean request = post.getType() == PostType.REQUEST;
+        User helper = request ? r.getHelper() : post.getAuthor();
+        User receiver = request ? post.getAuthor() : r.getHelper();
+        AwardService.Result result = awards.award(post, helper, receiver);
+        post.setStatus(PostStatus.FULFILLED);
+        int mine = helper.getId().equals(uid) ? result.points() : 0;
+        String message = helper.getId().equals(uid) ? result.message() : "¡Gracias por confirmar!";
+        return new ResponseDtos.ConfirmResponse(toDto(r, post.getAuthor().getPhone(), false), mine, message);
     }
 
     @Transactional
@@ -122,6 +155,6 @@ public class ResponseService {
         }
         return new ResponseDtos.HelpResponseDto(r.getId(), r.getPost().getId(), r.getPost().getTitle(),
                 UserDtos.UserSummary.of(r.getHelper()), r.getMessage(), r.getStatus(), r.getStatus().label(), phone,
-                r.getCreatedAt());
+                r.getPost().getStatus(), r.getPost().getType(), r.getCreatedAt());
     }
 }

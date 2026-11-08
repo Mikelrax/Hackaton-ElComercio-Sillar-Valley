@@ -10,7 +10,7 @@ export interface BackendPost {
   title: string
   description: string
   neighborhood: string | null
-  status: "PENDING" | "APPROVED" | "REJECTED" | "FULFILLED" | "CANCELLED"
+  status: "PENDING" | "APPROVED" | "REJECTED" | "TO_CONFIRM" | "FULFILLED" | "CANCELLED"
   statusLabel: string
   author: { id: number; fullName: string }
   moderationNote: string | null
@@ -27,7 +27,14 @@ export interface HelpResponse {
   status: "PENDING" | "ACCEPTED" | "DECLINED" | "WITHDRAWN"
   statusLabel: string
   contactPhone: string | null
+  postStatus: BackendPost["status"]
+  postType: BackendPost["type"]
   createdAt: string
+}
+
+export interface ConfirmResult {
+  points: number
+  message: string
 }
 
 export function whatsappLink(phone: string, text: string): string {
@@ -155,6 +162,10 @@ export const postsApi = {
 
   async acceptResponse(responseId: number): Promise<void> {
     await apiFetch(`/api/responses/${responseId}/accept`, { method: "POST" })
+  },
+
+  async confirmResponse(responseId: number): Promise<ConfirmResult> {
+    return apiFetch<ConfirmResult>(`/api/responses/${responseId}/confirm`, { method: "POST" })
   },
 
   async declineResponse(responseId: number): Promise<void> {

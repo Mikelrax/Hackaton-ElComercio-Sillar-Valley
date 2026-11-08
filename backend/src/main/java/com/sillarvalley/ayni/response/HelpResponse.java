@@ -41,6 +41,8 @@ public class HelpResponse {
     @Column(nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
+    private Instant acceptedAt;
+
     public Long getId() { return id; }
     public Post getPost() { return post; }
     public void setPost(Post post) { this.post = post; }
@@ -51,4 +53,6 @@ public class HelpResponse {
     public HelpStatus getStatus() { return status; }
     public void setStatus(HelpStatus status) { this.status = status; }
     public Instant getCreatedAt() { return createdAt; }
+    public Instant getAcceptedAt() { return acceptedAt; }
+    public void setAcceptedAt(Instant acceptedAt) { this.acceptedAt = acceptedAt; }
 }

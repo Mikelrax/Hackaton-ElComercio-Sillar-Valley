@@ -2,6 +2,7 @@ package com.sillarvalley.ayni.post;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -25,6 +26,8 @@ import com.sillarvalley.ayni.storage.StorageService;
 import com.sillarvalley.ayni.user.CurrentUser;
 import com.sillarvalley.ayni.user.Role;
 import com.sillarvalley.ayni.user.User;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -204,39 +207,60 @@ class PostServiceTest {
         assertEquals(PostStatus.PENDING, service.update(1L, 10L, request(null)).status());
     }
 
-    @Test
-    void cumplirUnPedidoDaPuntosAQuienResponde() {
-        Post p = approvedPost(PostType.REQUEST);
+    private HelpResponse acceptedResponse(Post p, Instant acceptedAt) {
         HelpResponse r = new HelpResponse();
         r.setPost(p);
         r.setHelper(otro);
         r.setStatus(HelpStatus.ACCEPTED);
+        r.setAcceptedAt(acceptedAt);
         when(posts.findById(10L)).thenReturn(Optional.of(p));
         when(responses.findFirstByPostIdAndStatus(10L, HelpStatus.ACCEPTED)).thenReturn(Optional.of(r));
-
-        var res = service.fulfill(1L, 10L);
-
-        assertEquals(PostStatus.FULFILLED, res.status());
-        assertEquals(PostService.POINTS_PER_HELP, otro.getAyniPoints());
-        assertEquals(1, otro.getHelpGiven());
-        assertEquals(1, vecino.getHelpReceived());
-        assertEquals(0, vecino.getAyniPoints());
+        return r;
     }
 
     @Test
-    void cumplirUnaOfertaDaPuntosAlAutor() {
-        Post p = approvedPost(PostType.OFFER);
-        HelpResponse r = new HelpResponse();
-        r.setPost(p);
-        r.setHelper(otro);
-        r.setStatus(HelpStatus.ACCEPTED);
+    void cumplirDejaLaPublicacionPorConfirmarYNoDaPuntos() {
+        Post p = approvedPost(PostType.REQUEST);
+        acceptedResponse(p, Instant.now().minus(Duration.ofHours(1)));
+
+        var res = service.fulfill(1L, 10L);
+
+        assertEquals(PostStatus.TO_CONFIRM, res.status());
+        assertNotNull(p.getFulfilledAt());
+        assertEquals(0, otro.getAyniPoints());
+        assertEquals(0, otro.getHelpGiven());
+        assertEquals(0, vecino.getHelpReceived());
+    }
+
+    @Test
+    void noSePuedeCumplirAlPocoDeAceptar() {
+        Post p = approvedPost(PostType.REQUEST);
+        acceptedResponse(p, Instant.now().minus(Duration.ofMinutes(2)));
+
+        ApiException e = assertThrows(ApiException.class, () -> service.fulfill(1L, 10L));
+
+        assertEquals(HttpStatus.CONFLICT, e.getStatus());
+        assertEquals(PostStatus.APPROVED, p.getStatus());
+    }
+
+    @Test
+    void respuestaAceptadaAntesDelCambioSePuedeCumplirDeInmediato() {
+        Post p = approvedPost(PostType.REQUEST);
+        acceptedResponse(p, null);
+
+        assertEquals(PostStatus.TO_CONFIRM, service.fulfill(1L, 10L).status());
+    }
+
+    @Test
+    void publicacionPorConfirmarNoSeEditaNiSeCancela() {
+        Post p = approvedPost(PostType.REQUEST);
+        p.setStatus(PostStatus.TO_CONFIRM);
         when(posts.findById(10L)).thenReturn(Optional.of(p));
-        when(responses.findFirstByPostIdAndStatus(10L, HelpStatus.ACCEPTED)).thenReturn(Optional.of(r));
 
-        service.fulfill(1L, 10L);
-
-        assertEquals(PostService.POINTS_PER_HELP, vecino.getAyniPoints());
-        assertEquals(1, otro.getHelpReceived());
+        assertEquals(HttpStatus.CONFLICT,
+                assertThrows(ApiException.class, () -> service.update(1L, 10L, request(null))).getStatus());
+        assertEquals(HttpStatus.CONFLICT,
+                assertThrows(ApiException.class, () -> service.cancel(1L, 10L)).getStatus());
     }
 
     @Test

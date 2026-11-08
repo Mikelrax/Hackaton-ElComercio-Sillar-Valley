@@ -16,6 +16,7 @@ const POST_STATUS_STYLE: Record<BackendPost["status"], string> = {
   PENDING: "bg-amber-100 text-[#8A5800]",
   APPROVED: "bg-[#d4f3eb] text-[#087F72]",
   REJECTED: "bg-rose-100 text-rose-700",
+  TO_CONFIRM: "bg-sky-100 text-sky-800",
   FULFILLED: "bg-emerald-100 text-emerald-800",
   CANCELLED: "bg-gray-100 text-gray-500",
 }
@@ -28,7 +29,7 @@ async function loadActivity(): Promise<Activity> {
   const withResponses = await Promise.all(
     posts.map(async p => ({
       ...p,
-      responses: p.status === "APPROVED" ? await postsApi.listResponses(p.id) : [],
+      responses: p.status === "APPROVED" || p.status === "TO_CONFIRM" ? await postsApi.listResponses(p.id) : [],
     }))
   )
   return { posts: withResponses, sent }
@@ -48,6 +49,7 @@ export function WallActivityPanel() {
   const [reloadKey, setReloadKey] = useState(0)
   const [activity, setActivity] = useState<Activity | null>(null)
   const [error, setError] = useState("")
+  const [notice, setNotice] = useState("")
   const [busyKey, setBusyKey] = useState<string | null>(null)
 
   useEffect(() => {
@@ -96,10 +98,26 @@ export function WallActivityPanel() {
     }
   }
 
+  const confirm = async (responseId: number) => {
+    setBusyKey(`confirm-${responseId}`)
+    setError("")
+    setNotice("")
+    try {
+      const result = await postsApi.confirmResponse(responseId)
+      setNotice(result.message)
+      refresh()
+    } catch (err) {
+      setError(errorText(err))
+    } finally {
+      setBusyKey(null)
+    }
+  }
+
   const pendingToReview = activity?.posts.reduce(
     (n, p) => n + p.responses.filter(r => r.status === "PENDING").length,
     0
   )
+  const toConfirm = activity?.sent.filter(r => r.status === "ACCEPTED" && r.postStatus === "TO_CONFIRM").length ?? 0
 
   return (
     <div className="rounded-2xl bg-white border border-gray-200/90 shadow-2xs">
@@ -119,6 +137,11 @@ export function WallActivityPanel() {
                 {pendingToReview} por responder
               </span>
             )}
+            {toConfirm > 0 && (
+              <span className="px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 text-xs font-bold">
+                {toConfirm} por confirmar
+              </span>
+            )}
           </p>
           <p className="text-xs text-gray-500">Tus publicaciones y las respuestas de tus vecinos</p>
         </div>
@@ -128,6 +151,11 @@ export function WallActivityPanel() {
       {open && (
         <div className="px-4 pb-4 space-y-5 border-t border-gray-100 pt-4">
           {error && <p className="text-xs font-semibold text-rose-600">{error}</p>}
+          {notice && (
+            <p className="text-xs font-semibold text-[#087F72]" role="status">
+              {notice}
+            </p>
+          )}
 
           {!activity && !error && (
             <div className="py-4 flex items-center gap-2 text-xs text-gray-500">
@@ -233,6 +261,17 @@ export function WallActivityPanel() {
                           {busyKey === `fulfill-${post.id}` ? "Guardando…" : "Ya se cumplió el favor"}
                         </button>
                       )}
+                      {accepted && post.status === "APPROVED" && (
+                        <p className="text-xs text-gray-500">
+                          Quien respondió tendrá que confirmarlo para que sume puntos ayni.
+                        </p>
+                      )}
+                      {accepted && post.status === "TO_CONFIRM" && (
+                        <p className="text-xs text-sky-800" role="status">
+                          Esperando que {accepted.helper.fullName} lo confirme. Si no lo hace en 7 días, se cierra
+                          sin puntos.
+                        </p>
+                      )}
                     </div>
                   )
                 })}
@@ -263,6 +302,23 @@ export function WallActivityPanel() {
                         <MessageCircle className="size-3.5" />
                         Coordinar por WhatsApp · {formatPhone(r.contactPhone)}
                       </a>
+                    )}
+                    {r.status === "ACCEPTED" && r.postStatus === "TO_CONFIRM" && (
+                      <div className="pt-1 space-y-1.5">
+                        <p className="text-xs text-sky-800">
+                          {r.postType === "REQUEST"
+                            ? "El autor marcó que lo ayudaste. ¿Fue así?"
+                            : "El autor marcó que te ayudó. ¿Fue así?"}
+                        </p>
+                        <button
+                          disabled={busyKey !== null}
+                          onClick={() => confirm(r.id)}
+                          className="h-8 px-3 rounded-lg bg-[#087F72] text-white text-xs font-bold flex items-center gap-1 hover:bg-[#075E54] disabled:opacity-60"
+                        >
+                          <Check className="size-3.5" />
+                          {busyKey === `confirm-${r.id}` ? "Confirmando…" : "Sí, se cumplió"}
+                        </button>
+                      </div>
                     )}
                   </div>
                 ))}

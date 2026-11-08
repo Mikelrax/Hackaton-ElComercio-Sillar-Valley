@@ -1,5 +1,7 @@
 package com.sillarvalley.ayni.response;
 
+import com.sillarvalley.ayni.post.PostStatus;
+import com.sillarvalley.ayni.post.PostType;
 import com.sillarvalley.ayni.user.UserDtos;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -13,5 +15,7 @@ public final class ResponseDtos {
 
     public record HelpResponseDto(Long id, Long postId, String postTitle, UserDtos.UserSummary helper,
                                   String message, HelpStatus status, String statusLabel, String contactPhone,
-                                  Instant createdAt) {}
+                                  PostStatus postStatus, PostType postType, Instant createdAt) {}
+
+    public record ConfirmResponse(HelpResponseDto response, int points, String message) {}
 }

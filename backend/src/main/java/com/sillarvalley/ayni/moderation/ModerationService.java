@@ -1,5 +1,6 @@
 package com.sillarvalley.ayni.moderation;
 
+import com.sillarvalley.ayni.award.AwardService;
 import com.sillarvalley.ayni.catalog.Locations;
 import com.sillarvalley.ayni.common.ApiException;
 import com.sillarvalley.ayni.common.PageResponse;
@@ -36,10 +37,12 @@ public class ModerationService {
     private final PostMapper mapper;
     private final Locations locations;
     private final PasswordEncoder encoder;
+    private final AwardService awards;
 
     public ModerationService(PostRepository posts, ReportRepository reports, UserRepository users,
                              CurrentUser currentUser, PostMapper mapper, Locations locations,
-                             PasswordEncoder encoder) {
+                             PasswordEncoder encoder, AwardService awards) {
+        this.awards = awards;
         this.posts = posts;
         this.reports = reports;
         this.users = users;
@@ -127,6 +130,12 @@ public class ModerationService {
         r.setResolvedBy(mod);
         r.setResolvedAt(Instant.now());
         return toDto(r);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ModerationDtos.AbuseAlertDto> abuseAlerts(Long uid) {
+        requireModerator(uid);
+        return awards.alerts();
     }
 
     @Transactional(readOnly = true)

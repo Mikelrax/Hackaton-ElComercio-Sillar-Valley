@@ -1,5 +1,6 @@
 package com.sillarvalley.ayni.post;
 
+import com.sillarvalley.ayni.award.AwardService;
 import com.sillarvalley.ayni.catalog.Locations;
 import com.sillarvalley.ayni.common.ApiException;
 import com.sillarvalley.ayni.common.GeoPoint;
@@ -15,6 +16,8 @@ import com.sillarvalley.ayni.user.CurrentUser;
 import com.sillarvalley.ayni.user.Role;
 import com.sillarvalley.ayni.user.User;
 import jakarta.persistence.criteria.Predicate;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.data.domain.PageRequest;
@@ -25,8 +28,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class PostService {
-
-    public static final int POINTS_PER_HELP = 10;
 
     private final PostRepository posts;
     private final HelpResponseRepository responses;
@@ -110,7 +111,8 @@ public class PostService {
         if (!isOwner(p, uid)) {
             throw ApiException.forbidden("Solo el autor puede editar la publicación");
         }
-        if (p.getStatus() == PostStatus.FULFILLED || p.getStatus() == PostStatus.CANCELLED) {
+        if (p.getStatus() == PostStatus.FULFILLED || p.getStatus() == PostStatus.CANCELLED
+                || p.getStatus() == PostStatus.TO_CONFIRM) {
             throw ApiException.conflict("Esta publicación ya no se puede editar");
         }
         apply(p, req);
@@ -129,7 +131,7 @@ public class PostService {
         if (!isOwner(p, uid) && user.getRole() != Role.MODERATOR) {
             throw ApiException.forbidden("No puedes cancelar esta publicación");
         }
-        if (p.getStatus() == PostStatus.FULFILLED) {
+        if (p.getStatus() == PostStatus.FULFILLED || p.getStatus() == PostStatus.TO_CONFIRM) {
             throw ApiException.conflict("Una publicación cumplida no se puede cancelar");
         }
         p.setStatus(PostStatus.CANCELLED);
@@ -149,13 +151,15 @@ public class PostService {
         HelpResponse accepted = responses.findFirstByPostIdAndStatus(id, HelpStatus.ACCEPTED)
                 .orElseThrow(() -> ApiException.conflict("Primero debes aceptar una respuesta"));
 
-        User helper = p.getType() == PostType.REQUEST ? accepted.getHelper() : p.getAuthor();
-        User receiver = p.getType() == PostType.REQUEST ? p.getAuthor() : accepted.getHelper();
+        Instant now = Instant.now();
+        Instant acceptedAt = accepted.getAcceptedAt();
+        if (acceptedAt != null && Duration.between(acceptedAt, now).compareTo(AwardService.MIN_BEFORE_FULFILL) < 0) {
+            long minutes = AwardService.MIN_BEFORE_FULFILL.toMinutes();
+            throw ApiException.conflict("Espera al menos " + minutes + " minutos desde que aceptaste la respuesta");
+        }
 
-        helper.setHelpGiven(helper.getHelpGiven() + 1);
-        helper.setAyniPoints(helper.getAyniPoints() + POINTS_PER_HELP);
-        receiver.setHelpReceived(receiver.getHelpReceived() + 1);
-        p.setStatus(PostStatus.FULFILLED);
+        p.setStatus(PostStatus.TO_CONFIRM);
+        p.setFulfilledAt(now);
         return mapper.toDto(p, true);
     }
 

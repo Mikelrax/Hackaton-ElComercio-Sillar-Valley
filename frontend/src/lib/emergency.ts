@@ -33,7 +33,19 @@ export interface AdminUser {
   primaryAddress: { neighborhood: string } | null
 }
 
+export interface AbuseAlert {
+  kind: "RING" | "CAPPED"
+  title: string
+  detail: string
+  users: { id: number; fullName: string }[]
+  count: number
+}
+
 export const emergencyApi = {
+  abuseAlerts(): Promise<AbuseAlert[]> {
+    return apiFetch<AbuseAlert[]>("/api/moderation/abuse-alerts")
+  },
+
   mode(): Promise<EmergencyMode> {
     return apiFetch<EmergencyMode>("/api/emergency/mode")
   },

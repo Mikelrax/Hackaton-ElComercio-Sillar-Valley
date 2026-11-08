@@ -4,6 +4,7 @@ import com.sillarvalley.ayni.user.UserDtos;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
+import java.util.List;
 
 public final class ModerationDtos {
 
@@ -18,6 +19,9 @@ public final class ModerationDtos {
     public record ActiveRequest(boolean active) {}
 
     public record TemporaryPasswordResponse(String fullName, String password) {}
+
+    public record AbuseAlertDto(String kind, String title, String detail, List<UserDtos.UserSummary> users,
+                                int count) {}
 
     public record ReportDto(Long id, Long postId, String postTitle, UserDtos.UserSummary reporter, String reason,
                             ReportStatus status, String resolutionNote, Instant createdAt, Instant resolvedAt) {}

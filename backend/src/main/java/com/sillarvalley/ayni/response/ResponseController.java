@@ -46,6 +46,11 @@ public class ResponseController {
         return service.accept(CurrentUser.idOf(jwt), id);
     }
 
+    @PostMapping("/api/responses/{id}/confirm")
+    public ResponseDtos.ConfirmResponse confirm(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id) {
+        return service.confirm(CurrentUser.idOf(jwt), id);
+    }
+
     @PostMapping("/api/responses/{id}/decline")
     public ResponseDtos.HelpResponseDto decline(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id) {
         return service.decline(CurrentUser.idOf(jwt), id);

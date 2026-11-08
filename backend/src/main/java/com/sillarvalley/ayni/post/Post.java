@@ -86,6 +86,8 @@ public class Post {
     @Column(nullable = false)
     private Instant updatedAt = Instant.now();
 
+    private Instant fulfilledAt;
+
     @PreUpdate
     void touch() {
         this.updatedAt = Instant.now();
@@ -122,4 +124,6 @@ public class Post {
     public void setImages(List<String> images) { this.images = images; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
+    public Instant getFulfilledAt() { return fulfilledAt; }
+    public void setFulfilledAt(Instant fulfilledAt) { this.fulfilledAt = fulfilledAt; }
 }
