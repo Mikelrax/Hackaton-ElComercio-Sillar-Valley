@@ -42,9 +42,34 @@ public class EmergencyController {
         return service.create(CurrentUser.idOf(jwt), req);
     }
 
+    @GetMapping("/api/emergency/reports/{id}")
+    public EmergencyDtos.ReportResponse detail(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id,
+                                               @RequestParam(required = false) Double lat,
+                                               @RequestParam(required = false) Double lng) {
+        return service.detail(CurrentUser.idOf(jwt), id, lat, lng);
+    }
+
     @PostMapping("/api/emergency/reports/{id}/on-the-way")
-    public EmergencyDtos.ReportResponse onTheWay(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id) {
-        return service.onTheWay(CurrentUser.idOf(jwt), id);
+    public EmergencyDtos.ReportResponse onTheWay(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id,
+                                                 @Valid @RequestBody(required = false) EmergencyDtos.MessageRequest req) {
+        return service.onTheWay(CurrentUser.idOf(jwt), id, req == null ? null : req.message());
+    }
+
+    @PostMapping("/api/emergency/reports/{id}/release")
+    public EmergencyDtos.ReportResponse release(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id) {
+        return service.release(CurrentUser.idOf(jwt), id);
+    }
+
+    @PostMapping("/api/emergency/reports/{id}/claim")
+    public EmergencyDtos.ReportResponse claim(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id,
+                                              @Valid @RequestBody(required = false) EmergencyDtos.MessageRequest req) {
+        return service.claim(CurrentUser.idOf(jwt), id, req == null ? null : req.message());
+    }
+
+    @PostMapping("/api/emergency/check-in")
+    public EmergencyDtos.CheckInResponse checkIn(@AuthenticationPrincipal Jwt jwt,
+                                                 @Valid @RequestBody EmergencyDtos.CheckInRequest req) {
+        return service.checkIn(CurrentUser.idOf(jwt), req);
     }
 
     @PostMapping("/api/emergency/reports/{id}/attended")
@@ -76,9 +101,9 @@ public class EmergencyController {
     }
 
     @PatchMapping("/api/moderation/support-points/{id}")
-    public EmergencyDtos.SupportPointResponse setOpen(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id,
-                                                      @RequestBody EmergencyDtos.OpenRequest req) {
-        return service.setPointOpen(CurrentUser.idOf(jwt), id, req.open());
+    public EmergencyDtos.SupportPointResponse updatePoint(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id,
+                                                          @Valid @RequestBody EmergencyDtos.UpdatePointRequest req) {
+        return service.updatePoint(CurrentUser.idOf(jwt), id, req);
     }
 
     @GetMapping("/api/moderation/stats")

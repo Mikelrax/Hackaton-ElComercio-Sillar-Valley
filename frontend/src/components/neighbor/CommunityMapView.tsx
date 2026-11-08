@@ -21,6 +21,8 @@ import { currentPosition, directionsUrl, mapApi, metersBetween, type LatLng, typ
 import { timeAgo } from "@/lib/posts"
 import { Catalog, MapItem, MapResult, MapSearchResult, Place } from "@/lib/types"
 import { CategoryIcon } from "@/components/ui/category-icon"
+import { useConfirm } from "@/components/ui/confirm-dialog"
+import { onTheWaySpec, respondSpec } from "@/lib/confirm-specs"
 import { layerStyle } from "@/components/map/layer-style"
 import type { MapFocus } from "@/components/map/NeighborhoodMap"
 
@@ -43,9 +45,10 @@ interface CommunityMapViewProps {
   emergencyActive: boolean
   refreshKey: number
   onSelectBusiness: (id: number) => void
-  onRespondPost: (item: MapItem) => Promise<void>
-  onOnTheWay: (item: MapItem) => Promise<void>
+  onRespondPost: (item: MapItem, message: string) => Promise<void>
+  onOnTheWay: (item: MapItem, message: string) => Promise<void>
   onOpenEmergency: () => void
+  onOpenDetail: (item: MapItem) => void
 }
 
 type View = "mapa" | "lista"
@@ -98,6 +101,7 @@ export const CommunityMapView: React.FC<CommunityMapViewProps> = ({
   onRespondPost,
   onOnTheWay,
   onOpenEmergency,
+  onOpenDetail,
 }) => {
   const options = catalog.map
   const [origin, setOrigin] = useState<Origin>({ key: "primary", label: "Mi casa", icon: "house", point: home })
@@ -208,6 +212,8 @@ export const CommunityMapView: React.FC<CommunityMapViewProps> = ({
     clearSearch()
     chooseOrigin({ key: "place", label: place.name, icon: "map-pin", point: { lat: place.latitude, lng: place.longitude } })
   }
+
+  const { ask, dialog } = useConfirm()
 
   const runAction = async (item: MapItem, action: () => Promise<void>) => {
     setBusy(true)
@@ -574,9 +580,16 @@ export const CommunityMapView: React.FC<CommunityMapViewProps> = ({
               error={actionError}
               onClose={() => setSelected(null)}
               onSelectBusiness={onSelectBusiness}
-              onRespond={() => runAction(current, () => onRespondPost(current))}
-              onOnTheWay={() => runAction(current, () => onOnTheWay(current))}
+              onRespond={async () => {
+                const message = await ask(respondSpec(current.type === "REQUEST" ? "REQUEST" : "OFFER", null, current.title))
+                if (message !== null) await runAction(current, () => onRespondPost(current, message))
+              }}
+              onOnTheWay={async () => {
+                const message = await ask(onTheWaySpec(current.title, null))
+                if (message !== null) await runAction(current, () => onOnTheWay(current, message))
+              }}
               onOpenEmergency={onOpenEmergency}
+              onOpenDetail={() => onOpenDetail(current)}
             />
           )}
         </div>
@@ -625,6 +638,7 @@ export const CommunityMapView: React.FC<CommunityMapViewProps> = ({
           })}
         </div>
       )}
+      {dialog}
     </div>
   )
 }
@@ -640,6 +654,7 @@ function ItemCard({
   onRespond,
   onOnTheWay,
   onOpenEmergency,
+  onOpenDetail,
 }: {
   item: MapItem
   approximateRadius: number
@@ -651,6 +666,7 @@ function ItemCard({
   onRespond: () => void
   onOnTheWay: () => void
   onOpenEmergency: () => void
+  onOpenDetail: () => void
 }) {
   const style = layerStyle(item.layer)
   const isWall = item.layer === "wall"
@@ -693,6 +709,15 @@ function ItemCard({
       {error && <p className="text-xs font-semibold text-rose-600">{error}</p>}
 
       <div className="flex flex-wrap gap-2">
+        {item.layer !== "businesses" && (
+          <button
+            type="button"
+            onClick={onOpenDetail}
+            className="flex-1 h-10 px-4 rounded-xl bg-white border border-gray-300 text-[#172B2A] font-bold text-xs hover:bg-gray-50"
+          >
+            Ver ficha
+          </button>
+        )}
         {item.layer === "businesses" && (
           <button
             type="button"

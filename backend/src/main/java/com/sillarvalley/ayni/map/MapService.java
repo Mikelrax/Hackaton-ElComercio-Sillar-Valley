@@ -211,8 +211,11 @@ public class MapService {
         }
         since(f, "r", q);
         tokens(f, PLAIN.formatted("r.title"), q.text());
+        f.params().put("uid", viewer.id());
         return jdbc.sql("SELECT r.id, r.kind, r.category, r.title, r.status, r.people_count, r.latitude,"
-                        + " r.longitude, r.created_at, r.reporter_id, r.helper_id, " + meters("r")
+                        + " r.longitude, r.created_at, r.reporter_id, r.helper_id, " + meters("r") + ","
+                        + " EXISTS (SELECT 1 FROM emergency_claims c WHERE c.report_id = r.id AND c.user_id = :uid)"
+                        + " AS claimed"
                         + " FROM emergency_reports r WHERE " + f.where() + " ORDER BY meters LIMIT :limit")
                 .params(f.params())
                 .query((rs, i) -> {
@@ -222,7 +225,8 @@ public class MapService {
                     EmergencyStatus status = EmergencyStatus.valueOf(rs.getString("status"));
                     int people = rs.getInt("people_count");
                     boolean mine = rs.getLong("reporter_id") == viewer.id();
-                    boolean exact = mine || viewer.moderator() || rs.getLong("helper_id") == viewer.id();
+                    boolean exact = mine || viewer.moderator() || rs.getLong("helper_id") == viewer.id()
+                            || rs.getBoolean("claimed");
                     return located("report", id, rs, exact, (lat, lng, meters) -> new MapDtos.MapItem("r-" + id,
                             MapLayer.EMERGENCIES.key(), id, kind.name(), rs.getString("title"),
                             join(kind.label(), category.label(), people > 1 ? people + " personas" : null),

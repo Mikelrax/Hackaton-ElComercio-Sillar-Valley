@@ -5,6 +5,8 @@ import { Check, CheckCircle2, HeartHandshake, Plus, RefreshCw } from "lucide-rea
 import { FavorItem, FavorType, Option } from "@/lib/types"
 import { ApiError } from "@/lib/api"
 import { WallActivityPanel } from "@/components/neighbor/WallActivityPanel"
+import { useConfirm } from "@/components/ui/confirm-dialog"
+import { respondSpec } from "@/lib/confirm-specs"
 
 interface SolidarityWallViewProps {
   favors: FavorItem[]
@@ -12,7 +14,7 @@ interface SolidarityWallViewProps {
   onRetry: () => void
   currentUserId: string
   categories: Option[]
-  onRespond: (favor: FavorItem) => Promise<void>
+  onRespond: (favor: FavorItem, message: string) => Promise<void>
   onOpenCreate: (initialType?: "necesito" | "ofrezco") => void
 }
 
@@ -30,6 +32,7 @@ export const SolidarityWallView: React.FC<SolidarityWallViewProps> = ({
   const [sentIds, setSentIds] = useState<string[]>([])
   const [sendingId, setSendingId] = useState<string | null>(null)
   const [respondError, setRespondError] = useState<{ id: string; message: string } | null>(null)
+  const { ask, dialog } = useConfirm()
 
   const filteredFavors = useMemo(() => {
     return favors.filter(f => {
@@ -40,10 +43,12 @@ export const SolidarityWallView: React.FC<SolidarityWallViewProps> = ({
   }, [favors, selectedType, selectedCategory])
 
   const handleRespond = async (favor: FavorItem) => {
+    const message = await ask(respondSpec(favor.type === "necesito" ? "REQUEST" : "OFFER", favor.author, favor.title))
+    if (message === null) return
     setRespondError(null)
     setSendingId(favor.id)
     try {
-      await onRespond(favor)
+      await onRespond(favor, message)
       setSentIds(prev => [...prev, favor.id])
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
@@ -263,6 +268,7 @@ export const SolidarityWallView: React.FC<SolidarityWallViewProps> = ({
           </div>
         )}
       </div>
+      {dialog}
     </div>
   )
 }

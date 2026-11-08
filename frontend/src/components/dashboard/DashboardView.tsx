@@ -7,6 +7,10 @@ import { Logo } from "@/components/brand/Logo"
 import { Address, User } from "@/lib/auth"
 import { ApiError } from "@/lib/api"
 import { AppTab, EmergencyMode, EmergencyOverview, FavorItem, KusiDraft, MapItem, Option } from "@/lib/types"
+import { currentPosition, type LatLng } from "@/lib/map"
+import { DEFAULT_RESPONSE } from "@/lib/confirm-specs"
+import { ItemDetailSheet } from "@/components/neighbor/ItemDetailSheet"
+import type { EmergencyOrigin } from "@/components/neighbor/EmergencySOSView"
 import { postsApi } from "@/lib/posts"
 import { businessesApi } from "@/lib/businesses"
 import { emergencyApi } from "@/lib/emergency"
@@ -73,6 +77,15 @@ export function DashboardView({ user, onLogout, onOpenPanel }: DashboardViewProp
   const [wallReloadKey, setWallReloadKey] = useState(0)
 
   const [emergency, setEmergency] = useState<EmergencyOverview | null>(null)
+  const [emergencyOrigin, setEmergencyOrigin] = useState<EmergencyOrigin>("home")
+  const [herePoint, setHerePoint] = useState<LatLng | null>(null)
+  const [locating, setLocating] = useState(false)
+  const [locateFailed, setLocateFailed] = useState(false)
+  const [detailItem, setDetailItem] = useState<MapItem | null>(null)
+  const emergencyFrom = useMemo(
+    () => (emergencyOrigin === "here" && herePoint ? herePoint : location),
+    [emergencyOrigin, herePoint, location]
+  )
   const [emergencyStatus, setEmergencyStatus] = useState<LoadStatus>("loading")
   const [emergencyReloadKey, setEmergencyReloadKey] = useState(0)
 
@@ -183,7 +196,7 @@ export function DashboardView({ user, onLogout, onOpenPanel }: DashboardViewProp
   useEffect(() => {
     let cancelled = false
     emergencyApi
-      .overview(user.location)
+      .overview(emergencyFrom)
       .then(data => {
         if (cancelled) return
         setEmergency(data)
@@ -195,7 +208,7 @@ export function DashboardView({ user, onLogout, onOpenPanel }: DashboardViewProp
     return () => {
       cancelled = true
     }
-  }, [emergencyReloadKey, user.location])
+  }, [emergencyReloadKey, emergencyFrom])
 
   useEffect(() => {
     let cancelled = false
@@ -234,22 +247,38 @@ export function DashboardView({ user, onLogout, onOpenPanel }: DashboardViewProp
     setIsCreateModalOpen(true)
   }
 
-  const handleRespond = (favor: FavorItem) =>
-    postsApi.respond(
-      favor.id,
-      favor.type === "necesito" ? "¡Hola! Yo te puedo ayudar con esto." : "¡Hola! Me interesa lo que ofreces."
-    )
+  const handleRespond = (favor: FavorItem, message: string) =>
+    postsApi.respond(favor.id, message || DEFAULT_RESPONSE[favor.type === "necesito" ? "REQUEST" : "OFFER"])
 
-  const respondFromMap = (item: MapItem) =>
-    postsApi.respond(
-      String(item.id),
-      item.type === "REQUEST" ? "¡Hola! Yo te puedo ayudar con esto." : "¡Hola! Me interesa lo que ofreces."
-    )
+  const respondFromMap = (item: MapItem, message: string) =>
+    postsApi.respond(String(item.id), message || DEFAULT_RESPONSE[item.type === "REQUEST" ? "REQUEST" : "OFFER"])
 
-  const onTheWayFromMap = async (item: MapItem) => {
-    await emergencyApi.onTheWay(item.id)
+  const onTheWayFromMap = async (item: MapItem, message: string) => {
+    await emergencyApi.onTheWay(item.id, message)
     setEmergencyReloadKey(k => k + 1)
   }
+
+  const chooseEmergencyOrigin = (next: EmergencyOrigin) => {
+    setLocateFailed(false)
+    if (next === "home") {
+      setEmergencyOrigin("home")
+      return
+    }
+    setLocating(true)
+    currentPosition()
+      .then(point => {
+        setHerePoint(point)
+        setEmergencyOrigin("here")
+      })
+      .catch(() => setLocateFailed(true))
+      .finally(() => setLocating(false))
+  }
+
+  const refreshAfterDetail = useCallback(() => {
+    setMapKey(k => k + 1)
+    setEmergencyReloadKey(k => k + 1)
+    setWallReloadKey(k => k + 1)
+  }, [])
 
   const modalCategories = useMemo<Record<PostTypeSelection, Option[]>>(
     () => ({
@@ -303,6 +332,7 @@ export function DashboardView({ user, onLogout, onOpenPanel }: DashboardViewProp
           category: data.category,
           title,
           peopleCount: data.emergencyKind === "NEED" ? data.peopleCount : undefined,
+          vulnerable: data.emergencyKind === "NEED" && data.vulnerable.length > 0 ? data.vulnerable : undefined,
           ...(data.where ?? {}),
         },
         title ?? `Emergencia: ${data.categoryLabel}`
@@ -480,7 +510,9 @@ export function DashboardView({ user, onLogout, onOpenPanel }: DashboardViewProp
           className="w-full bg-[#BA1A1A] text-white px-4 py-2.5 text-sm font-bold flex items-center justify-center gap-2"
         >
           <AlertTriangle className="size-4" />
-          Modo emergencia activo: {mode.title}. Toca para ver reportes y puntos de apoyo.
+          {emergency?.myCheckIn
+            ? `Modo emergencia activo: ${mode.title}. Toca para ver reportes y puntos de apoyo.`
+            : `Modo emergencia activo: ${mode.title}. Toca para contarnos si estás bien.`}
         </button>
       )}
 
@@ -514,6 +546,7 @@ export function DashboardView({ user, onLogout, onOpenPanel }: DashboardViewProp
               onRespondPost={respondFromMap}
               onOnTheWay={onTheWayFromMap}
               onOpenEmergency={() => goTo("emergencia")}
+              onOpenDetail={setDetailItem}
             />
           ) : (
             catalogFallback
@@ -536,6 +569,10 @@ export function DashboardView({ user, onLogout, onOpenPanel }: DashboardViewProp
             overview={emergency}
             status={emergencyStatus}
             emergencyNumbers={catalog?.emergencyNumbers ?? []}
+            origin={emergencyOrigin}
+            locating={locating}
+            locateFailed={locateFailed}
+            onChooseOrigin={chooseEmergencyOrigin}
             onRetry={reloadEmergency}
             onChanged={() => setEmergencyReloadKey(k => k + 1)}
             onOpenCreate={kind => openCreate("emergencia", kind)}
@@ -600,6 +637,17 @@ export function DashboardView({ user, onLogout, onOpenPanel }: DashboardViewProp
         />
       )}
 
+      {detailItem && (
+        <ItemDetailSheet
+          item={detailItem}
+          from={location}
+          supportPoints={emergency?.supportPoints ?? []}
+          approximateRadius={catalog?.map.approximateRadius ?? 0}
+          onClose={() => setDetailItem(null)}
+          onChanged={refreshAfterDetail}
+        />
+      )}
+
       <BusinessDetailModal
         businessId={selectedBusinessId}
         location={location}
@@ -619,6 +667,7 @@ export function DashboardView({ user, onLogout, onOpenPanel }: DashboardViewProp
         mapStyleUrl={catalog?.map.styleUrl ?? null}
         categories={modalCategories}
         emergencyKinds={catalog?.emergencyKinds ?? []}
+        vulnerableGroups={catalog?.vulnerableGroups ?? []}
         recommendationTags={catalog?.recommendationTags ?? []}
         openDayOptions={catalog?.openDays ?? []}
         onSubmitPost={handleCreatePost}

@@ -14,6 +14,8 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.Collection;
+import java.util.Set;
 
 @Entity
 @Table(name = "emergency_reports")
@@ -71,6 +73,14 @@ public class EmergencyReport {
     @Column(nullable = false)
     private Instant updatedAt = Instant.now();
 
+    @Column(length = 100)
+    private String vulnerable;
+
+    private Instant attendedAt;
+
+    @Column(length = 200)
+    private String helperMessage;
+
     @PreUpdate
     void touch() {
         updatedAt = Instant.now();
@@ -104,4 +114,10 @@ public class EmergencyReport {
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
+    public Set<VulnerableGroup> getVulnerable() { return EnumCsv.parse(VulnerableGroup.class, vulnerable); }
+    public void setVulnerable(Collection<VulnerableGroup> groups) { this.vulnerable = EnumCsv.join(groups); }
+    public Instant getAttendedAt() { return attendedAt; }
+    public void setAttendedAt(Instant attendedAt) { this.attendedAt = attendedAt; }
+    public String getHelperMessage() { return helperMessage; }
+    public void setHelperMessage(String helperMessage) { this.helperMessage = helperMessage; }
 }

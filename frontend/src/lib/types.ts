@@ -66,6 +66,8 @@ export interface Catalog {
   directory: DirectoryOptions
   recommendationTags: Option[]
   openDays: Option[]
+  vulnerableGroups: Option[]
+  supportResources: Option[]
   map: MapOptions
   assistantEnabled?: boolean
 }
@@ -215,16 +217,21 @@ export interface EmergencyReport {
   categoryLabel: string
   title: string
   peopleCount: number
+  vulnerable: Option[]
   severity: "HIGH" | "MEDIUM" | "LOW"
   severityLabel: string
-  status: "URGENT" | "ON_THE_WAY" | "ATTENDED"
+  status: "URGENT" | "ON_THE_WAY" | "AVAILABLE" | "ATTENDED"
   statusLabel: string
   verified: boolean
   reporter: string
   reporterPhone: string | null
   helper: string | null
+  helperMessage: string | null
   mine: boolean
   helpingByMe: boolean
+  claimCount: number
+  claimedByMe: boolean
+  claimers: Claimer[]
   neighborhood: string
   distanceMeters: number | null
   latitude: number
@@ -240,16 +247,40 @@ export interface SupportPoint {
   typeLabel: string
   neighborhood: string
   address: string | null
+  resources: Option[]
+  hours: string | null
   open: boolean
   distanceMeters: number | null
   latitude: number
   longitude: number
 }
 
+export interface Contact {
+  name: string
+  phone: string
+}
+
+export interface Claimer extends Contact {
+  message: string | null
+}
+
+export type SafetyStatus = "SAFE" | "NEED_HELP"
+
+export interface SafetySummary {
+  safe: number
+  needHelp: number
+  pending: number
+  needHelpPeople: Contact[]
+}
+
 export interface EmergencyOverview {
   mode: EmergencyMode
   reports: EmergencyReport[]
   supportPoints: SupportPoint[]
+  nearbyMeters: number | null
+  myCheckIn: SafetyStatus | null
+  safety: SafetySummary | null
+  generatedAt: string
 }
 
 export interface ModerationStats {

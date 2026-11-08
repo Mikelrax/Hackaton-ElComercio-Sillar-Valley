@@ -14,4 +14,8 @@ public enum Severity {
     public String label() {
         return label;
     }
+
+    public Severity raised() {
+        return values()[Math.max(0, ordinal() - 1)];
+    }
 }

@@ -2,6 +2,8 @@
 
 import { type RefObject, useEffect, useRef } from "react"
 
+const openDialogs: symbol[] = []
+
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
@@ -14,6 +16,8 @@ export function useDialog(open: boolean, ref: RefObject<HTMLElement | null>, onC
 
   useEffect(() => {
     if (!open) return
+    const id = Symbol("dialog")
+    openDialogs.push(id)
     const node = ref.current
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null
     const overflow = document.body.style.overflow
@@ -25,6 +29,7 @@ export function useDialog(open: boolean, ref: RefObject<HTMLElement | null>, onC
     if (node && !node.contains(document.activeElement)) (focusables()[0] ?? node).focus()
 
     const onKey = (e: KeyboardEvent) => {
+      if (openDialogs[openDialogs.length - 1] !== id) return
       if (e.key === "Escape") {
         e.stopPropagation()
         closeRef.current()
@@ -46,6 +51,7 @@ export function useDialog(open: boolean, ref: RefObject<HTMLElement | null>, onC
 
     document.addEventListener("keydown", onKey)
     return () => {
+      openDialogs.splice(openDialogs.indexOf(id), 1)
       document.removeEventListener("keydown", onKey)
       document.body.style.overflow = overflow
       previous?.focus()

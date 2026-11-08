@@ -16,6 +16,8 @@ import com.sillarvalley.ayni.common.GeoPoint;
 import com.sillarvalley.ayni.emergency.EmergencyCategory;
 import com.sillarvalley.ayni.emergency.EmergencyKind;
 import com.sillarvalley.ayni.emergency.SupportPointType;
+import com.sillarvalley.ayni.emergency.SupportResource;
+import com.sillarvalley.ayni.emergency.VulnerableGroup;
 import com.sillarvalley.ayni.post.Category;
 import java.util.Arrays;
 import java.util.List;
@@ -44,8 +46,8 @@ public class CatalogController {
                           List<Option> emergencyKinds, List<IconOption> emergencyCategories,
                           List<IconOption> supportPointTypes, List<Option> emergencyNumbers,
                           List<PlaceOption> addressPlaces, int maxAddresses, DirectoryOptions directory,
-                          List<Option> recommendationTags, List<Option> openDays, MapOptions map,
-                          boolean assistantEnabled) {}
+                          List<Option> recommendationTags, List<Option> openDays, List<Option> vulnerableGroups,
+                          List<Option> supportResources, MapOptions map, boolean assistantEnabled) {}
 
     private static final List<Option> OPEN_DAYS = List.of(
             new Option("1234567", "Todos los días"),
@@ -56,7 +58,8 @@ public class CatalogController {
     public static final List<Option> EMERGENCY_NUMBERS = List.of(
             new Option("105", "Policía"),
             new Option("116", "Bomberos"),
-            new Option("106", "SAMU"));
+            new Option("106", "SAMU"),
+            new Option("115", "Defensa Civil"));
 
     private static final DirectoryOptions DIRECTORY = new DirectoryOptions(
             List.of(new RadiusOption(500, "500 m"), new RadiusOption(1000, "1 km"), new RadiusOption(2000, "2 km"),
@@ -101,6 +104,8 @@ public class CatalogController {
                 DIRECTORY,
                 Arrays.stream(RecommendationTag.values()).map(t -> new Option(t.key(), t.label())).toList(),
                 OPEN_DAYS,
+                Arrays.stream(VulnerableGroup.values()).map(g -> new Option(g.name(), g.label())).toList(),
+                Arrays.stream(SupportResource.values()).map(s -> new Option(s.name(), s.label())).toList(),
                 mapOptions(),
                 assistantEnabled);
     }

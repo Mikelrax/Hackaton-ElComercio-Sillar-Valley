@@ -122,6 +122,15 @@ export const postsApi = {
     return { favor: toFavor(post), pending: post.status === "PENDING" }
   },
 
+  async get(postId: number): Promise<FavorItem> {
+    const [post, mine] = await Promise.all([
+      apiFetch<BackendPost>(`/api/posts/${postId}`),
+      apiFetch<HelpResponse[]>("/api/responses/mine").catch(() => [] as HelpResponse[]),
+    ])
+    const responded = mine.some(r => r.postId === post.id && r.status !== "WITHDRAWN")
+    return { ...toFavor(post), respondedByMe: responded }
+  },
+
   async respond(postId: string, message: string): Promise<void> {
     await apiFetch(`/api/posts/${postId}/responses`, { method: "POST", body: { message } })
   },

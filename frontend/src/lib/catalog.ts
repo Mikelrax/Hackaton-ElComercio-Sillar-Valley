@@ -95,5 +95,5 @@ export function useCatalog(): { catalog: Catalog | null; error: boolean; retry: 
 export function formatDistance(meters: number | null): string {
   if (meters === null) return ""
   if (meters < 1000) return `${Math.max(10, Math.round(meters / 10) * 10)} m`
-  return `${(meters / 1000).toFixed(1).replace(".", ",")} km`
+  return `${(meters / 1000).toFixed(1).replace(/\.0$/, "").replace(".", ",")} km`
 }

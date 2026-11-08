@@ -100,13 +100,13 @@ export default function NeighborhoodMap({
     () => ({
       type: "FeatureCollection",
       features: items
-        .filter(i => i.approximate)
+        .filter(i => i.approximate && i.key === selectedKey)
         .map(i => ({
           ...circle({ lat: i.latitude, lng: i.longitude }, approximateRadius, 32),
           properties: { color: layerStyle(i.layer).color },
         })),
     }),
-    [items, approximateRadius]
+    [items, approximateRadius, selectedKey]
   )
 
   const handleMoveEnd = (e: ViewStateChangeEvent) => {

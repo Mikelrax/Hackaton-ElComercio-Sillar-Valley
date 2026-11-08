@@ -32,7 +32,7 @@ import { AdminUser, emergencyApi } from "@/lib/emergency";
 import { formatDistance, useCatalog } from "@/lib/catalog";
 import { postsApi, timeAgo } from "@/lib/posts";
 import { businessesApi } from "@/lib/businesses";
-import { EmergencyOverview, EmergencyReport, ModerationStats } from "@/lib/types";
+import { EmergencyOverview, EmergencyReport, ModerationStats, Option, SafetySummary, SupportPoint } from "@/lib/types";
 import { PendingPostsPanel } from "@/components/dashboard/PendingPostsPanel";
 import { BigSelect } from "@/components/ui/big-select";
 import { Spot } from "@/lib/types";
@@ -68,6 +68,7 @@ const SEVERITY_STYLE: Record<EmergencyReport["severity"], string> = {
 const STATUS_STYLE: Record<EmergencyReport["status"], string> = {
   URGENT: "bg-rose-50 text-rose-700",
   ON_THE_WAY: "bg-amber-50 text-amber-800",
+  AVAILABLE: "bg-blue-50 text-blue-800",
   ATTENDED: "bg-emerald-50 text-emerald-800",
 };
 
@@ -98,7 +99,120 @@ function SectionHeader({ title, onRefresh }: { title: string; onRefresh?: () => 
   );
 }
 
-function ReportCard({ report, onAction, busy }: { report: EmergencyReport; busy: boolean; onAction: (kind: "verify" | "attended") => void }) {
+type ReportAction = "verify" | "attended" | "release";
+
+function runReportAction(kind: ReportAction, id: number) {
+  if (kind === "verify") return emergencyApi.verify(id);
+  if (kind === "release") return emergencyApi.release(id);
+  return emergencyApi.attended(id);
+}
+
+function toggle(list: string[], value: string): string[] {
+  return list.includes(value) ? list.filter(v => v !== value) : [...list, value];
+}
+
+function ResourceChips({ options, value, onChange }: { options: Option[]; value: string[]; onChange: (next: string[]) => void }) {
+  return (
+    <div className="flex flex-wrap gap-2" role="group" aria-label="Qué ofrece">
+      {options.map(o => (
+        <button
+          key={o.value}
+          type="button"
+          aria-pressed={value.includes(o.value)}
+          onClick={() => onChange(toggle(value, o.value))}
+          className={`px-3 py-1.5 rounded-full text-xs font-bold ${
+            value.includes(o.value) ? "bg-[#087F72] text-white" : "bg-white border border-gray-300 text-gray-600"
+          }`}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function SafetyCard({ safety }: { safety: SafetySummary }) {
+  return (
+    <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm space-y-3">
+      <p className="text-base font-bold">¿Cómo están los vecinos?</p>
+      <div className="grid grid-cols-3 gap-3 text-center">
+        <div className="rounded-xl bg-emerald-50 p-3">
+          <p className="text-2xl font-extrabold text-emerald-700">{safety.safe}</p>
+          <p className="text-xs font-semibold text-emerald-800">Están bien</p>
+        </div>
+        <div className="rounded-xl bg-rose-50 p-3">
+          <p className="text-2xl font-extrabold text-rose-700">{safety.needHelp}</p>
+          <p className="text-xs font-semibold text-rose-800">Necesitan ayuda</p>
+        </div>
+        <div className="rounded-xl bg-gray-50 p-3">
+          <p className="text-2xl font-extrabold text-gray-700">{safety.pending}</p>
+          <p className="text-xs font-semibold text-gray-600">Sin responder</p>
+        </div>
+      </div>
+      {safety.needHelpPeople.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-gray-500">Llama primero a quienes pidieron ayuda:</p>
+          <div className="flex flex-wrap gap-2">
+            {safety.needHelpPeople.map(person => (
+              <a
+                key={person.phone}
+                href={`tel:+${person.phone}`}
+                className="h-10 px-3 rounded-xl border border-rose-300 text-rose-700 text-xs font-bold flex items-center gap-1.5"
+              >
+                <PhoneCall className="size-3.5" />
+                {person.name}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PointEditor({
+  point,
+  options,
+  busy,
+  onSave,
+  onCancel,
+}: {
+  point: SupportPoint;
+  options: Option[];
+  busy: boolean;
+  onSave: (resources: string[], hours: string) => void;
+  onCancel: () => void;
+}) {
+  const [resources, setResources] = useState(point.resources.map(r => r.value));
+  const [hours, setHours] = useState(point.hours ?? "");
+  return (
+    <div className="space-y-2 pt-1">
+      <ResourceChips options={options} value={resources} onChange={setResources} />
+      <input
+        value={hours}
+        onChange={e => setHours(e.target.value)}
+        maxLength={60}
+        placeholder="Horario, ej. 24 horas o 8:00 a 18:00"
+        aria-label="Horario"
+        className="w-full h-10 px-3 rounded-xl border border-gray-300 text-sm"
+      />
+      <div className="flex gap-2">
+        <button
+          disabled={busy}
+          onClick={() => onSave(resources, hours.trim())}
+          className="h-9 px-3 rounded-lg bg-[#087F72] text-white text-xs font-bold disabled:opacity-60"
+        >
+          Guardar
+        </button>
+        <button onClick={onCancel} className="h-9 px-3 rounded-lg border border-gray-300 text-xs font-bold">
+          Cancelar
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ReportCard({ report, onAction, busy }: { report: EmergencyReport; busy: boolean; onAction: (kind: ReportAction) => void }) {
   return (
     <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm space-y-3">
       <div className="flex items-start justify-between gap-3">
@@ -123,10 +237,33 @@ function ReportCard({ report, onAction, busy }: { report: EmergencyReport; busy:
         </span>
         <span>Reportó: {report.reporter}{report.reporterPhone ? ` · +${report.reporterPhone}` : ""}</span>
         {report.helper && <span>Ayuda: {report.helper}</span>}
+        {report.kind === "OFFER" && report.claimCount > 0 && (
+          <span>
+            Lo pidieron: {report.claimers.map(c => `${c.name} (+${c.phone})`).join(", ")}
+          </span>
+        )}
       </div>
+      {report.vulnerable.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {report.vulnerable.map(v => (
+            <span key={v.value} className="px-2 py-0.5 rounded-full bg-amber-50 border border-amber-300 text-xs font-semibold text-amber-900">
+              {v.label}
+            </span>
+          ))}
+        </div>
+      )}
       <div className="flex flex-wrap items-center gap-2">
         <span className={`px-2 py-1 rounded-md text-xs font-bold ${STATUS_STYLE[report.status]}`}>{report.statusLabel}</span>
         <div className="flex-1" />
+        {report.status === "ON_THE_WAY" && (
+          <button
+            disabled={busy}
+            onClick={() => onAction("release")}
+            className="h-8 px-3 rounded-lg border border-gray-300 text-gray-700 text-xs font-bold disabled:opacity-60"
+          >
+            Liberar
+          </button>
+        )}
         {!report.verified && (
           <button
             disabled={busy}
@@ -170,6 +307,9 @@ export function ModeratorDashboard({ user, onLogout, onOpenNeighborView }: Moder
   const [pointFormOpen, setPointFormOpen] = useState(false);
   const [pointSpot, setPointSpot] = useState<Spot | null>(null);
   const [pointError, setPointError] = useState("");
+  const [pointResources, setPointResources] = useState<string[]>([]);
+  const [pointHours, setPointHours] = useState("");
+  const [editingPoint, setEditingPoint] = useState<number | null>(null);
   const [confirming, setConfirming] = useState<"activate" | "deactivate" | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
   const [confirmTempFor, setConfirmTempFor] = useState<number | null>(null);
@@ -218,8 +358,9 @@ export function ModeratorDashboard({ user, onLogout, onOpenNeighborView }: Moder
   };
 
   const mode = overview?.mode;
-  const pendingReports = overview?.reports.filter(r => r.status !== "ATTENDED") ?? [];
+  const pendingReports = overview?.reports.filter(r => r.kind === "NEED" && r.status !== "ATTENDED") ?? [];
   const supportTypes = catalog?.supportPointTypes ?? [];
+  const resourceOptions = catalog?.supportResources ?? [];
   const currentPointType = pointType || supportTypes[0]?.value || "";
 
   const go = (section: Section) => {
@@ -376,6 +517,8 @@ export function ModeratorDashboard({ user, onLogout, onOpenNeighborView }: Moder
                 </div>
               )}
 
+              {mode?.active && overview?.safety && <SafetyCard safety={overview.safety} />}
+
               <div className="space-y-3">
                 <SectionHeader title="Reportes sin atender" />
                 {overview && pendingReports.length === 0 && (
@@ -386,9 +529,7 @@ export function ModeratorDashboard({ user, onLogout, onOpenNeighborView }: Moder
                     key={r.id}
                     report={r}
                     busy={busyKey === `r-${r.id}`}
-                    onAction={kind =>
-                      run(`r-${r.id}`, () => (kind === "verify" ? emergencyApi.verify(r.id) : emergencyApi.attended(r.id)))
-                    }
+                    onAction={kind => run(`r-${r.id}`, () => runReportAction(kind, r.id))}
                   />
                 ))}
               </div>
@@ -425,9 +566,7 @@ export function ModeratorDashboard({ user, onLogout, onOpenNeighborView }: Moder
                   key={r.id}
                   report={r}
                   busy={busyKey === `r-${r.id}`}
-                  onAction={kind =>
-                    run(`r-${r.id}`, () => (kind === "verify" ? emergencyApi.verify(r.id) : emergencyApi.attended(r.id)))
-                  }
+                  onAction={kind => run(`r-${r.id}`, () => runReportAction(kind, r.id))}
                 />
               ))}
             </div>
@@ -452,13 +591,40 @@ export function ModeratorDashboard({ user, onLogout, onOpenNeighborView }: Moder
                         {p.open ? "Abierto" : "Cerrado"}
                       </span>
                     </div>
-                    <button
-                      disabled={busyKey !== null}
-                      onClick={() => run(`p-${p.id}`, () => emergencyApi.setSupportPointOpen(p.id, !p.open))}
-                      className="text-xs font-bold text-[#087F72] hover:underline disabled:opacity-60"
-                    >
-                      {p.open ? "Marcar como cerrado" : "Marcar como abierto"}
-                    </button>
+                    {editingPoint === p.id ? (
+                      <PointEditor
+                        point={p}
+                        options={resourceOptions}
+                        busy={busyKey !== null}
+                        onCancel={() => setEditingPoint(null)}
+                        onSave={async (resources, hours) => {
+                          const ok = await run(`p-${p.id}`, () => emergencyApi.updateSupportPoint(p.id, { resources, hours }));
+                          if (ok) setEditingPoint(null);
+                        }}
+                      />
+                    ) : (
+                      <>
+                        {p.hours && <p className="text-xs text-gray-600">Horario: {p.hours}</p>}
+                        {p.resources.length > 0 && (
+                          <p className="text-xs text-gray-600">Ofrece: {p.resources.map(r => r.label).join(", ")}</p>
+                        )}
+                        <div className="flex flex-wrap gap-x-4 gap-y-1">
+                          <button
+                            disabled={busyKey !== null}
+                            onClick={() => run(`p-${p.id}`, () => emergencyApi.setSupportPointOpen(p.id, !p.open))}
+                            className="text-xs font-bold text-[#087F72] hover:underline disabled:opacity-60"
+                          >
+                            {p.open ? "Marcar como cerrado" : "Marcar como abierto"}
+                          </button>
+                          <button
+                            onClick={() => setEditingPoint(p.id)}
+                            className="text-xs font-bold text-gray-600 hover:underline"
+                          >
+                            Editar qué ofrece y horario
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>
@@ -478,6 +644,8 @@ export function ModeratorDashboard({ user, onLogout, onOpenNeighborView }: Moder
                         name: pointName.trim(),
                         type: currentPointType,
                         address: pointAddress.trim() || undefined,
+                        resources: pointResources,
+                        hours: pointHours.trim() || undefined,
                         latitude: pointSpot.latitude,
                         longitude: pointSpot.longitude,
                       })
@@ -485,6 +653,8 @@ export function ModeratorDashboard({ user, onLogout, onOpenNeighborView }: Moder
                     if (ok) {
                       setPointName("");
                       setPointAddress("");
+                      setPointResources([]);
+                      setPointHours("");
                       setPointSpot(null);
                       setPointFormOpen(false);
                     }
@@ -511,6 +681,20 @@ export function ModeratorDashboard({ user, onLogout, onOpenNeighborView }: Moder
                     onChange={e => setPointAddress(e.target.value)}
                     placeholder="Dirección o referencia (opcional)"
                     aria-label="Dirección"
+                    className="w-full h-11 px-3 rounded-xl border border-gray-300 text-sm"
+                  />
+                  {resourceOptions.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-semibold">¿Qué ofrece?</p>
+                      <ResourceChips options={resourceOptions} value={pointResources} onChange={setPointResources} />
+                    </div>
+                  )}
+                  <input
+                    value={pointHours}
+                    onChange={e => setPointHours(e.target.value)}
+                    maxLength={60}
+                    placeholder="Horario, ej. 24 horas o 8:00 a 18:00 (opcional)"
+                    aria-label="Horario"
                     className="w-full h-11 px-3 rounded-xl border border-gray-300 text-sm"
                   />
                   <div className="space-y-2">
@@ -677,6 +861,12 @@ export function ModeratorDashboard({ user, onLogout, onOpenNeighborView }: Moder
                   <p className="text-xs text-rose-100">
                     Activada por {mode.activatedBy} · {mode.activatedAt && timeAgo(mode.activatedAt)}
                   </p>
+                  {overview?.safety && (
+                    <p className="text-sm font-semibold">
+                      {overview.safety.safe} están bien · {overview.safety.needHelp} necesitan ayuda ·{" "}
+                      {overview.safety.pending} sin responder
+                    </p>
+                  )}
                   {confirming === "deactivate" ? (
                     <div className="rounded-xl bg-white/10 border border-white/30 p-3 space-y-2" role="alertdialog" aria-label="Confirmar desactivación">
                       <p className="text-sm font-bold">¿Desactivar el modo emergencia?</p>

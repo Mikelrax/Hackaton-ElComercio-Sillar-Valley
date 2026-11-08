@@ -13,6 +13,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.Collection;
+import java.util.Set;
 
 @Entity
 @Table(name = "support_points")
@@ -51,7 +53,18 @@ public class SupportPoint {
     @Column(nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
+    @Column(length = 200)
+    private String resources;
+
+    @Column(length = 60)
+    private String hours;
+
     public Long getId() { return id; }
+    public Set<SupportResource> getResources() { return EnumCsv.parse(SupportResource.class, resources); }
+    public void setResources(Collection<SupportResource> values) { this.resources = EnumCsv.join(values); }
+    public boolean hasResources() { return resources != null; }
+    public String getHours() { return hours; }
+    public void setHours(String hours) { this.hours = hours; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
     public SupportPointType getType() { return type; }

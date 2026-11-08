@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useRef, useState } from "react"
+import React, { useCallback, useEffect, useRef, useState } from "react"
 import dynamic from "next/dynamic"
 import { AlertCircle, Check, LocateFixed, MapPin, Minus, Plus, WifiOff, X } from "lucide-react"
 import { Option, Spot } from "@/lib/types"
@@ -27,6 +27,7 @@ export interface NewPostData {
   phone: string
   emergencyKind: EmergencyKindValue
   peopleCount: number
+  vulnerable: string[]
   where: Where | null
   tags: string[]
   comment: string
@@ -46,6 +47,7 @@ interface CreatePostModalProps {
   mapStyleUrl: string | null
   categories: Record<PostTypeSelection, Option[]>
   emergencyKinds: Option[]
+  vulnerableGroups: Option[]
   recommendationTags: Option[]
   openDayOptions: Option[]
   onSubmitPost: (data: NewPostData) => Promise<PublishResult>
@@ -89,6 +91,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   mapStyleUrl,
   categories,
   emergencyKinds,
+  vulnerableGroups,
   recommendationTags,
   openDayOptions,
   onSubmitPost,
@@ -100,12 +103,14 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const [reference, setReference] = useState("")
   const [phone, setPhone] = useState("")
   const [peopleCount, setPeopleCount] = useState(1)
+  const [vulnerable, setVulnerable] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [result, setResult] = useState<PublishResult | null>(null)
   const [submitError, setSubmitError] = useState("")
-  const [whereKey, setWhereKey] = useState("")
+  const [whereKey, setWhereKey] = useState(initialType === "emergencia" ? "gps" : "")
   const [gpsPoint, setGpsPoint] = useState<LatLng | null>(null)
-  const [gpsState, setGpsState] = useState<"idle" | "locating" | "error">("idle")
+  const [gpsState, setGpsState] = useState<"idle" | "locating" | "error">(initialType === "emergencia" ? "locating" : "idle")
+  const [gpsNote, setGpsNote] = useState("")
   const [pickedSpot, setPickedSpot] = useState<Spot | null>(null)
   const [tags, setTags] = useState<string[]>([])
   const [comment, setComment] = useState("")
@@ -115,6 +120,36 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
 
   const dialogRef = useRef<HTMLDivElement>(null)
   useDialog(isOpen, dialogRef, onClose)
+
+  const hasAddress = addresses.length > 0
+  const locate = useCallback(
+    (fallbackToHome: boolean) => {
+      setWhereKey("gps")
+      setGpsState("locating")
+      setGpsNote("")
+      currentPosition()
+        .then(point => {
+          setGpsPoint(point)
+          setGpsState("idle")
+        })
+        .catch(() => {
+          if (fallbackToHome && hasAddress) {
+            setWhereKey("")
+            setGpsState("idle")
+            setGpsNote("No pudimos saber dónde estás, así que usamos tu dirección principal. Cámbiala si estás en otro lugar.")
+          } else {
+            setGpsState("error")
+          }
+        })
+    },
+    [hasAddress]
+  )
+
+  useEffect(() => {
+    if (!isOpen || initialType !== "emergencia") return
+    const timer = window.setTimeout(() => locate(true), 0)
+    return () => window.clearTimeout(timer)
+  }, [isOpen, initialType, locate])
 
   if (!isOpen) return null
 
@@ -131,16 +166,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const whereTitle =
     selectedType === "recomiendo" ? "¿Dónde queda?" : selectedType === "emergencia" ? "¿Dónde es?" : "¿Dónde?"
 
-  const chooseGps = () => {
-    setWhereKey("gps")
-    setGpsState("locating")
-    currentPosition()
-      .then(point => {
-        setGpsPoint(point)
-        setGpsState("idle")
-      })
-      .catch(() => setGpsState("error"))
-  }
+  const chooseGps = () => locate(false)
 
   const resolveWhere = (): Where | null | "missing" => {
     if (currentWhere.startsWith("a-")) return { addressId: Number(currentWhere.slice(2)) }
@@ -153,6 +179,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
     setSelectedType(type)
     setCategory("")
     setSubmitError("")
+    if (type === "emergencia" && !whereKey && !gpsNote) locate(true)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -192,6 +219,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
         phone: phone.replace(/\D/g, ""),
         emergencyKind,
         peopleCount,
+        vulnerable: selectedType === "emergencia" && emergencyKind === "NEED" ? vulnerable : [],
         where,
         tags,
         comment: comment.trim(),
@@ -204,6 +232,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
       setReference("")
       setPhone("")
       setPeopleCount(1)
+      setVulnerable([])
       setTags([])
       setComment("")
       setOpensAt("")
@@ -440,6 +469,31 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
             </div>
           )}
 
+          {selectedType === "emergencia" && emergencyKind === "NEED" && vulnerableGroups.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-bold text-gray-700">
+                ¿Hay alguien que necesite más cuidado? <span className="font-normal text-gray-400">(opcional)</span>
+              </p>
+              <div className="flex flex-wrap gap-2" role="group" aria-label="Personas vulnerables">
+                {vulnerableGroups.map(g => (
+                  <button
+                    key={g.value}
+                    type="button"
+                    aria-pressed={vulnerable.includes(g.value)}
+                    onClick={() =>
+                      setVulnerable(current =>
+                        current.includes(g.value) ? current.filter(v => v !== g.value) : [...current, g.value]
+                      )
+                    }
+                    className={chipClass(vulnerable.includes(g.value))}
+                  >
+                    {g.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2">
             <p className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
               <MapPin className="size-3.5 text-[#087F72]" />
@@ -451,7 +505,10 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
                   key={a.id}
                   type="button"
                   aria-pressed={currentWhere === `a-${a.id}`}
-                  onClick={() => setWhereKey(`a-${a.id}`)}
+                  onClick={() => {
+                    setWhereKey(`a-${a.id}`)
+                    setGpsNote("")
+                  }}
                   className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all ${
                     currentWhere === `a-${a.id}`
                       ? "bg-[#087F72] text-white"
@@ -503,6 +560,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
                     : "Usaremos el lugar donde estás ahora."}
               </p>
             )}
+            {gpsNote && currentWhere !== "gps" && <p className="text-xs font-semibold text-amber-800">{gpsNote}</p>}
             {currentWhere === "map" && mapStyleUrl && (
               <LocationPicker styleUrl={mapStyleUrl} start={home} startZoom={15} confirmed onChange={setPickedSpot} />
             )}
