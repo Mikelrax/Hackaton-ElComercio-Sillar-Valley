@@ -19,7 +19,12 @@ public class CatalogController {
     public record Catalog(List<String> neighborhoods, List<Option> postCategories,
                           List<BusinessDtos.CategoryResponse> businessCategories,
                           List<Option> emergencyKinds, List<Option> emergencyCategories,
-                          List<Option> supportPointTypes) {}
+                          List<Option> supportPointTypes, List<Option> emergencyNumbers) {}
+
+    private static final List<Option> EMERGENCY_NUMBERS = List.of(
+            new Option("105", "Policía"),
+            new Option("116", "Bomberos"),
+            new Option("106", "SAMU"));
 
     private final NeighborhoodRepository neighborhoods;
     private final BusinessService businesses;
@@ -37,6 +42,7 @@ public class CatalogController {
                 businesses.categories(),
                 Arrays.stream(EmergencyKind.values()).map(k -> new Option(k.name(), k.label())).toList(),
                 Arrays.stream(EmergencyCategory.values()).map(c -> new Option(c.name(), c.label())).toList(),
-                Arrays.stream(SupportPointType.values()).map(t -> new Option(t.name(), t.label())).toList());
+                Arrays.stream(SupportPointType.values()).map(t -> new Option(t.name(), t.label())).toList(),
+                EMERGENCY_NUMBERS);
     }
 }

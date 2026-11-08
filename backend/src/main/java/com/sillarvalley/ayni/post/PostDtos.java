@@ -20,7 +20,7 @@ public final class PostDtos {
             @Size(max = 4, message = "Máximo 4 imágenes") List<String> images) {}
 
     public record PostResponse(
-            Long id, PostType type, Category category, String title, String description,
+            Long id, PostType type, Category category, String categoryLabel, String title, String description,
             String neighborhood, PostStatus status, List<String> imageUrls, UserDtos.UserSummary author,
             String moderationNote, Instant createdAt, Instant updatedAt) {}
 }

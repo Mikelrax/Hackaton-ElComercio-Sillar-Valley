@@ -15,7 +15,7 @@ public class PostMapper {
 
     public PostDtos.PostResponse toDto(Post p, boolean includeNote) {
         return new PostDtos.PostResponse(
-                p.getId(), p.getType(), p.getCategory(), p.getTitle(), p.getDescription(),
+                p.getId(), p.getType(), p.getCategory(), p.getCategory().label(), p.getTitle(), p.getDescription(),
                 p.getNeighborhood(), p.getStatus(),
                 p.getImages().stream().map(storage::publicUrl).toList(),
                 UserDtos.UserSummary.of(p.getAuthor()),
