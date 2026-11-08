@@ -3,6 +3,7 @@
 import * as React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import {
   MapPin,
   Navigation,
@@ -10,6 +11,8 @@ import {
   User as UserIcon,
   Phone,
   Lock,
+  Eye,
+  EyeOff,
   HeartHandshake,
   Users,
   Store,
@@ -73,6 +76,7 @@ export function AuthCard() {
   // Estado del Login
   const [loginPhone, setLoginPhone] = useState("")
   const [loginPassword, setLoginPassword] = useState("")
+  const [showLoginPassword, setShowLoginPassword] = useState(false)
   const [loginLoading, setLoginLoading] = useState(false)
   const [loginError, setLoginError] = useState("")
 
@@ -80,6 +84,7 @@ export function AuthCard() {
   const [name, setName] = useState("")
   const [phone, setPhone] = useState("")
   const [password, setPassword] = useState("")
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false)
   const [role, setRole] = useState<UserRole>("vecino")
   const [profile, setProfile] = useState<UserProfile>("adulto")
   const [neighborhood, setNeighborhood] = useState("Yanahuara")
@@ -201,7 +206,9 @@ export function AuthCard() {
     <Card className="w-full max-w-lg border-border/80 bg-card/95 backdrop-blur-md shadow-xl transition-all">
       <CardHeader className="text-center pb-4 space-y-3">
         <div className="flex justify-center">
-          <Logo size="lg" />
+          <Link href="/" className="hover:opacity-90 transition-opacity">
+            <Logo size="lg" />
+          </Link>
         </div>
 
         <CardDescription className="text-xs sm:text-sm text-muted-foreground">
@@ -248,13 +255,13 @@ export function AuthCard() {
 
             <div className="space-y-1.5">
               <Label htmlFor="login-phone" className="text-xs font-semibold flex items-center gap-1.5">
-                <Phone className="size-3.5 text-emerald-600" />
+                <Phone className="size-3.5 text-[#087F72]" />
                 Número de Celular
               </Label>
               <Input
                 id="login-phone"
                 type="tel"
-                placeholder="Ej. 958 123 456"
+                placeholder="Ej. 987 654 321"
                 value={loginPhone}
                 onChange={(e) => setLoginPhone(e.target.value)}
                 autoComplete="tel"
@@ -265,30 +272,40 @@ export function AuthCard() {
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <Label htmlFor="login-password" className="text-xs font-semibold flex items-center gap-1.5">
-                  <Lock className="size-3.5 text-emerald-600" />
+                  <Lock className="size-3.5 text-[#087F72]" />
                   Contraseña
                 </Label>
-                <span className="text-[11px] text-emerald-600 hover:underline cursor-pointer">
+                <span className="text-[11px] text-[#087F72] hover:underline cursor-pointer">
                   ¿Olvidaste tu clave?
                 </span>
               </div>
-              <Input
-                id="login-password"
-                type="password"
-                placeholder="Ingresa tu contraseña"
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-                autoComplete="current-password"
-                className="h-11 rounded-xl"
-              />
+              <div className="relative">
+                <Input
+                  id="login-password"
+                  type={showLoginPassword ? "text" : "password"}
+                  placeholder="Ingresa tu contraseña"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  autoComplete="current-password"
+                  className="h-11 rounded-xl pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowLoginPassword(!showLoginPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition-colors"
+                  aria-label={showLoginPassword ? "Ocultar contraseña" : "Ver contraseña"}
+                >
+                  {showLoginPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              </div>
             </div>
 
             <Button
               type="submit"
               disabled={loginLoading}
-              className="w-full h-11 text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-md shadow-emerald-600/20"
+              className="w-full h-11 text-sm font-bold bg-[#087F72] hover:bg-[#075E54] text-white rounded-xl shadow-md transition-all active:scale-98"
             >
-              {loginLoading ? "Ingresando al barrio..." : "Ingresar a Vecinos+"}
+              {loginLoading ? "Ingresando al barrio..." : "Ingresar a AYNI"}
             </Button>
           </form>
         ) : (
@@ -329,14 +346,24 @@ export function AuthCard() {
             {/* Contraseña */}
             <div className="space-y-1.5">
               <Label htmlFor="reg-password" className="text-xs font-semibold">Contraseña</Label>
-              <Input
-                id="reg-password"
-                type="password"
-                placeholder="Crea una contraseña segura"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="h-10 rounded-xl text-xs"
-              />
+              <div className="relative">
+                <Input
+                  id="reg-password"
+                  type={showRegisterPassword ? "text" : "password"}
+                  placeholder="Crea una contraseña segura"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-10 rounded-xl text-xs pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowRegisterPassword(!showRegisterPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition-colors"
+                  aria-label={showRegisterPassword ? "Ocultar contraseña" : "Ver contraseña"}
+                >
+                  {showRegisterPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              </div>
             </div>
 
             {/* Ubicación de la Casa y Detección GPS */}
@@ -440,9 +467,9 @@ export function AuthCard() {
             <Button
               type="submit"
               disabled={registerLoading}
-              className="w-full h-11 text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-md shadow-emerald-600/20"
+              className="w-full h-11 text-sm font-bold bg-[#087F72] hover:bg-[#075E54] text-white rounded-xl shadow-md transition-all active:scale-98"
             >
-              {registerLoading ? "Creando cuenta..." : "Completar Registro en Vecinos+"}
+              {registerLoading ? "Creando cuenta..." : "Completar Registro en AYNI"}
             </Button>
           </form>
         )}

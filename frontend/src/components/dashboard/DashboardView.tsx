@@ -143,7 +143,13 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
       {/* ================= CABECERA DE ESCRITORIO & TABLET ================= */}
       <header className="sticky top-0 z-40 bg-white border-b border-gray-200/80 shadow-2xs">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <Logo size="md" />
+          <button
+            onClick={() => setActiveTab("inicio")}
+            className="flex items-center text-left hover:opacity-85 transition-opacity cursor-pointer focus:outline-none"
+            title="Ir a Inicio"
+          >
+            <Logo size="md" />
+          </button>
 
           {/* Navegación Desktop */}
           <nav className="hidden md:flex items-center gap-1 bg-gray-100/80 p-1 rounded-2xl">

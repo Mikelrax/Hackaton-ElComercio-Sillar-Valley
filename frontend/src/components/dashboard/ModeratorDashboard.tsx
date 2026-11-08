@@ -138,7 +138,13 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
       {/* ================= SIDEBAR (Desktop) ================= */}
       <aside className="hidden md:flex md:w-64 flex-col bg-white border-r border-gray-200 shadow-sm">
         <div className="p-5 border-b border-gray-100">
-          <Logo size="md" />
+          <button
+            onClick={() => setActiveSection("dashboard")}
+            className="flex items-center text-left hover:opacity-85 transition-opacity cursor-pointer focus:outline-none"
+            title="Ir al Panel General"
+          >
+            <Logo size="md" />
+          </button>
           <div className="mt-3 flex items-center gap-2">
             <div className="size-8 rounded-full bg-[#087F72] text-white flex items-center justify-center text-sm font-bold">
               {user.name.charAt(0)}
@@ -195,7 +201,16 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
       {/* ================= MOBILE HEADER ================= */}
       <header className="md:hidden sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
         <div className="flex items-center justify-between px-4 h-14">
-          <Logo size="sm" />
+          <button
+            onClick={() => {
+              setActiveSection("dashboard")
+              setMobileMenuOpen(false)
+            }}
+            className="flex items-center text-left hover:opacity-85 transition-opacity cursor-pointer focus:outline-none"
+            title="Ir al Panel General"
+          >
+            <Logo size="sm" />
+          </button>
           <div className="flex items-center gap-2">
             <Badge className="bg-[#EAF5F1] text-[#087F72] border-0 text-[10px]">
               <Shield className="size-3 mr-1" />

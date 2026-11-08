@@ -2,7 +2,7 @@
 // Pantalla 4 del Figma: Flujo "+ Publicar en 3 clics"
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { X, MapPin, Check } from "lucide-react"
 import { FavorCategory } from "@/lib/types"
 
@@ -44,6 +44,18 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
 
+  // Cierre con la tecla Escape
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose()
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [isOpen, onClose])
+
   if (!isOpen) return null
 
   const handleTypeSelect = (type: PostTypeSelection) => {
@@ -73,13 +85,21 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
-      <div className="relative w-full max-w-md min-h-screen sm:min-h-0 bg-white sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4 overflow-y-auto animate-in fade-in duration-200"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-md min-h-screen sm:min-h-0 bg-white sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden my-auto"
+      >
         {/* ================= CABECERA (Figma: Botón cerrar X y "Toque 2 de 3") ================= */}
-        <div className="p-4 sm:p-5 flex items-center justify-between border-b border-gray-100">
+        <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-xs p-4 sm:p-5 flex items-center justify-between border-b border-gray-100">
           <button
+            type="button"
             onClick={onClose}
-            className="size-9 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center hover:bg-gray-200 transition-colors"
+            className="size-9 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center hover:bg-gray-200 transition-colors cursor-pointer"
+            aria-label="Cerrar ventana"
           >
             <X className="size-4" />
           </button>
