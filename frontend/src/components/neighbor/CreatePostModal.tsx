@@ -1,0 +1,243 @@
+// src/components/neighbor/CreatePostModal.tsx
+// Pantalla 4 del Figma: Flujo "+ Publicar en 3 clics"
+"use client"
+
+import React, { useState } from "react"
+import { X, MapPin, Check } from "lucide-react"
+import { FavorCategory } from "@/lib/types"
+
+export type PostTypeSelection = "recomiendo" | "necesito" | "ofrezco" | "emergencia"
+
+interface CreatePostModalProps {
+  isOpen: boolean
+  onClose: () => void
+  initialType?: PostTypeSelection
+  userNeighborhood: string
+  onSubmitPost: (data: {
+    type: PostTypeSelection
+    category: string
+    description: string
+    location: string
+  }) => void
+}
+
+const CATEGORY_OPTIONS: Record<PostTypeSelection, string[]> = {
+  recomiendo: ["Gasfitería", "Comida casera", "Costura", "Bodega", "Técnico", "Salud"],
+  necesito: ["Herramientas", "Ayuda temporal", "Donaciones", "Movilidad", "Cuidado"],
+  ofrezco: ["Herramientas", "Habilidades", "Ayuda temporal", "Donaciones", "Movilidad"],
+  emergencia: ["Agua potable", "Refugio", "Medicinas", "Rescate", "Primeros auxilios"],
+}
+
+export const CreatePostModal: React.FC<CreatePostModalProps> = ({
+  isOpen,
+  onClose,
+  initialType = "necesito",
+  userNeighborhood,
+  onSubmitPost,
+}) => {
+  const [selectedType, setSelectedType] = useState<PostTypeSelection>(initialType)
+  const [category, setCategory] = useState<string>(CATEGORY_OPTIONS[initialType][0])
+  const [description, setDescription] = useState("")
+  const [locationText, setLocationText] = useState(
+    userNeighborhood ? `${userNeighborhood}, cerca al parque` : "Urb. Las Flores, cerca al parque"
+  )
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
+
+  if (!isOpen) return null
+
+  const handleTypeSelect = (type: PostTypeSelection) => {
+    setSelectedType(type)
+    setCategory(CATEGORY_OPTIONS[type][0])
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+
+    // Simula envío rápido garantizando confirmación
+    setTimeout(() => {
+      onSubmitPost({
+        type: selectedType,
+        category,
+        description: description || (selectedType === "necesito" ? "Petición de apoyo barrial" : "Aporte comunitario"),
+        location: locationText,
+      })
+      setIsSubmitting(false)
+      setShowSuccess(true)
+      setTimeout(() => {
+        setShowSuccess(false)
+        onClose()
+      }, 1000)
+    }, 400)
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
+      <div className="relative w-full max-w-md min-h-screen sm:min-h-0 bg-white sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+        {/* ================= CABECERA (Figma: Botón cerrar X y "Toque 2 de 3") ================= */}
+        <div className="p-4 sm:p-5 flex items-center justify-between border-b border-gray-100">
+          <button
+            onClick={onClose}
+            className="size-9 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center hover:bg-gray-200 transition-colors"
+          >
+            <X className="size-4" />
+          </button>
+          <span className="text-xs font-bold text-gray-400">Toque 2 de 3</span>
+          <div className="size-9" /> {/* Espaciador balanceador */}
+        </div>
+
+        {/* ================= CONTENIDO FORMULARIO ================= */}
+        <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-5 flex-1 overflow-y-auto">
+          {/* Título de la pregunta */}
+          <h2 className="text-xl sm:text-2xl font-black text-[#172B2A] tracking-tight">
+            ¿Qué quieres publicar?
+          </h2>
+
+          {/* Cuadrícula 2x2 de Tipos de Publicación (Figma) */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* 1. Recomiendo */}
+            <button
+              type="button"
+              onClick={() => handleTypeSelect("recomiendo")}
+              className={`p-3.5 rounded-2xl border text-left transition-all ${
+                selectedType === "recomiendo"
+                  ? "border-[#087F72] bg-[#EAF5F1] ring-2 ring-[#087F72]/30 shadow-xs"
+                  : "border-gray-200 bg-white hover:border-gray-300"
+              }`}
+            >
+              <p className="text-sm font-black text-[#172B2A]">Recomiendo</p>
+              <p className="text-[11px] text-gray-500 font-medium mt-0.5">Un negocio o servicio</p>
+            </button>
+
+            {/* 2. Necesito (Figma: seleccionado en amarillo/ámbar) */}
+            <button
+              type="button"
+              onClick={() => handleTypeSelect("necesito")}
+              className={`p-3.5 rounded-2xl border text-left transition-all ${
+                selectedType === "necesito"
+                  ? "border-[#D97706] bg-[#FFF8E6] ring-2 ring-[#D97706]/30 shadow-xs"
+                  : "border-gray-200 bg-white hover:border-gray-300"
+              }`}
+            >
+              <p className="text-sm font-black text-[#8A5800]">Necesito</p>
+              <p className="text-[11px] text-amber-900/70 font-medium mt-0.5">Pide un favor</p>
+            </button>
+
+            {/* 3. Ofrezco */}
+            <button
+              type="button"
+              onClick={() => handleTypeSelect("ofrezco")}
+              className={`p-3.5 rounded-2xl border text-left transition-all ${
+                selectedType === "ofrezco"
+                  ? "border-[#087F72] bg-[#EAF5F1] ring-2 ring-[#087F72]/30 shadow-xs"
+                  : "border-gray-200 bg-white hover:border-gray-300"
+              }`}
+            >
+              <p className="text-sm font-black text-[#087F72]">Ofrezco</p>
+              <p className="text-[11px] text-gray-500 font-medium mt-0.5">Presta o regala algo</p>
+            </button>
+
+            {/* 4. Emergencia */}
+            <button
+              type="button"
+              onClick={() => handleTypeSelect("emergencia")}
+              className={`p-3.5 rounded-2xl border text-left transition-all ${
+                selectedType === "emergencia"
+                  ? "border-rose-500 bg-rose-50 ring-2 ring-rose-500/30 shadow-xs"
+                  : "border-rose-200/80 bg-white hover:border-rose-300"
+              }`}
+            >
+              <p className="text-sm font-black text-[#BA1A1A]">Emergencia</p>
+              <p className="text-[11px] text-rose-900/70 font-medium mt-0.5 leading-tight">
+                Alguien necesita ayuda ya
+              </p>
+            </button>
+          </div>
+
+          {/* Categoría (Figma: chips redondeados) */}
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-gray-700">Categoría</label>
+            <div className="flex flex-wrap gap-2">
+              {CATEGORY_OPTIONS[selectedType].map(cat => (
+                <button
+                  type="button"
+                  key={cat}
+                  onClick={() => setCategory(cat)}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
+                    category === cat
+                      ? "bg-[#087F72] text-white shadow-xs"
+                      : "bg-white border border-gray-200 text-gray-600 hover:border-gray-300"
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Cuéntalo en pocas palabras (opcional) */}
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-gray-700">
+              Cuéntalo en pocas palabras <span className="font-normal text-gray-400">(opcional)</span>
+            </label>
+            <textarea
+              rows={2}
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="Ej: Una escalera por 2 horas, taladro, o apoyo con compra"
+              className="w-full p-3.5 rounded-2xl bg-white border border-gray-200 text-xs text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#087F72]/30 resize-none shadow-2xs"
+            />
+          </div>
+
+          {/* Ubicación GPS Prellenada (Figma) */}
+          <div className="p-3.5 rounded-2xl bg-white border border-gray-200 flex items-center justify-between shadow-2xs">
+            <div className="flex items-center gap-2.5">
+              <MapPin className="size-4 text-[#087F72] shrink-0" />
+              <div>
+                <p className="text-xs font-bold text-gray-800">Tu ubicación (GPS)</p>
+                <p className="text-[11px] text-gray-500">{locationText}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const updated = prompt("Ajustar dirección de referencia:", locationText)
+                if (updated) setLocationText(updated)
+              }}
+              className="text-xs font-bold text-[#087F72] hover:underline"
+            >
+              Ajustar
+            </button>
+          </div>
+
+          {/* Botón Grande: "Publicar" (Figma) */}
+          <div className="pt-2 space-y-2">
+            <button
+              type="submit"
+              disabled={isSubmitting || showSuccess}
+              className="w-full h-12 rounded-xl bg-[#087F72] hover:bg-[#075E54] active:scale-98 text-white font-black text-sm flex items-center justify-center gap-2 shadow-md transition-all"
+            >
+              {showSuccess ? (
+                <>
+                  <Check className="size-5 text-white" />
+                  <span>¡Publicado en el barrio!</span>
+                </>
+              ) : isSubmitting ? (
+                <span>Publicando...</span>
+              ) : (
+                <span>Publicar</span>
+              )}
+            </button>
+
+            {/* Texto aclaratorio (Figma) */}
+            <p className="text-[11px] text-center text-gray-400 font-medium">
+              Ubicación y categoría ya vienen llenas: solo tocas Publicar.
+            </p>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
