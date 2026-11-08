@@ -40,7 +40,7 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
   const [activeTab, setActiveTab] = useState<AppTab>("inicio")
   const { catalog } = useCatalog()
   const location = useMemo(() => ({ lat: user.location.lat, lng: user.location.lng }), [user.location.lat, user.location.lng])
-  const neighborhoodName = user.location?.neighborhood || "Tu barrio"
+  const neighborhoodName = user.location.neighborhood
 
   const [favors, setFavors] = useState<FavorItem[]>([])
   const [wallStatus, setWallStatus] = useState<LoadStatus>("loading")
@@ -267,17 +267,23 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
       )}
 
       <main className="flex-1 px-4 sm:px-6 py-6 pb-28 md:pb-12 max-w-5xl mx-auto w-full">
-        {activeTab === "inicio" && (
-          <DirectoryView
-            key={directoryKey}
-            userName={user.name}
-            userNeighborhood={neighborhoodName}
-            location={location}
-            onSelectBusiness={setSelectedBusinessId}
-            onOpenMap={() => goTo("mapa")}
-            onRecommendNew={() => openCreate("recomiendo")}
-          />
-        )}
+        {activeTab === "inicio" &&
+          (catalog ? (
+            <DirectoryView
+              userName={user.name}
+              userNeighborhood={neighborhoodName}
+              location={location}
+              options={catalog.directory}
+              refreshKey={directoryKey}
+              onSelectBusiness={setSelectedBusinessId}
+              onOpenMap={() => goTo("mapa")}
+              onRecommendNew={() => openCreate("recomiendo")}
+            />
+          ) : (
+            <div className="py-16 flex justify-center">
+              <div className="size-7 rounded-full border-2 border-[#087F72] border-t-transparent animate-spin" />
+            </div>
+          ))}
 
         {activeTab === "mapa" && (
           <CommunityMapView

@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import {
   User as UserIcon,
@@ -22,11 +22,7 @@ import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/
 import { Logo } from "@/components/brand/Logo"
 import { authService } from "@/lib/auth"
 import { ApiError } from "@/lib/api"
-
-const DEMO_ACCOUNTS = {
-  vecino: { phone: "900000002", password: "Vecino1234" },
-  moderador: { phone: "900000001", password: "Moderador123" },
-}
+import { DemoAccount } from "@/lib/types"
 
 function errorMessage(err: unknown, fallback: string): string {
   return err instanceof ApiError ? err.friendlyMessage : fallback
@@ -40,6 +36,20 @@ export function AuthCard() {
   const [loginError, setLoginError] = useState("")
 
   const [showDemoPanel, setShowDemoPanel] = useState(false)
+  const [demoAccounts, setDemoAccounts] = useState<DemoAccount[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    authService
+      .demoAccounts()
+      .then(list => {
+        if (!cancelled) setDemoAccounts(list)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -52,7 +62,7 @@ export function AuthCard() {
     setLoginLoading(true)
     try {
       await authService.login({ phone: loginPhone, password: loginPassword })
-      window.location.href = "/"
+      window.location.assign("/")
     } catch (err) {
       setLoginError(
         err instanceof ApiError && err.status === 401
@@ -63,18 +73,14 @@ export function AuthCard() {
     }
   }
 
-  const handleDemoAccess = async (demoRole: keyof typeof DEMO_ACCOUNTS) => {
+  const handleDemoAccess = async (key: string) => {
     setLoginError("")
     setLoginLoading(true)
     try {
-      await authService.login(DEMO_ACCOUNTS[demoRole])
-      window.location.href = "/"
+      await authService.demoLogin(key)
+      window.location.assign("/")
     } catch (err) {
-      setLoginError(
-        err instanceof ApiError && err.status === 401
-          ? "Las cuentas de demostración no están activas en este servidor."
-          : errorMessage(err, "No pudimos iniciar sesión. Intenta otra vez.")
-      )
+      setLoginError(errorMessage(err, "No pudimos iniciar sesión. Intenta otra vez."))
       setLoginLoading(false)
     }
   }
@@ -166,6 +172,7 @@ export function AuthCard() {
           </p>
         </form>
 
+        {demoAccounts.length > 0 && (
         <div className="pt-3 border-t border-border/70">
           <button
             type="button"
@@ -184,31 +191,39 @@ export function AuthCard() {
               <p className="text-[11px] text-muted-foreground">
                 Selecciona un perfil demostrativo precargado para ingresar en 1 clic:
               </p>
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleDemoAccess("vecino")}
-                  className="h-8 text-xs font-semibold rounded-lg justify-start"
-                >
-                  <UserIcon className="size-3.5" />
-                  Vecino General
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleDemoAccess("moderador")}
-                  className="h-8 text-xs font-semibold rounded-lg justify-start border-rose-500/30 text-rose-600 dark:text-rose-400"
-                >
-                  <Siren className="size-3.5" />
-                  Moderador (Junta SOS)
-                </Button>
+              <div className="space-y-2">
+                {demoAccounts.map(account => {
+                  const isModerator = account.role === "MODERATOR"
+                  const Icon = isModerator ? Siren : UserIcon
+                  return (
+                    <button
+                      key={account.key}
+                      type="button"
+                      disabled={loginLoading}
+                      onClick={() => handleDemoAccess(account.key)}
+                      className={`w-full flex items-start gap-2.5 rounded-lg border bg-background p-2.5 text-left transition-colors hover:bg-muted disabled:opacity-60 ${
+                        isModerator ? "border-rose-500/30" : "border-border"
+                      }`}
+                    >
+                      <Icon className={`size-4 mt-0.5 shrink-0 ${isModerator ? "text-rose-600" : "text-[#087F72]"}`} />
+                      <span className="min-w-0">
+                        <span className={`block text-xs font-bold ${isModerator ? "text-rose-600" : "text-foreground"}`}>
+                          {account.title}
+                        </span>
+                        <span className="block text-[11px] text-muted-foreground">
+                          {account.fullName}
+                          {account.neighborhood ? ` · ${account.neighborhood}` : ""}
+                        </span>
+                        <span className="block text-[11px] text-muted-foreground">{account.summary}</span>
+                      </span>
+                    </button>
+                  )
+                })}
               </div>
             </div>
           )}
         </div>
+        )}
       </CardContent>
     </Card>
   )

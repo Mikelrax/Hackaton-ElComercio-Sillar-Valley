@@ -5,7 +5,7 @@ import { ArrowLeft, Check, MessageCircle, Phone, ThumbsUp } from "lucide-react"
 import { BusinessDetail } from "@/lib/types"
 import { ApiError } from "@/lib/api"
 import { businessesApi, RecommendInput } from "@/lib/businesses"
-import { formatDistance } from "@/lib/catalog"
+import { formatDistance, useCatalog } from "@/lib/catalog"
 import { timeAgo, whatsappLink } from "@/lib/posts"
 import { CategoryIcon, categoryTone } from "@/components/ui/category-icon"
 
@@ -16,17 +16,15 @@ interface BusinessDetailModalProps {
   onChanged: () => void
 }
 
-const TAGS: { key: keyof Omit<RecommendInput, "comment">; label: string }[] = [
-  { key: "goodPrice", label: "Buen precio" },
-  { key: "punctual", label: "Puntual" },
-  { key: "reliable", label: "Confiable" },
-]
+type TagKey = keyof Omit<RecommendInput, "comment">
 
 function initials(name: string): string {
   return name.slice(0, 2).toUpperCase()
 }
 
 export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({ businessId, location, onClose, onChanged }) => {
+  const { catalog } = useCatalog()
+  const tags = (catalog?.recommendationTags ?? []).map(t => ({ key: t.value as TagKey, label: t.label }))
   const [business, setBusiness] = useState<BusinessDetail | null>(null)
   const [error, setError] = useState("")
   const [recommending, setRecommending] = useState(false)
@@ -146,7 +144,7 @@ export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({ busine
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {TAGS.map(t => (
+              {tags.map(t => (
                 <span key={t.key} className="px-3 py-1.5 rounded-full bg-white border border-gray-200 text-xs font-medium text-gray-700">
                   {t.label} · {business.tags[t.key]}
                 </span>
@@ -194,7 +192,7 @@ export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({ busine
               <div className="rounded-2xl border-2 border-[#F2A900]/50 p-4 space-y-3">
                 <p className="text-sm font-bold text-[#172B2A]">¿Qué destacas de este lugar?</p>
                 <div className="flex flex-wrap gap-2">
-                  {TAGS.map(t => (
+                  {tags.map(t => (
                     <button
                       key={t.key}
                       type="button"

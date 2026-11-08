@@ -6,7 +6,7 @@ export interface BusinessFilters {
   category?: string | null
   radius?: number | null
   openNow?: boolean
-  sort?: "recommended" | "distance"
+  sort?: string
   lat?: number
   lng?: number
   size?: number

@@ -12,7 +12,32 @@ export interface CategoryFacet {
   count: number
 }
 
+export interface GeoPoint {
+  latitude: number
+  longitude: number
+  neighborhood: string
+}
+
+export interface PlaceOption {
+  value: string
+  label: string
+  icon: string
+  custom: boolean
+}
+
+export interface RadiusOption {
+  meters: number | null
+  label: string
+}
+
+export interface DirectoryOptions {
+  radii: RadiusOption[]
+  defaultRadius: number | null
+  sorts: Option[]
+}
+
 export interface Catalog {
+  city: GeoPoint
   neighborhoods: string[]
   postCategories: Option[]
   businessCategories: CategoryFacet[]
@@ -20,6 +45,26 @@ export interface Catalog {
   emergencyCategories: Option[]
   supportPointTypes: Option[]
   emergencyNumbers: Option[]
+  addressPlaces: PlaceOption[]
+  maxAddresses: number
+  directory: DirectoryOptions
+  recommendationTags: Option[]
+}
+
+export interface DemoAccount {
+  key: string
+  title: string
+  summary: string
+  role: "NEIGHBOR" | "MODERATOR"
+  fullName: string
+  neighborhood: string | null
+}
+
+export interface Landing {
+  zones: string[]
+  business: { name: string; categoryName: string; categoryIcon: string; recommendations: number } | null
+  offer: { title: string; neighborhood: string | null } | null
+  supportPoint: { name: string; typeLabel: string; neighborhood: string } | null
 }
 
 export interface ReputationTags {

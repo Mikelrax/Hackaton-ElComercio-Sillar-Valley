@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { Check, MapPin, RefreshCw, Search, SlidersHorizontal, Store, ThumbsUp, X } from "lucide-react"
-import { BusinessSearchResult } from "@/lib/types"
+import { BusinessSearchResult, DirectoryOptions } from "@/lib/types"
 import { businessesApi } from "@/lib/businesses"
 import { formatDistance } from "@/lib/catalog"
 import { CategoryIcon, categoryTone } from "@/components/ui/category-icon"
@@ -12,39 +12,33 @@ interface DirectoryViewProps {
   userName: string
   userNeighborhood: string
   location: { lat: number; lng: number }
+  options: DirectoryOptions
+  refreshKey: number
   onSelectBusiness: (id: number) => void
   onOpenMap: () => void
   onRecommendNew: () => void
-}
-
-type Sort = "recommended" | "distance"
-
-const RADIUS_OPTIONS: { value: number | null; label: string }[] = [
-  { value: 500, label: "500 m" },
-  { value: 1000, label: "1 km" },
-  { value: 2000, label: "2 km" },
-  { value: null, label: "Toda la ciudad" },
-]
-const DEFAULT_RADIUS = 2000
-
-function radiusLabel(radius: number | null): string {
-  return RADIUS_OPTIONS.find(o => o.value === radius)?.label ?? "Toda la ciudad"
 }
 
 export const DirectoryView: React.FC<DirectoryViewProps> = ({
   userName,
   userNeighborhood,
   location,
+  options,
+  refreshKey,
   onSelectBusiness,
   onOpenMap,
   onRecommendNew,
 }) => {
+  const defaultRadius = options.defaultRadius
+  const defaultSort = options.sorts[0]?.value ?? ""
+  const radiusLabel = (meters: number | null) => options.radii.find(o => o.meters === meters)?.label ?? ""
+  const sortLabel = (value: string) => options.sorts.find(o => o.value === value)?.label ?? value
   const [searchTerm, setSearchTerm] = useState("")
   const [query, setQuery] = useState("")
   const [category, setCategory] = useState<string | null>(null)
-  const [radius, setRadius] = useState<number | null>(DEFAULT_RADIUS)
+  const [radius, setRadius] = useState<number | null>(defaultRadius)
   const [openNow, setOpenNow] = useState(false)
-  const [sort, setSort] = useState<Sort>("recommended")
+  const [sort, setSort] = useState(defaultSort)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [result, setResult] = useState<BusinessSearchResult | null>(null)
   const [error, setError] = useState(false)
@@ -74,12 +68,12 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
     return () => {
       cancelled = true
     }
-  }, [query, category, radius, openNow, sort, location.lat, location.lng, reloadKey])
+  }, [query, category, radius, openNow, sort, location.lat, location.lng, reloadKey, refreshKey])
 
   const facets = useMemo(() => result?.categories ?? [], [result])
   const totalAllCategories = facets.reduce((n, f) => n + f.count, 0)
   const visibleFacets = facets.filter(f => f.count > 0 || f.slug === category)
-  const activeFilterCount = (radius !== DEFAULT_RADIUS ? 1 : 0) + (openNow ? 1 : 0) + (sort !== "recommended" ? 1 : 0)
+  const activeFilterCount = (radius !== defaultRadius ? 1 : 0) + (openNow ? 1 : 0) + (sort !== defaultSort ? 1 : 0)
   const firstName = userName.split(" ")[0] || userName
 
   const update = (fn: () => void) => {
@@ -89,9 +83,9 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
 
   const clearFilters = () =>
     update(() => {
-      setRadius(DEFAULT_RADIUS)
+      setRadius(defaultRadius)
       setOpenNow(false)
-      setSort("recommended")
+      setSort(defaultSort)
       setCategory(null)
       setSearchTerm("")
     })
@@ -183,12 +177,12 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
 
       {activeFilterCount > 0 && (
         <div className="flex flex-wrap items-center gap-2">
-          {radius !== DEFAULT_RADIUS && (
+          {radius !== defaultRadius && (
             <button
-              onClick={() => update(() => setRadius(DEFAULT_RADIUS))}
+              onClick={() => update(() => setRadius(defaultRadius))}
               className="h-8 px-3 rounded-full bg-[#EAF5F1] text-[#087F72] text-xs font-bold flex items-center gap-1"
             >
-              {radius === null ? "Toda la ciudad" : `A ${radiusLabel(radius)}`}
+              {radius === null ? radiusLabel(null) : `A ${radiusLabel(radius)}`}
               <X className="size-3.5" />
             </button>
           )}
@@ -201,12 +195,12 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
               <X className="size-3.5" />
             </button>
           )}
-          {sort !== "recommended" && (
+          {sort !== defaultSort && (
             <button
-              onClick={() => update(() => setSort("recommended"))}
+              onClick={() => update(() => setSort(defaultSort))}
               className="h-8 px-3 rounded-full bg-[#EAF5F1] text-[#087F72] text-xs font-bold flex items-center gap-1"
             >
-              Más cerca primero
+              {sortLabel(sort)}
               <X className="size-3.5" />
             </button>
           )}
@@ -320,13 +314,13 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
             <fieldset className="space-y-2">
               <legend className="text-sm font-bold text-[#172B2A] mb-2">Qué tan cerca</legend>
               <div className="grid grid-cols-2 gap-2">
-                {RADIUS_OPTIONS.map(o => (
+                {options.radii.map(o => (
                   <button
                     key={o.label}
-                    onClick={() => update(() => setRadius(o.value))}
-                    aria-pressed={radius === o.value}
+                    onClick={() => update(() => setRadius(o.meters))}
+                    aria-pressed={radius === o.meters}
                     className={`h-11 rounded-xl border-2 text-sm font-bold transition-colors ${
-                      radius === o.value
+                      radius === o.meters
                         ? "border-[#087F72] bg-[#EAF5F1] text-[#087F72]"
                         : "border-gray-200 text-gray-700 hover:border-gray-300"
                     }`}
@@ -353,12 +347,7 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
             <fieldset className="space-y-2">
               <legend className="text-sm font-bold text-[#172B2A] mb-2">Ordenar por</legend>
               <div className="grid grid-cols-2 gap-2">
-                {(
-                  [
-                    { value: "recommended", label: "Más recomendados" },
-                    { value: "distance", label: "Más cerca" },
-                  ] as const
-                ).map(o => (
+                {options.sorts.map(o => (
                   <button
                     key={o.value}
                     onClick={() => update(() => setSort(o.value))}

@@ -10,6 +10,7 @@ export interface BackendPost {
   description: string
   neighborhood: string | null
   status: "PENDING" | "APPROVED" | "REJECTED" | "FULFILLED" | "CANCELLED"
+  statusLabel: string
   author: { id: number; fullName: string }
   moderationNote: string | null
   createdAt: string
@@ -22,6 +23,7 @@ export interface HelpResponse {
   helper: { id: number; fullName: string }
   message: string
   status: "PENDING" | "ACCEPTED" | "DECLINED" | "WITHDRAWN"
+  statusLabel: string
   contactPhone: string | null
   createdAt: string
 }
@@ -55,7 +57,7 @@ function toFavor(p: BackendPost): FavorItem {
     description: p.description,
     author: p.author.fullName.split(" ")[0] || p.author.fullName,
     authorId: String(p.author.id),
-    distanceText: p.neighborhood || "Tu barrio",
+    distanceText: p.neighborhood ?? "",
     timeAgo: timeAgo(p.createdAt),
     isResolved: p.status === "FULFILLED",
   }

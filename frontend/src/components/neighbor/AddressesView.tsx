@@ -4,42 +4,30 @@ import * as React from "react"
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Briefcase, Home, LocateFixed, Lock, MapPin, Plus, Star, Users, type LucideIcon } from "lucide-react"
+import { ArrowLeft, LocateFixed, Lock, MapPin, Plus, Star } from "lucide-react"
 import { Address, authService } from "@/lib/auth"
 import { ApiError } from "@/lib/api"
-import { addressesApi, MAX_ADDRESSES } from "@/lib/addresses"
+import { addressesApi } from "@/lib/addresses"
 import { useCatalog } from "@/lib/catalog"
 import { helpClass, inputClass, labelClass, primaryButton, secondaryButton } from "@/lib/form-styles"
 import { FormError } from "@/components/ui/form-error"
 import { SoftBackdrop } from "@/components/layout/SoftBackdrop"
 import { BigSelect, type BigSelectOption } from "@/components/ui/big-select"
+import { CategoryIcon } from "@/components/ui/category-icon"
 
-type PlaceType = "Casa" | "Trabajo" | "Familia" | "Otro"
 type GpsState = "idle" | "locating" | "ok" | "error"
-
-const PLACE_OPTIONS: BigSelectOption[] = [
-  { value: "Casa", label: "Casa", icon: Home },
-  { value: "Trabajo", label: "Trabajo", icon: Briefcase },
-  { value: "Familia", label: "Casa de un familiar", icon: Users },
-  { value: "Otro", label: "Otro lugar", icon: MapPin },
-]
-
-function iconFor(label: string): LucideIcon {
-  const l = label.toLowerCase()
-  if (/famili|mam[aá]|pap[aá]|abuel/.test(l)) return Users
-  if (l.includes("trabajo")) return Briefcase
-  if (l.includes("casa")) return Home
-  return MapPin
-}
 
 function errorText(err: unknown): string {
   return err instanceof ApiError ? err.friendlyMessage : "Algo salió mal. Intenta otra vez."
 }
 
 function AddressForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => void }) {
-  const [placeType, setPlaceType] = useState<PlaceType>("Casa")
-  const [customLabel, setCustomLabel] = useState("")
   const { catalog } = useCatalog()
+  const places = catalog?.addressPlaces ?? []
+  const placeOptions: BigSelectOption[] = places.map(p => ({ value: p.value, label: p.label, iconName: p.icon }))
+  const [chosenPlace, setPlace] = useState("")
+  const place = places.find(p => p.value === chosenPlace) ?? places[0]
+  const [customLabel, setCustomLabel] = useState("")
   const [chosenNeighborhood, setNeighborhood] = useState("")
   const neighborhoodOptions: BigSelectOption[] = (catalog?.neighborhoods ?? []).map(n => ({ value: n, label: n }))
   const neighborhood = chosenNeighborhood || neighborhoodOptions[0]?.value || ""
@@ -68,8 +56,7 @@ function AddressForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
-    const label =
-      placeType === "Otro" ? customLabel.trim() : PLACE_OPTIONS.find(o => o.value === placeType)?.label ?? placeType
+    const label = place?.custom ? customLabel.trim() : place?.label ?? ""
     if (!label) {
       setError("Escribe un nombre para este lugar, por ejemplo «Casa de mi abuela».")
       return
@@ -98,11 +85,12 @@ function AddressForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () 
         <label htmlFor="addr-place" className={labelClass}>¿Qué lugar es?</label>
         <BigSelect
           id="addr-place"
-          value={placeType}
-          onValueChange={v => setPlaceType(v as PlaceType)}
-          options={PLACE_OPTIONS}
+          value={place?.value ?? ""}
+          onValueChange={setPlace}
+          options={placeOptions}
+          placeholder="Cargando lugares…"
         />
-        {placeType === "Otro" && (
+        {place?.custom && (
           <input
             aria-label="Nombre del lugar"
             value={customLabel}
@@ -173,6 +161,7 @@ function AddressForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () 
 
 export function AddressesView() {
   const router = useRouter()
+  const { catalog } = useCatalog()
   const [addresses, setAddresses] = useState<Address[] | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
   const [error, setError] = useState("")
@@ -193,8 +182,7 @@ export function AddressesView() {
         if (cancelled) return
         setAddresses(list)
         setError("")
-        const primary = list.find(a => a.primary)
-        if (primary) authService.updatePrimaryAddress(primary)
+        authService.refreshLocation().catch(() => {})
       })
       .catch(err => {
         if (!cancelled) setError(errorText(err))
@@ -223,6 +211,7 @@ export function AddressesView() {
   }
 
   const count = addresses?.length ?? 0
+  const maxAddresses = catalog?.maxAddresses ?? null
 
   return (
     <SoftBackdrop className="flex justify-center font-sans text-[#1C1917]">
@@ -267,13 +256,12 @@ export function AddressesView() {
         {addresses && (
           <ul className="space-y-3">
             {addresses.map(address => {
-              const Icon = iconFor(address.label)
               const isBusy = busyId === address.id
               return (
                 <li key={address.id} className="rounded-2xl bg-white border border-[#E7E5E4] p-4 space-y-3">
                   <div className="flex items-start gap-3">
                     <span className="size-11 shrink-0 rounded-full bg-[#EAF5F1] text-[#087F72] flex items-center justify-center">
-                      <Icon className="size-5" />
+                      <CategoryIcon name={address.icon} className="size-5" />
                     </span>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -358,7 +346,7 @@ export function AddressesView() {
           />
         )}
 
-        {addresses && !formOpen && count < MAX_ADDRESSES && (
+        {addresses && !formOpen && maxAddresses !== null && count < maxAddresses && (
           <button
             type="button"
             onClick={() => {
@@ -372,8 +360,8 @@ export function AddressesView() {
           </button>
         )}
 
-        {addresses && count >= MAX_ADDRESSES && (
-          <p className={helpClass}>Puedes guardar hasta {MAX_ADDRESSES} direcciones. Borra una para agregar otra.</p>
+        {addresses && maxAddresses !== null && count >= maxAddresses && (
+          <p className={helpClass}>Puedes guardar hasta {maxAddresses} direcciones. Borra una para agregar otra.</p>
         )}
       </div>
     </SoftBackdrop>

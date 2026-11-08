@@ -1,4 +1,5 @@
 import { apiFetch, SESSION_KEY } from "@/lib/api"
+import { DemoAccount, GeoPoint } from "@/lib/types"
 
 export type UserRole = "vecino" | "emprendedor" | "moderador"
 export type UserProfile = "mayor" | "familia" | "joven" | "adulto"
@@ -6,7 +7,7 @@ export type UserProfile = "mayor" | "familia" | "joven" | "adulto"
 export interface UserLocation {
   lat: number
   lng: number
-  neighborhood?: string
+  neighborhood: string
   address?: string
 }
 
@@ -55,6 +56,7 @@ export interface Address {
   latitude: number | null
   longitude: number | null
   primary: boolean
+  icon: string
 }
 
 interface BackendUser {
@@ -64,6 +66,7 @@ interface BackendUser {
   role: "NEIGHBOR" | "MODERATOR"
   helpGiven: number
   primaryAddress: Address | null
+  location: GeoPoint
 }
 
 interface AuthResponse {
@@ -72,14 +75,12 @@ interface AuthResponse {
   user: BackendUser
 }
 
-const DEFAULT_COORDS = { lat: -16.3988, lng: -71.535 }
-
-function toLocation(address: Address | null): UserLocation {
+function toLocation(user: BackendUser): UserLocation {
   return {
-    lat: address?.latitude ?? DEFAULT_COORDS.lat,
-    lng: address?.longitude ?? DEFAULT_COORDS.lng,
-    neighborhood: address?.neighborhood,
-    address: address?.reference ?? undefined,
+    lat: user.location.latitude,
+    lng: user.location.longitude,
+    neighborhood: user.location.neighborhood,
+    address: user.primaryAddress?.reference ?? undefined,
   }
 }
 
@@ -91,7 +92,7 @@ function toUser(res: AuthResponse): User {
     phone: b.phone,
     role: b.role === "MODERATOR" ? "moderador" : "vecino",
     profile: "adulto",
-    location: toLocation(b.primaryAddress),
+    location: toLocation(b),
     token: res.token,
     expiresAt: Date.now() + res.expiresInSeconds * 1000,
     verified: true,
@@ -105,7 +106,8 @@ export const authService = {
     try {
       const data = localStorage.getItem(SESSION_KEY)
       const user: User | null = data ? JSON.parse(data) : null
-      if (!user?.token || (user.expiresAt && user.expiresAt < Date.now())) {
+      const expired = user?.expiresAt !== undefined && user.expiresAt < Date.now()
+      if (!user?.token || expired || !user.location?.neighborhood) {
         localStorage.removeItem(SESSION_KEY)
         return null
       }
@@ -120,9 +122,24 @@ export const authService = {
     localStorage.setItem(SESSION_KEY, JSON.stringify(user))
   },
 
-  updatePrimaryAddress(address: Address): void {
+  async refreshLocation(): Promise<void> {
+    const me = await apiFetch<BackendUser>("/api/users/me")
     const user = this.getCurrentUser()
-    if (user) this.setCurrentUser({ ...user, location: toLocation(address) })
+    if (user) this.setCurrentUser({ ...user, location: toLocation(me) })
+  },
+
+  demoAccounts(): Promise<DemoAccount[]> {
+    return apiFetch<DemoAccount[]>("/api/auth/demo", { auth: false })
+  },
+
+  async demoLogin(key: string): Promise<User> {
+    const res = await apiFetch<AuthResponse>(`/api/auth/demo/${encodeURIComponent(key)}`, {
+      method: "POST",
+      auth: false,
+    })
+    const user = toUser(res)
+    this.setCurrentUser(user)
+    return user
   },
 
   logout(): void {

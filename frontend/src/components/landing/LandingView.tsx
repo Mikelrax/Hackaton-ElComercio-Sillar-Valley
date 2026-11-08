@@ -22,19 +22,24 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Logo } from "@/components/brand/Logo"
 import { CommunityHeroIllustration } from "@/components/brand/CommunityHeroIllustration"
-
-const DISTRICTS = [
-  "Yanahuara",
-  "Cayma",
-  "Cerro Colorado",
-  "Cercado",
-  "Paucarpata",
-  "J.L. Bustamante y Rivero",
-  "Alto Selva Alegre",
-  "Sachaca",
-]
+import { apiFetch } from "@/lib/api"
+import { Landing } from "@/lib/types"
 
 export function LandingView() {
+  const [landing, setLanding] = React.useState<Landing | null>(null)
+
+  React.useEffect(() => {
+    let cancelled = false
+    apiFetch<Landing>("/api/landing", { auth: false })
+      .then(data => {
+        if (!cancelled) setLanding(data)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground antialiased selection:bg-emerald-500/20">
       <header className="sticky top-0 z-40 w-full border-b border-border/80 bg-background/85 backdrop-blur-md transition-all">
@@ -123,21 +128,22 @@ export function LandingView() {
             </div>
 
             <div className="lg:col-span-5 flex justify-center">
-              <CommunityHeroIllustration />
+              <CommunityHeroIllustration landing={landing} />
             </div>
           </div>
         </div>
       </section>
 
+      {landing && landing.zones.length > 0 && (
       <section className="py-5 bg-muted/40 border-b border-border/60">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground">
             <span className="font-semibold text-foreground flex items-center gap-1.5">
               <MapPin className="size-3.5 text-emerald-600" />
-              Zonas activas en Arequipa:
+              Barrios con vecinos activos:
             </span>
             <div className="flex flex-wrap items-center justify-center gap-1.5">
-              {DISTRICTS.map((district) => (
+              {landing.zones.map((district) => (
                 <span
                   key={district}
                   className="px-2.5 py-1 rounded-lg bg-background border border-border/70 text-[11px] font-medium"
@@ -149,6 +155,7 @@ export function LandingView() {
           </div>
         </div>
       </section>
+      )}
 
       <section id="directorio" className="py-16 sm:py-20 max-w-6xl mx-auto px-4 sm:px-6 w-full">
         <div className="text-center max-w-2xl mx-auto space-y-3 mb-12">

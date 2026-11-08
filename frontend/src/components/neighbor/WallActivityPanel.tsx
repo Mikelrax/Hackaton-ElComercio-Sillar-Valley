@@ -12,19 +12,12 @@ interface Activity {
   sent: HelpResponse[]
 }
 
-const POST_STATUS: Record<BackendPost["status"], { label: string; className: string }> = {
-  PENDING: { label: "En revisión", className: "bg-amber-100 text-[#8A5800]" },
-  APPROVED: { label: "Publicada", className: "bg-[#d4f3eb] text-[#087F72]" },
-  REJECTED: { label: "No aprobada", className: "bg-rose-100 text-rose-700" },
-  FULFILLED: { label: "Cumplida", className: "bg-emerald-100 text-emerald-800" },
-  CANCELLED: { label: "Cancelada", className: "bg-gray-100 text-gray-500" },
-}
-
-const SENT_STATUS: Record<HelpResponse["status"], string> = {
-  PENDING: "Esperando que te acepten",
-  ACCEPTED: "¡Te aceptaron!",
-  DECLINED: "Esta vez no fue posible",
-  WITHDRAWN: "La retiraste",
+const POST_STATUS_STYLE: Record<BackendPost["status"], string> = {
+  PENDING: "bg-amber-100 text-[#8A5800]",
+  APPROVED: "bg-[#d4f3eb] text-[#087F72]",
+  REJECTED: "bg-rose-100 text-rose-700",
+  FULFILLED: "bg-emerald-100 text-emerald-800",
+  CANCELLED: "bg-gray-100 text-gray-500",
 }
 
 async function loadActivity(): Promise<Activity> {
@@ -142,14 +135,13 @@ export function WallActivityPanel() {
                 )}
 
                 {activity.posts.map(post => {
-                  const status = POST_STATUS[post.status]
                   const accepted = post.responses.find(r => r.status === "ACCEPTED")
                   return (
                     <div key={post.id} className="p-3 rounded-xl border border-gray-200 space-y-2">
                       <div className="flex items-start justify-between gap-2">
                         <p className="text-sm font-bold text-[#172B2A] leading-snug">{post.title}</p>
-                        <span className={`shrink-0 px-2 py-0.5 rounded-md text-[11px] font-bold ${status.className}`}>
-                          {status.label}
+                        <span className={`shrink-0 px-2 py-0.5 rounded-md text-[11px] font-bold ${POST_STATUS_STYLE[post.status]}`}>
+                          {post.statusLabel}
                         </span>
                       </div>
 
@@ -233,7 +225,7 @@ export function WallActivityPanel() {
                         r.status === "ACCEPTED" ? "text-[#087F72]" : "text-gray-500"
                       }`}
                     >
-                      {SENT_STATUS[r.status]}
+                      {r.statusLabel}
                     </p>
                     {r.status === "ACCEPTED" && r.contactPhone && (
                       <a

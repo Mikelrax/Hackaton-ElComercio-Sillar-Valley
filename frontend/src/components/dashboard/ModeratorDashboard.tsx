@@ -290,7 +290,7 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
           <div className="max-w-5xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight">Panel de moderador</h1>
-              <p className="text-xs text-gray-500 mt-0.5">Gestión comunitaria · {user.location?.neighborhood || "Arequipa"}</p>
+              <p className="text-xs text-gray-500 mt-0.5">Gestión comunitaria · {user.location.neighborhood}</p>
             </div>
             <button
               onClick={() => go("emergency")}

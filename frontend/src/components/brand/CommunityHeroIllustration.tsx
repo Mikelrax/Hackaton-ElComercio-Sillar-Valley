@@ -1,8 +1,17 @@
 import * as React from "react"
-import { Handshake, Siren, Star, Wrench } from "lucide-react"
+import { Handshake, Siren, Star } from "lucide-react"
+import { DynamicIcon, type IconName } from "lucide-react/dynamic"
 import { cn } from "@/lib/utils"
+import { Landing } from "@/lib/types"
 
-export function CommunityHeroIllustration({ className }: { className?: string }) {
+function clip(text: string, max: number): string {
+  return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text
+}
+
+export function CommunityHeroIllustration({ landing, className }: { landing: Landing | null; className?: string }) {
+  const business = landing?.business
+  const offer = landing?.offer
+  const supportPoint = landing?.supportPoint
   return (
     <div className={cn("relative w-full max-w-lg mx-auto aspect-[4/3] flex items-center justify-center select-none", className)}>
       <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/15 via-teal-500/10 to-transparent rounded-3xl blur-2xl -z-10" />
@@ -93,34 +102,46 @@ export function CommunityHeroIllustration({ className }: { className?: string })
           <path d="M-2 0 Q 5 -8 12 0" fill="none" stroke="#64748b" strokeWidth="2" />
         </g>
 
-        <g transform="translate(45, 60)">
-          <g className="animate-bounce" style={{ animationDuration: "5s", transformBox: "fill-box" }}>
-            <rect x="0" y="0" width="135" height="42" rx="12" fill="#ffffff" stroke="#e2e8f0" strokeWidth="1.5" filter="drop-shadow(0 4px 6px rgba(0,0,0,0.06))" />
-            <circle cx="22" cy="21" r="13" fill="#d1fae5" />
-            <Wrench x={15} y={14} size={14} color="#059669" strokeWidth={2.25} />
-            <text x="42" y="18" fill="#0f172a" fontSize="10" fontWeight="bold">Don Lucho (Gasfitero)</text>
-            <Star x={42} y={23} size={8} color="#059669" fill="#059669" />
-            <text x="53" y="30" fill="#059669" fontSize="8.5" fontWeight="600">Recomendado por 12</text>
+        {business && (
+          <g transform="translate(30, 60)">
+            <g className="animate-bounce" style={{ animationDuration: "5s", transformBox: "fill-box" }}>
+              <rect x="0" y="0" width="172" height="42" rx="12" fill="#ffffff" stroke="#e2e8f0" strokeWidth="1.5" filter="drop-shadow(0 4px 6px rgba(0,0,0,0.06))" />
+              <circle cx="22" cy="21" r="13" fill="#d1fae5" />
+              <DynamicIcon name={business.categoryIcon as IconName} x={15} y={14} size={14} color="#059669" strokeWidth={2.25} />
+              <text x="42" y="18" fill="#0f172a" fontSize="10" fontWeight="bold">{clip(business.name, 22)}</text>
+              <Star x={42} y={23} size={8} color="#059669" fill="#059669" />
+              <text x="53" y="30" fill="#059669" fontSize="8.5" fontWeight="600">
+                {business.recommendations === 1 ? "Recomendado por 1 vecino" : `Recomendado por ${business.recommendations} vecinos`}
+              </text>
+            </g>
           </g>
-        </g>
+        )}
 
-        <g transform="translate(340, 70)">
-          <g className="animate-bounce" style={{ animationDuration: "6s", transformBox: "fill-box" }}>
-            <rect x="0" y="0" width="140" height="42" rx="12" fill="#ffffff" stroke="#e2e8f0" strokeWidth="1.5" filter="drop-shadow(0 4px 6px rgba(0,0,0,0.06))" />
-            <circle cx="22" cy="21" r="13" fill="#e0f2fe" />
-            <Handshake x={15} y={14} size={14} color="#0284c7" strokeWidth={2.25} />
-            <text x="42" y="18" fill="#0f172a" fontSize="10" fontWeight="bold">Préstamo de Escalera</text>
-            <text x="42" y="30" fill="#0284c7" fontSize="8.5" fontWeight="600">A 200m · Costo Cero</text>
+        {offer && (
+          <g transform="translate(318, 70)">
+            <g className="animate-bounce" style={{ animationDuration: "6s", transformBox: "fill-box" }}>
+              <rect x="0" y="0" width="176" height="42" rx="12" fill="#ffffff" stroke="#e2e8f0" strokeWidth="1.5" filter="drop-shadow(0 4px 6px rgba(0,0,0,0.06))" />
+              <circle cx="22" cy="21" r="13" fill="#e0f2fe" />
+              <Handshake x={15} y={14} size={14} color="#0284c7" strokeWidth={2.25} />
+              <text x="42" y="18" fill="#0f172a" fontSize="10" fontWeight="bold">{clip(offer.title, 23)}</text>
+              <text x="42" y="30" fill="#0284c7" fontSize="8.5" fontWeight="600">
+                {clip([offer.neighborhood, "Sin costo"].filter(Boolean).join(" · "), 28)}
+              </text>
+            </g>
           </g>
-        </g>
+        )}
 
-        <g transform="translate(195, 290)">
-          <rect x="0" y="0" width="130" height="34" rx="10" fill="#ffffff" stroke="#fecdd3" strokeWidth="1.5" filter="drop-shadow(0 4px 6px rgba(0,0,0,0.06))" />
-          <circle cx="18" cy="17" r="10" fill="#ffe4e6" />
-          <Siren x={12} y={11} size={12} color="#e11d48" strokeWidth={2.25} />
-          <text x="35" y="16" fill="#9f1239" fontSize="9" fontWeight="bold">Punto de Agua Activo</text>
-          <text x="35" y="26" fill="#64748b" fontSize="8">Yanahuara · Respaldo Offline</text>
-        </g>
+        {supportPoint && (
+          <g transform="translate(170, 290)">
+            <rect x="0" y="0" width="180" height="34" rx="10" fill="#ffffff" stroke="#fecdd3" strokeWidth="1.5" filter="drop-shadow(0 4px 6px rgba(0,0,0,0.06))" />
+            <circle cx="18" cy="17" r="10" fill="#ffe4e6" />
+            <Siren x={12} y={11} size={12} color="#e11d48" strokeWidth={2.25} />
+            <text x="35" y="16" fill="#9f1239" fontSize="9" fontWeight="bold">{clip(supportPoint.name, 27)}</text>
+            <text x="35" y="26" fill="#64748b" fontSize="8">
+              {clip(`${supportPoint.typeLabel} · ${supportPoint.neighborhood}`, 34)}
+            </text>
+          </g>
+        )}
       </svg>
     </div>
   )

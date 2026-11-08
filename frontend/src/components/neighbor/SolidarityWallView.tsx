@@ -217,7 +217,7 @@ export const SolidarityWallView: React.FC<SolidarityWallViewProps> = ({
 
                 <div className="flex items-center justify-between gap-3 pt-1">
                   <p className="text-xs text-gray-500 font-medium">
-                    {favor.author} · {favor.distanceText} · {favor.timeAgo}
+                    {[favor.author, favor.distanceText, favor.timeAgo].filter(Boolean).join(" · ")}
                   </p>
 
                   {isMine ? (

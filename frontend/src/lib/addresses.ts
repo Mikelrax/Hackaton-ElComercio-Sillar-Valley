@@ -1,8 +1,6 @@
 import { apiFetch } from "@/lib/api"
 import { Address, AddressInput } from "@/lib/auth"
 
-export const MAX_ADDRESSES = 5
-
 export const addressesApi = {
   list(): Promise<Address[]> {
     return apiFetch<Address[]>("/api/users/me/addresses")
