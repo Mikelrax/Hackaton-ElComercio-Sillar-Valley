@@ -10,6 +10,7 @@ import { directionsUrl, type LatLng } from "@/lib/map"
 import { postsApi } from "@/lib/posts"
 import { useDialog } from "@/lib/use-dialog"
 import { useConfirm } from "@/components/ui/confirm-dialog"
+import { RichText } from "@/components/ui/rich-text"
 import { DEFAULT_RESPONSE, respondSpec } from "@/lib/confirm-specs"
 import { ReportCard, SupportPointCard, useReportActions } from "@/components/neighbor/emergency-parts"
 
@@ -114,7 +115,7 @@ function PostDetail({ item, approximateRadius, onChanged }: { item: MapItem; app
         {[post.categoryLabel, post.author, post.distanceText, post.timeAgo].filter(Boolean).join(" · ")}
         {item.distanceMeters !== null && ` · a ${item.approximate ? "unos " : ""}${formatDistance(item.distanceMeters)}`}
       </p>
-      {post.details && <p className="text-[17px] leading-snug text-[#1C1917] whitespace-pre-line">{post.details}</p>}
+      {post.details && <RichText value={post.details} className="text-[17px] leading-snug text-[#1C1917]" />}
       {post.isResolved && (
         <p className="rounded-xl bg-emerald-50 p-3 text-[15px] font-semibold text-emerald-900">Esta publicación ya se resolvió.</p>
       )}

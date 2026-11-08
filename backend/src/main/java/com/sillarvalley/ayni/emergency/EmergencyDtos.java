@@ -60,7 +60,7 @@ public final class EmergencyDtos {
 
     public record ActivateRequest(
             @NotBlank(message = "Escribe qué está pasando") @Size(max = 80) String title,
-            @Size(max = 500) String message) {}
+            @Size(max = 2000) String message) {}
 
     public record SupportPointRequest(
             @NotBlank(message = "Escribe el nombre del punto") @Size(max = 120) String name,

@@ -35,6 +35,8 @@ import { businessesApi } from "@/lib/businesses";
 import { EmergencyOverview, EmergencyReport, ModerationStats, Option, SafetySummary, SupportPoint } from "@/lib/types";
 import { PendingPostsPanel } from "@/components/dashboard/PendingPostsPanel";
 import { BigSelect } from "@/components/ui/big-select";
+import { RichText } from "@/components/ui/rich-text";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Spot } from "@/lib/types";
 
 const LocationPicker = dynamic(() => import("@/components/map/LocationPicker"), {
@@ -326,7 +328,7 @@ export function ModeratorDashboard({ user, onLogout, onOpenNeighborView }: Moder
       businessesApi.pending(),
       emergencyApi.abuseAlerts().catch(() => [] as AbuseAlert[]),
     ])
-      .then(([s, o, u, pendingPosts, pendingBusinesses]) => {
+      .then(([s, o, u, pendingPosts, pendingBusinesses, alerts]) => {
         if (cancelled) return;
         setStats(s);
         setOverview(o);
@@ -880,7 +882,7 @@ export function ModeratorDashboard({ user, onLogout, onOpenNeighborView }: Moder
                     <Siren className="size-5" />
                     Emergencia activa: {mode.title}
                   </p>
-                  {mode.message && <p className="text-sm text-rose-50">{mode.message}</p>}
+                  {mode.message && <RichText value={mode.message} className="text-sm text-rose-50" />}
                   <p className="text-xs text-rose-100">
                     Activada por {mode.activatedBy} · {mode.activatedAt && timeAgo(mode.activatedAt)}
                   </p>
@@ -955,14 +957,13 @@ export function ModeratorDashboard({ user, onLogout, onOpenNeighborView }: Moder
                     aria-label="Tipo de emergencia"
                     className="w-full h-11 px-3 rounded-xl border border-gray-300 text-sm"
                   />
-                  <textarea
+                  <RichTextEditor
                     value={modeMessage}
-                    onChange={e => setModeMessage(e.target.value)}
-                    maxLength={500}
-                    rows={3}
+                    onChange={setModeMessage}
+                    maxLength={1200}
                     placeholder="Mensaje para los vecinos (opcional)"
-                    aria-label="Mensaje para los vecinos"
-                    className="w-full p-3 rounded-xl border border-gray-300 text-sm resize-none"
+                    label="Mensaje para los vecinos"
+                    minHeight={96}
                   />
                   {confirming === "activate" ? (
                     <div className="rounded-xl bg-rose-50 border border-rose-200 p-3 space-y-2" role="alertdialog" aria-label="Confirmar activación">

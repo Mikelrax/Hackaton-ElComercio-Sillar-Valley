@@ -48,7 +48,7 @@ public class Post {
     @Column(nullable = false, length = 150)
     private String title;
 
-    @Column(nullable = false, length = 2000)
+    @Column(nullable = false, length = 4000)
     private String description;
 
     @Column(length = 120)

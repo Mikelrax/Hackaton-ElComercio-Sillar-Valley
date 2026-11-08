@@ -2,12 +2,14 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react"
 import dynamic from "next/dynamic"
-import { AlertCircle, Check, LocateFixed, MapPin, Minus, Plus, WifiOff, X } from "lucide-react"
+import { AlertCircle, Check, LocateFixed, MapPin, Minus, Phone, Plus, WifiOff, X } from "lucide-react"
 import { Option, Spot } from "@/lib/types"
 import { ApiError } from "@/lib/api"
 import { Address } from "@/lib/auth"
 import { currentPosition, type LatLng, type Where } from "@/lib/map"
+import { plainToHtml, toPlainText } from "@/lib/rich-text"
 import { CategoryIcon } from "@/components/ui/category-icon"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { useDialog } from "@/lib/use-dialog"
 
 const LocationPicker = dynamic(() => import("@/components/map/LocationPicker"), {
@@ -23,6 +25,7 @@ export interface NewPostData {
   category: string
   categoryLabel: string
   description: string
+  details: string
   reference: string
   phone: string
   emergencyKind: EmergencyKindValue
@@ -47,6 +50,7 @@ interface CreatePostModalProps {
   mapStyleUrl: string | null
   categories: Record<PostTypeSelection, Option[]>
   emergencyKinds: Option[]
+  emergencyNumbers: Option[]
   vulnerableGroups: Option[]
   recommendationTags: Option[]
   openDayOptions: Option[]
@@ -65,13 +69,19 @@ const TYPES: { value: PostTypeSelection; title: string; hint: string; active: st
   { value: "emergencia", title: "Emergencia", hint: "Alguien necesita ayuda ya", active: "border-rose-500 bg-rose-50 ring-2 ring-rose-500/30", idle: "border-rose-200/80", titleColor: "text-[#BA1A1A]" },
 ]
 
+const DETAILS_MAX = 1500
+const COMMENT_MAX = 1000
+const FIRE_NUMBER = "116"
+
+const isRichType = (type: PostTypeSelection) => type === "necesito" || type === "ofrezco"
+
 const PLACEHOLDERS: Record<
   PostTypeSelection,
   { label: string; placeholder: string; required: boolean; maxLength: number; reference: string }
 > = {
   recomiendo: { label: "Nombre del negocio", placeholder: "Ej: Gasfitería Don Lucho", required: true, maxLength: 120, reference: "Ej: Cerca al parque principal" },
-  necesito: { label: "Cuéntalo en pocas palabras", placeholder: "Ej: Una escalera por 2 horas", required: false, maxLength: 500, reference: "Ej: Cerca al parque principal" },
-  ofrezco: { label: "Cuéntalo en pocas palabras", placeholder: "Ej: Presto mi taladro los fines de semana", required: false, maxLength: 500, reference: "Ej: Cerca al parque principal" },
+  necesito: { label: "Cuéntalo con detalle", placeholder: "Ej: Una escalera por 2 horas", required: false, maxLength: DETAILS_MAX, reference: "Ej: Cerca al parque principal" },
+  ofrezco: { label: "Cuéntalo con detalle", placeholder: "Ej: Presto mi taladro los fines de semana", required: false, maxLength: DETAILS_MAX, reference: "Ej: Cerca al parque principal" },
   emergencia: { label: "¿Qué está pasando?", placeholder: "Ej: Adulto mayor sin agua", required: false, maxLength: 100, reference: "Ej: Casa azul frente a la iglesia" },
 }
 
@@ -91,6 +101,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   mapStyleUrl,
   categories,
   emergencyKinds,
+  emergencyNumbers,
   vulnerableGroups,
   recommendationTags,
   openDayOptions,
@@ -99,7 +110,8 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const [selectedType, setSelectedType] = useState<PostTypeSelection>(initialType)
   const [emergencyKind, setEmergencyKind] = useState<EmergencyKindValue>(initialEmergencyKind)
   const [category, setCategory] = useState("")
-  const [description, setDescription] = useState(initialText)
+  const [description, setDescription] = useState(isRichType(initialType) ? "" : initialText)
+  const [details, setDetails] = useState(isRichType(initialType) ? plainToHtml(initialText) : "")
   const [reference, setReference] = useState("")
   const [phone, setPhone] = useState("")
   const [peopleCount, setPeopleCount] = useState(1)
@@ -160,6 +172,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
       ? options[0].value
       : ""
   const text = PLACEHOLDERS[selectedType]
+  const fireNumber = emergencyNumbers.find(n => n.value === FIRE_NUMBER)
 
   const primary = addresses.find(a => a.primary) ?? addresses[0]
   const currentWhere = whereKey || (primary ? `a-${primary.id}` : "")
@@ -176,6 +189,13 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   }
 
   const handleTypeSelect = (type: PostTypeSelection) => {
+    if (isRichType(type) && !isRichType(selectedType) && !details && description.trim()) {
+      setDetails(plainToHtml(description))
+    }
+    if (!isRichType(type) && isRichType(selectedType) && !description.trim() && details) {
+      const first = toPlainText(details).split("\n")[0].trim()
+      setDescription(first.slice(0, PLACEHOLDERS[type].maxLength))
+    }
     setSelectedType(type)
     setCategory("")
     setSubmitError("")
@@ -215,6 +235,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
         category: currentCategory,
         categoryLabel: options.find(o => o.value === currentCategory)?.label ?? "",
         description: description.trim(),
+        details: isRichType(selectedType) ? details : "",
         reference: reference.trim(),
         phone: phone.replace(/\D/g, ""),
         emergencyKind,
@@ -229,6 +250,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
       })
       setResult(outcome)
       setDescription("")
+      setDetails("")
       setReference("")
       setPhone("")
       setPeopleCount(1)
@@ -314,6 +336,21 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
             </div>
           )}
 
+          {selectedType === "emergencia" && emergencyKind === "NEED" && fireNumber && (
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 space-y-3" role="note">
+              <p className="text-sm font-bold text-[#7F1D1D] leading-snug">
+                Si hay peligro para la vida, un incendio o alguien herido de gravedad, llama primero a {fireNumber.label}. Después avisa a tus vecinos.
+              </p>
+              <a
+                href={`tel:${fireNumber.value}`}
+                className="h-12 rounded-xl bg-[#BA1A1A] hover:bg-[#93000A] text-white text-sm font-black flex items-center justify-center gap-2"
+              >
+                <Phone className="size-5 shrink-0" />
+                Llamar al {fireNumber.value} · {fireNumber.label}
+              </a>
+            </div>
+          )}
+
           <div className="space-y-2">
             <p className="text-xs font-bold text-gray-700">
               {selectedType === "emergencia" ? "¿Qué tipo de ayuda?" : "Categoría"}
@@ -338,18 +375,36 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
           </div>
 
           <div className="space-y-2">
-            <label htmlFor="post-text" className="text-xs font-bold text-gray-700">
-              {text.label} {!text.required && <span className="font-normal text-gray-400">(opcional)</span>}
-            </label>
-            <textarea
-              id="post-text"
-              rows={2}
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              placeholder={text.placeholder}
-              maxLength={text.maxLength}
-              className="w-full p-3.5 rounded-2xl bg-white border border-gray-200 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#087F72]/30 resize-none"
-            />
+            {isRichType(selectedType) ? (
+              <>
+                <p id="post-text-label" className="text-xs font-bold text-gray-700">
+                  {text.label} <span className="font-normal text-gray-400">(opcional)</span>
+                </p>
+                <RichTextEditor
+                  value={details}
+                  onChange={setDetails}
+                  placeholder={text.placeholder}
+                  maxLength={text.maxLength}
+                  label={text.label}
+                />
+                <p className="text-xs text-gray-500">La primera línea será el título de tu publicación.</p>
+              </>
+            ) : (
+              <>
+                <label htmlFor="post-text" className="text-xs font-bold text-gray-700">
+                  {text.label} {!text.required && <span className="font-normal text-gray-400">(opcional)</span>}
+                </label>
+                <textarea
+                  id="post-text"
+                  rows={2}
+                  value={description}
+                  onChange={e => setDescription(e.target.value)}
+                  placeholder={text.placeholder}
+                  maxLength={text.maxLength}
+                  className="w-full p-3.5 rounded-2xl bg-white border border-gray-200 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#087F72]/30 resize-none"
+                />
+              </>
+            )}
           </div>
 
           {selectedType === "recomiendo" && (
@@ -432,14 +487,13 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
                   </button>
                 ))}
               </div>
-              <textarea
-                rows={2}
+              <RichTextEditor
                 value={comment}
-                onChange={e => setComment(e.target.value)}
-                maxLength={500}
-                aria-label="Tu comentario"
+                onChange={setComment}
+                maxLength={COMMENT_MAX}
+                label="Tu comentario"
                 placeholder="Cuéntale a tus vecinos tu experiencia (opcional)"
-                className="w-full p-3.5 rounded-2xl bg-white border border-gray-200 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#087F72]/30 resize-none"
+                minHeight={80}
               />
             </div>
           )}

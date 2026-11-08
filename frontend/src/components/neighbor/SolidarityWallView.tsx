@@ -6,6 +6,7 @@ import { FavorItem, FavorType, Option } from "@/lib/types"
 import { ApiError } from "@/lib/api"
 import { WallActivityPanel } from "@/components/neighbor/WallActivityPanel"
 import { useConfirm } from "@/components/ui/confirm-dialog"
+import { RichText } from "@/components/ui/rich-text"
 import { respondSpec } from "@/lib/confirm-specs"
 
 interface SolidarityWallViewProps {
@@ -220,7 +221,7 @@ export const SolidarityWallView: React.FC<SolidarityWallViewProps> = ({
                   {favor.title}
                 </h3>
                 {favor.details && (
-                  <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line line-clamp-5">{favor.details}</p>
+                  <RichText value={favor.details} className="text-sm text-gray-600 leading-relaxed line-clamp-5" />
                 )}
 
                 <div className="flex items-center justify-between gap-3 pt-1">

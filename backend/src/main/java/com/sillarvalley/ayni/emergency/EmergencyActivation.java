@@ -23,7 +23,7 @@ public class EmergencyActivation {
     @Column(nullable = false, length = 80)
     private String title;
 
-    @Column(length = 500)
+    @Column(length = 2000)
     private String message;
 
     @Column(nullable = false)

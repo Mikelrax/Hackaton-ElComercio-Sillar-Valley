@@ -311,7 +311,7 @@ export function DashboardView({ user, onLogout, onOpenPanel }: DashboardViewProp
         type: data.type,
         category: data.category,
         categoryLabel: data.categoryLabel,
-        text: data.description,
+        text: data.details || data.description,
         reference: data.reference,
         where: data.where,
       })
@@ -670,6 +670,7 @@ export function DashboardView({ user, onLogout, onOpenPanel }: DashboardViewProp
         mapStyleUrl={catalog?.map.styleUrl ?? null}
         categories={modalCategories}
         emergencyKinds={catalog?.emergencyKinds ?? []}
+        emergencyNumbers={catalog?.emergencyNumbers ?? []}
         vulnerableGroups={catalog?.vulnerableGroups ?? []}
         recommendationTags={catalog?.recommendationTags ?? []}
         openDayOptions={catalog?.openDays ?? []}

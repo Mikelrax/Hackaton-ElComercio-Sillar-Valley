@@ -8,6 +8,8 @@ import { businessesApi, RecommendInput } from "@/lib/businesses"
 import { formatDistance, useCatalog } from "@/lib/catalog"
 import { timeAgo, whatsappLink } from "@/lib/posts"
 import { CategoryIcon, categoryTone } from "@/components/ui/category-icon"
+import { RichText } from "@/components/ui/rich-text"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { useDialog } from "@/lib/use-dialog"
 
 interface BusinessDetailModalProps {
@@ -214,13 +216,13 @@ export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({ busine
                     </button>
                   ))}
                 </div>
-                <textarea
-                  rows={2}
-                  value={form.comment}
-                  onChange={e => setForm(f => ({ ...f, comment: e.target.value }))}
-                  maxLength={500}
+                <RichTextEditor
+                  value={form.comment ?? ""}
+                  onChange={comment => setForm(f => ({ ...f, comment }))}
+                  maxLength={1000}
+                  label="Tu comentario"
                   placeholder="Cuéntale a tus vecinos tu experiencia (opcional)"
-                  className="w-full p-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#087F72]/30 resize-none"
+                  minHeight={80}
                 />
                 {error && <p className="text-xs font-semibold text-rose-600">{error}</p>}
                 <div className="grid grid-cols-2 gap-2">
@@ -264,7 +266,7 @@ export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({ busine
                         <p className="text-xs text-gray-400">{timeAgo(r.createdAt)}</p>
                       </div>
                     </div>
-                    <p className="text-sm text-gray-600 pl-9 leading-relaxed">«{r.comment}»</p>
+                    <RichText value={r.comment ?? ""} className="text-sm text-gray-600 pl-9 leading-relaxed" />
                   </div>
                 ))}
             </div>

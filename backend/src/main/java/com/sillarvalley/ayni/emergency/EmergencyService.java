@@ -3,6 +3,7 @@ package com.sillarvalley.ayni.emergency;
 import com.sillarvalley.ayni.catalog.Locations;
 import com.sillarvalley.ayni.common.ApiException;
 import com.sillarvalley.ayni.common.GeoPoint;
+import com.sillarvalley.ayni.common.RichText;
 import com.sillarvalley.ayni.geo.Distances;
 import com.sillarvalley.ayni.geo.LocationPrivacy;
 import com.sillarvalley.ayni.user.CurrentUser;
@@ -219,7 +220,7 @@ public class EmergencyService {
         activeMode().ifPresent(a -> close(a, mod));
         EmergencyActivation a = new EmergencyActivation();
         a.setTitle(req.title().trim());
-        a.setMessage(blankToNull(req.message()));
+        a.setMessage(blankToNull(RichText.clean(req.message())));
         a.setActivatedBy(mod);
         activations.save(a);
         return toMode(a);

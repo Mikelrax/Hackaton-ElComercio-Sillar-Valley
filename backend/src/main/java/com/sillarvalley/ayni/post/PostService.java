@@ -5,6 +5,7 @@ import com.sillarvalley.ayni.catalog.Locations;
 import com.sillarvalley.ayni.common.ApiException;
 import com.sillarvalley.ayni.common.GeoPoint;
 import com.sillarvalley.ayni.common.PageResponse;
+import com.sillarvalley.ayni.common.RichText;
 import com.sillarvalley.ayni.response.HelpResponse;
 import com.sillarvalley.ayni.response.HelpResponseRepository;
 import com.sillarvalley.ayni.response.HelpStatus;
@@ -167,7 +168,8 @@ public class PostService {
         p.setType(req.type());
         p.setCategory(req.category());
         p.setTitle(req.title().trim());
-        p.setDescription(req.description().trim());
+        String description = RichText.clean(req.description());
+        p.setDescription(description.isEmpty() ? p.getTitle() : description);
         GeoPoint where = locations.pick(p.getAuthor(), req.addressId(), req.latitude(), req.longitude());
         p.setNeighborhood(where.neighborhood());
         p.setLatitude(where.latitude());

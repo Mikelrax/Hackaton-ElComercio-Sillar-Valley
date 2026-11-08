@@ -128,3 +128,41 @@
     @apply font-sans;
   }
 }
+.ayni-editor .ql-container {
+  font-size: 0.875rem;
+  color: #1f2937;
+}
+
+.ayni-editor .ql-editor {
+  min-height: var(--editor-min-height, 112px);
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 0.75rem 0.875rem;
+  line-height: 1.5;
+  outline: none;
+}
+
+.ayni-editor .ql-editor.ql-blank::before {
+  left: 0.875rem;
+  right: 0.875rem;
+  font-style: normal;
+  color: #9ca3af;
+}
+
+.ayni-editor .ql-editor p {
+  margin: 0 0 0.5rem;
+}
+
+.ayni-editor .ql-editor p:last-child {
+  margin-bottom: 0;
+}
+
+.ayni-editor .ql-editor ul,
+.ayni-editor .ql-editor ol {
+  padding-left: 1.25rem;
+  margin: 0 0 0.5rem;
+}
+
+.ayni-editor .ql-editor li {
+  padding-left: 0.25rem;
+}

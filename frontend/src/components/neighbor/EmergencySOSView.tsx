@@ -8,6 +8,8 @@ import { emergencyApi } from "@/lib/emergency"
 import { formatDistance } from "@/lib/catalog"
 import { directionsUrl } from "@/lib/map"
 import { timeAgo } from "@/lib/posts"
+import { toPlainText } from "@/lib/rich-text"
+import { RichText } from "@/components/ui/rich-text"
 import { ReportCard, SupportPointCard, useReportActions } from "@/components/neighbor/emergency-parts"
 
 export type EmergencyOrigin = "home" | "here"
@@ -48,7 +50,7 @@ function shareText(overview: EmergencyOverview, numbers: Option[]): string {
   const mode = overview.mode
   const point = overview.supportPoints.find(p => p.open)
   const lines = [`Aviso de emergencia en el barrio: ${mode.title}`]
-  if (mode.message) lines.push(mode.message)
+  if (mode.message) lines.push(toPlainText(mode.message))
   if (point) {
     lines.push(
       "",
@@ -134,7 +136,7 @@ export const EmergencySOSView: React.FC<EmergencySOSViewProps> = ({
               <p className="text-[15px] text-rose-100">
                 Activado por {mode.activatedBy} de la junta vecinal · {mode.activatedAt && timeAgo(mode.activatedAt)}
               </p>
-              {mode.message && <p className="text-[17px] leading-snug pt-1">{mode.message}</p>}
+              {mode.message && <RichText value={mode.message} className="text-[17px] leading-snug pt-1" />}
             </div>
           </div>
           <button

@@ -5,6 +5,7 @@ import com.sillarvalley.ayni.catalog.Locations;
 import com.sillarvalley.ayni.common.ApiException;
 import com.sillarvalley.ayni.common.GeoPoint;
 import com.sillarvalley.ayni.common.PhoneUtils;
+import com.sillarvalley.ayni.common.RichText;
 import com.sillarvalley.ayni.geo.Distances;
 import com.sillarvalley.ayni.review.AutoReview;
 import com.sillarvalley.ayni.review.AutoReviewInfo;
@@ -175,7 +176,7 @@ public class BusinessService {
         r.setGoodPrice(req.goodPrice());
         r.setPunctual(req.punctual());
         r.setReliable(req.reliable());
-        r.setComment(blankToNull(req.comment()));
+        r.setComment(blankToNull(RichText.clean(req.comment())));
         recommendations.save(r);
         b.addRecommendation(r);
     }

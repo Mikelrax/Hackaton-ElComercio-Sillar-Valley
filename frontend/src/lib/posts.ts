@@ -1,5 +1,6 @@
 import { apiFetch } from "@/lib/api"
 import { Where } from "@/lib/map"
+import { dropLeadingTitle, isRichText, normalizeHtml, plainToHtml, toPlainText } from "@/lib/rich-text"
 import { AutoReviewInfo, FavorItem, FavorType } from "@/lib/types"
 
 export interface BackendPost {
@@ -68,6 +69,7 @@ function headline(text: string): string {
 function detailsOf(p: BackendPost): string | undefined {
   const body = p.description?.trim() ?? ""
   if (!body || body === p.title) return undefined
+  if (isRichText(body)) return dropLeadingTitle(body, p.title)
   if (body.startsWith(p.title)) return body.slice(p.title.length).trim() || undefined
   return body
 }
@@ -109,13 +111,15 @@ export const postsApi = {
   },
 
   async create(data: NewFavor): Promise<{ favor: FavorItem; pending: boolean; reviewing: boolean }> {
-    const text = data.text.trim()
+    const rich = isRichText(data.text) ? normalizeHtml(data.text) : ""
+    const text = rich ? toPlainText(rich) : data.text.trim()
     const fallback =
       data.type === "necesito" ? `Necesito ayuda: ${data.categoryLabel}` : `Ofrezco ayuda: ${data.categoryLabel}`
-    const title = text ? headline(text) : fallback
-    const description = [text || fallback, data.reference && `Referencia: ${data.reference}`]
-      .filter(Boolean)
-      .join("\n")
+    const title = text ? headline(text.split("\n")[0].trim()) : fallback
+    const reference = data.reference.trim()
+    const description = rich
+      ? rich + (reference ? plainToHtml(`Referencia: ${reference}`) : "")
+      : [text || fallback, reference && `Referencia: ${reference}`].filter(Boolean).join("\n")
     const post = await apiFetch<BackendPost>("/api/posts", {
       method: "POST",
       queue: title.slice(0, 80),
@@ -123,7 +127,7 @@ export const postsApi = {
         type: data.type === "necesito" ? "REQUEST" : "OFFER",
         category: data.category,
         title: title.slice(0, 150),
-        description: description.slice(0, 2000),
+        description: rich ? description : description.slice(0, 2000),
         ...(data.where ?? {}),
       },
     })

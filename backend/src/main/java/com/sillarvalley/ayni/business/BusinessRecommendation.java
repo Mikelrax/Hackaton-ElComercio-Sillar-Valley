@@ -37,7 +37,7 @@ public class BusinessRecommendation {
     @Column(nullable = false)
     private boolean reliable;
 
-    @Column(length = 500)
+    @Column(length = 2000)
     private String comment;
 
     @Column(nullable = false, updatable = false)

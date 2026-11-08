@@ -14,5 +14,7 @@ public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificat
 
     List<Post> findByStatusAndAutoReviewIsNull(PostStatus status);
 
+    boolean existsByTitle(String title);
+
     List<Post> findByStatusAndFulfilledAtBefore(PostStatus status, java.time.Instant before);
 }

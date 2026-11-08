@@ -18,7 +18,7 @@ public final class PostDtos {
             @NotNull PostType type,
             @NotNull Category category,
             @NotBlank @Size(max = 150) String title,
-            @NotBlank @Size(max = 2000) String description,
+            @NotBlank @Size(max = 4000) String description,
             Long addressId,
             @DecimalMin("-90") @DecimalMax("90") Double latitude,
             @DecimalMin("-180") @DecimalMax("180") Double longitude,

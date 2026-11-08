@@ -6,6 +6,7 @@ import com.sillarvalley.ayni.business.BusinessRecommendation;
 import com.sillarvalley.ayni.business.BusinessRecommendationRepository;
 import com.sillarvalley.ayni.business.BusinessRepository;
 import com.sillarvalley.ayni.business.BusinessStatus;
+import com.sillarvalley.ayni.common.RichText;
 import com.sillarvalley.ayni.post.Post;
 import com.sillarvalley.ayni.post.PostRepository;
 import com.sillarvalley.ayni.post.PostStatus;
@@ -180,10 +181,10 @@ public class ReviewQueue {
                 + "Categoría: " + p.getCategory().label() + "\n"
                 + line("Barrio", p.getNeighborhood())
                 + "Título: " + p.getTitle() + "\n"
-                + "Descripción: " + p.getDescription() + "\n"
+                + "Descripción: " + RichText.plain(p.getDescription()) + "\n"
                 + "Fotos adjuntas: " + p.getImages().size() + "\n"
                 + "</publicacion_del_muro>";
-        return new ReviewContent(ReviewSubject.POST, prompt, p.getTitle() + "\n" + p.getDescription(),
+        return new ReviewContent(ReviewSubject.POST, prompt, p.getTitle() + "\n" + RichText.plain(p.getDescription()),
                 p.getImages().size());
     }
 
@@ -198,7 +199,7 @@ public class ReviewQueue {
                         r.isReliable() ? "confiable" : null)
                 .filter(s -> s != null)
                 .collect(Collectors.joining(", "))).orElse("");
-        String comment = mine.map(BusinessRecommendation::getComment).orElse(null);
+        String comment = mine.map(r -> RichText.plain(r.getComment())).orElse(null);
         String hours = b.getOpensAt() == null || b.getClosesAt() == null ? null
                 : "de " + b.getOpensAt() + " a " + b.getClosesAt();
         String prompt = "<recomendacion_de_negocio>\n"

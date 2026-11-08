@@ -37,7 +37,7 @@ public final class BusinessDtos {
             List<RecommendationResponse> recommendations, Instant createdAt, AutoReviewInfo autoReview) {}
 
     public record RecommendRequest(boolean goodPrice, boolean punctual, boolean reliable,
-                                   @Size(max = 500) String comment) {}
+                                   @Size(max = 2000) String comment) {}
 
     public record CreateBusinessRequest(
             @NotBlank(message = "Escribe el nombre del negocio") @Size(max = 120) String name,

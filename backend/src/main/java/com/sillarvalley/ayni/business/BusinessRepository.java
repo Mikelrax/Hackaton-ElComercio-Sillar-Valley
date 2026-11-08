@@ -10,4 +10,6 @@ public interface BusinessRepository extends JpaRepository<Business, Long> {
     Page<Business> findByStatusOrderByCreatedAtAsc(BusinessStatus status, Pageable pageable);
 
     List<Business> findByStatusAndAutoReviewIsNull(BusinessStatus status);
+
+    boolean existsByName(String name);
 }

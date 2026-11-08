@@ -6,6 +6,7 @@ import { ApiError } from "@/lib/api"
 import { postsApi, timeAgo } from "@/lib/posts"
 import { businessesApi } from "@/lib/businesses"
 import { AutoReviewInfo, AutoReviewState } from "@/lib/types"
+import { RichText } from "@/components/ui/rich-text"
 
 interface PendingItem {
   key: string
@@ -200,7 +201,7 @@ export function PendingPostsPanel({ onChanged }: { onChanged?: () => void }) {
           </div>
           <div>
             <p className="text-base font-bold">{item.title}</p>
-            {item.body && <p className="text-xs text-gray-600 whitespace-pre-line mt-1">{item.body}</p>}
+            {item.body && <RichText value={item.body} className="text-xs text-gray-600 mt-1" />}
             <p className="text-xs text-gray-400 mt-1">
               Por {item.author}
               {item.place ? ` · ${item.place}` : ""}
