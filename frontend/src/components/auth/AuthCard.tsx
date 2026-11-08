@@ -91,18 +91,6 @@ export function AuthCard() {
         <CardDescription className="text-xs sm:text-sm text-muted-foreground">
           Ingresa para conectarte con los servicios y la red de apoyo de tu barrio
         </CardDescription>
-
-        <div className="grid grid-cols-2 p-1 bg-muted rounded-xl gap-1">
-          <span className="py-2 text-xs sm:text-sm font-bold rounded-lg bg-background text-foreground shadow-sm">
-            Iniciar Sesión
-          </span>
-          <Link
-            href="/registro"
-            className="py-2 text-xs sm:text-sm font-bold rounded-lg text-muted-foreground hover:text-foreground transition-all"
-          >
-            Crear Cuenta Vecinal
-          </Link>
-        </div>
       </CardHeader>
 
       <CardContent className="space-y-4">
