@@ -39,3 +39,17 @@ Agregar componentes de shadcn:
 ```bash
 npx shadcn@latest add <componente>
 ```
+
+## Despliegue
+
+La app (**Ayni**) corre en Dokploy como un servicio Docker Compose con el `docker-compose.yml` de la raíz. Cada push a `main` dispara un deploy automático mediante un webhook de GitHub.
+
+| Servicio | URL |
+|---|---|
+| App | https://aynibarrio.duckdns.org |
+| Backend | https://api.aynibarrio.duckdns.org |
+
+Variables de entorno configuradas en Dokploy:
+
+- `NEXT_PUBLIC_API_URL`: URL pública del backend. Se fija al compilar el frontend, así que si cambia hay que volver a desplegar.
+- `CORS_ALLOWED_ORIGINS`: URL de la app que puede llamar al backend (varias separadas por comas).
