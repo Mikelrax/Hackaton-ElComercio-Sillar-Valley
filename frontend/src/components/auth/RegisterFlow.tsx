@@ -5,7 +5,6 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
-  AlertCircle,
   ArrowLeft,
   Check,
   CheckCircle2,
@@ -19,29 +18,13 @@ import {
 } from "lucide-react"
 import { authService } from "@/lib/auth"
 import { ApiError } from "@/lib/api"
-
-const NEIGHBORHOODS = [
-  "Yanahuara",
-  "Cayma",
-  "Cerro Colorado",
-  "Cercado - Arequipa",
-  "Paucarpata",
-  "José Luis Bustamante y Rivero",
-  "Alto Selva Alegre",
-  "Miraflores",
-  "Sachaca",
-]
+import { NEIGHBORHOODS } from "@/lib/neighborhoods"
+import { helpClass, inputClass, labelClass, primaryButton, secondaryButton } from "@/lib/form-styles"
+import { FormError } from "@/components/ui/form-error"
+import { SoftBackdrop } from "@/components/layout/SoftBackdrop"
 
 type Step = 1 | 2 | 3 | "done"
 type GpsState = "idle" | "locating" | "ok" | "error"
-
-const inputClass =
-  "w-full h-14 rounded-2xl border-2 border-[#E7E5E4] bg-white px-4 text-[17px] text-[#1C1917] placeholder:text-[#A8A29E] focus:outline-none focus:border-[#087F72] transition-colors"
-const labelClass = "block text-[15px] font-semibold text-[#1C1917] mb-2"
-const helpClass = "mt-2 text-[14px] leading-snug text-[#57534E]"
-const errorClass = "mt-2 text-[14px] leading-snug font-semibold text-[#B91C1C] flex items-start gap-1.5"
-const primaryButton =
-  "w-full h-14 rounded-2xl bg-[#087F72] hover:bg-[#075E54] text-white text-[17px] font-bold transition-colors disabled:opacity-60"
 
 function formatPhone(digits: string): string {
   return [digits.slice(0, 3), digits.slice(3, 6), digits.slice(6, 9)].filter(Boolean).join(" ")
@@ -76,15 +59,6 @@ function Rule({ ok, children }: { ok: boolean; children: React.ReactNode }) {
       {ok ? <CheckCircle2 className="size-5 shrink-0" /> : <Circle className="size-5 shrink-0" />}
       {children}
     </li>
-  )
-}
-
-function FormError({ children }: { children: React.ReactNode }) {
-  return (
-    <p className={errorClass} role="alert">
-      <AlertCircle className="size-4 mt-0.5 shrink-0" />
-      <span>{children}</span>
-    </p>
   )
 }
 
@@ -191,8 +165,8 @@ export function RegisterFlow() {
   }
 
   return (
-    <div className="min-h-dvh bg-[#F7F7F4] sm:bg-[#E9E7E2] flex justify-center sm:items-center sm:py-8 font-sans text-[#1C1917]">
-      <div className="w-full max-w-[420px] min-h-dvh sm:min-h-[780px] bg-[#F7F7F4] sm:rounded-[32px] sm:border sm:border-[#E7E5E4] sm:shadow-xl flex flex-col px-5 pt-6 pb-6">
+    <SoftBackdrop className="flex justify-center sm:items-center sm:p-6 font-sans text-[#1C1917]">
+      <div className="w-full max-w-[440px] min-h-dvh sm:min-h-[760px] bg-white sm:rounded-2xl sm:border sm:border-border/80 sm:shadow-xl flex flex-col px-5 pt-6 pb-6">
         {step === 1 && (
           <form onSubmit={submitStep1} noValidate className="flex-1 flex flex-col">
             <StepHeader step={1} onBack={goBack} />
@@ -499,7 +473,7 @@ export function RegisterFlow() {
               <button
                 type="button"
                 onClick={() => router.push("/")}
-                className="w-full h-14 rounded-2xl border-2 border-[#087F72] bg-white text-[#087F72] text-[17px] font-bold hover:bg-[#EAF5F1] transition-colors"
+                className={secondaryButton}
               >
                 Ir al inicio
               </button>
@@ -507,6 +481,6 @@ export function RegisterFlow() {
           </div>
         )}
       </div>
-    </div>
+    </SoftBackdrop>
   )
 }

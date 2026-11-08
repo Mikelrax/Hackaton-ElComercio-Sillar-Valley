@@ -74,21 +74,24 @@ interface AuthResponse {
 
 const DEFAULT_COORDS = { lat: -16.3988, lng: -71.535 }
 
+function toLocation(address: Address | null): UserLocation {
+  return {
+    lat: address?.latitude ?? DEFAULT_COORDS.lat,
+    lng: address?.longitude ?? DEFAULT_COORDS.lng,
+    neighborhood: address?.neighborhood,
+    address: address?.reference ?? undefined,
+  }
+}
+
 function toUser(res: AuthResponse): User {
   const b = res.user
-  const address = b.primaryAddress
   return {
     id: String(b.id),
     name: b.fullName,
     phone: b.phone,
     role: b.role === "MODERATOR" ? "moderador" : "vecino",
     profile: "adulto",
-    location: {
-      lat: address?.latitude ?? DEFAULT_COORDS.lat,
-      lng: address?.longitude ?? DEFAULT_COORDS.lng,
-      neighborhood: address?.neighborhood,
-      address: address?.reference ?? undefined,
-    },
+    location: toLocation(b.primaryAddress),
     token: res.token,
     expiresAt: Date.now() + res.expiresInSeconds * 1000,
     verified: true,
@@ -115,6 +118,11 @@ export const authService = {
   setCurrentUser(user: User): void {
     if (typeof window === "undefined") return
     localStorage.setItem(SESSION_KEY, JSON.stringify(user))
+  },
+
+  updatePrimaryAddress(address: Address): void {
+    const user = this.getCurrentUser()
+    if (user) this.setCurrentUser({ ...user, location: toLocation(address) })
   },
 
   logout(): void {

@@ -13,6 +13,7 @@ import {
   Bell,
   ChevronRight,
 } from "lucide-react"
+import Link from "next/link"
 import { Logo } from "@/components/brand/Logo"
 import { User } from "@/lib/auth"
 import { AppTab, BusinessItem, FavorCategory, FavorItem, EmergencyReportItem, SupportPointItem } from "@/lib/types"
@@ -233,10 +234,18 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
               <span>Publicar</span>
             </button>
 
-            <div className="hidden lg:flex flex-col text-right pr-1">
-              <span className="text-xs font-bold leading-tight">{user.name}</span>
-              <span className="text-[10px] text-gray-500 capitalize">{user.role} · {user.profile}</span>
-            </div>
+            <Link
+              href="/direcciones"
+              title="Mis direcciones"
+              className="h-9 px-2.5 lg:px-3 rounded-xl border border-gray-200 bg-white hover:border-[#087F72] flex items-center gap-2 transition-colors"
+            >
+              <MapPin className="size-4 text-[#087F72]" />
+              <span className="hidden lg:flex flex-col text-left">
+                <span className="text-xs font-bold leading-tight">{user.name}</span>
+                <span className="text-[10px] text-gray-500">{neighborhoodName} · Mis direcciones</span>
+              </span>
+              <span className="sr-only lg:hidden">Mis direcciones</span>
+            </Link>
 
             <button
               onClick={onLogout}
