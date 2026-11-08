@@ -1,10 +1,38 @@
 services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ayni
+      POSTGRES_USER: ayni
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ayni -d ayni"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
   backend:
     build:
       context: ./backend
     restart: unless-stopped
     environment:
+      DB_URL: jdbc:postgresql://db:5432/ayni
+      DB_USER: ayni
+      DB_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?Define JWT_SECRET}
+      MODERATOR_INVITE_CODE: ${MODERATOR_INVITE_CODE:?Define MODERATOR_INVITE_CODE}
+      APP_SEED: ${APP_SEED:-false}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
+      UPLOAD_DIR: /app/uploads
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
     expose:
       - "8080"
 
@@ -18,3 +46,7 @@ services:
       - backend
     expose:
       - "3000"
+
+volumes:
+  pgdata:
+  uploads:
