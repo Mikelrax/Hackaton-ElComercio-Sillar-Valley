@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:18-alpine
+    image: postgis/postgis:18-3.7-alpine
     restart: unless-stopped
     environment:
       POSTGRES_DB: ayni

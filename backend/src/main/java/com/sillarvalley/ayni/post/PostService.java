@@ -1,7 +1,8 @@
 package com.sillarvalley.ayni.post;
 
-import com.sillarvalley.ayni.address.Address;
+import com.sillarvalley.ayni.catalog.Locations;
 import com.sillarvalley.ayni.common.ApiException;
+import com.sillarvalley.ayni.common.GeoPoint;
 import com.sillarvalley.ayni.common.PageResponse;
 import com.sillarvalley.ayni.response.HelpResponse;
 import com.sillarvalley.ayni.response.HelpResponseRepository;
@@ -29,14 +30,16 @@ public class PostService {
     private final CurrentUser currentUser;
     private final StorageService storage;
     private final PostMapper mapper;
+    private final Locations locations;
 
     public PostService(PostRepository posts, HelpResponseRepository responses, CurrentUser currentUser,
-                       StorageService storage, PostMapper mapper) {
+                       StorageService storage, PostMapper mapper, Locations locations) {
         this.posts = posts;
         this.responses = responses;
         this.currentUser = currentUser;
         this.storage = storage;
         this.mapper = mapper;
+        this.locations = locations;
     }
 
     @Transactional
@@ -151,9 +154,10 @@ public class PostService {
         p.setCategory(req.category());
         p.setTitle(req.title().trim());
         p.setDescription(req.description().trim());
-        p.setNeighborhood(req.neighborhood() == null || req.neighborhood().isBlank()
-                ? p.getAuthor().primaryAddress().map(Address::getNeighborhood).orElse(null)
-                : req.neighborhood().trim());
+        GeoPoint where = locations.pick(p.getAuthor(), req.addressId(), req.latitude(), req.longitude());
+        p.setNeighborhood(where.neighborhood());
+        p.setLatitude(where.latitude());
+        p.setLongitude(where.longitude());
         List<String> images = req.images() == null ? List.of() : req.images();
         for (String name : images) {
             if (!storage.exists(name)) {

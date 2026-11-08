@@ -22,10 +22,13 @@ public record AppProperties(
         @NotBlank String uploadDir,
         @NotBlank String publicBaseUrl,
         boolean seed,
-        @NotNull @Valid City city
+        @NotNull @Valid City city,
+        @NotNull @Valid Geo geo
 ) {
 
     public record City(@NotBlank String name, double latitude, double longitude) {}
+
+    public record Geo(@NotBlank String styleUrl, @NotBlank String placesUrl) {}
 
     public List<String> corsOriginList() {
         return Arrays.stream(corsOrigins.split(","))

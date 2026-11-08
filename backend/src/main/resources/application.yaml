@@ -43,3 +43,6 @@ app:
     name: Arequipa
     latitude: -16.3988
     longitude: -71.535
+  geo:
+    style-url: ${MAP_STYLE_URL:https://tiles.openfreemap.org/styles/liberty}
+    places-url: ${PLACES_URL:https://photon.komoot.io}

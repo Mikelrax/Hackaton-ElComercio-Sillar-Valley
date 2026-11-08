@@ -1,5 +1,11 @@
 package com.sillarvalley.ayni.catalog;
 
+import com.sillarvalley.ayni.AppProperties;
+import com.sillarvalley.ayni.emergency.EmergencyStatus;
+import com.sillarvalley.ayni.geo.LocationPrivacy;
+import com.sillarvalley.ayni.map.MapLayer;
+import com.sillarvalley.ayni.map.MapPeriod;
+import com.sillarvalley.ayni.post.PostType;
 import com.sillarvalley.ayni.address.AddressPlace;
 import com.sillarvalley.ayni.address.AddressService;
 import com.sillarvalley.ayni.business.BusinessDtos;
@@ -20,18 +26,24 @@ public class CatalogController {
 
     public record Option(String value, String label) {}
 
+    public record IconOption(String value, String label, String icon) {}
+
     public record PlaceOption(String value, String label, String icon, boolean custom) {}
 
     public record RadiusOption(Integer meters, String label) {}
 
     public record DirectoryOptions(List<RadiusOption> radii, Integer defaultRadius, List<Option> sorts) {}
 
-    public record Catalog(GeoPoint city, List<String> neighborhoods, List<Option> postCategories,
+    public record MapOptions(String styleUrl, List<RadiusOption> radii, int defaultRadius, List<IconOption> layers,
+                             List<String> emergencyLayers, List<Option> postTypes, List<Option> emergencyStatuses,
+                             List<Option> periods, int approximateRadius) {}
+
+    public record Catalog(GeoPoint city, List<String> neighborhoods, List<IconOption> postCategories,
                           List<BusinessDtos.CategoryResponse> businessCategories,
-                          List<Option> emergencyKinds, List<Option> emergencyCategories,
-                          List<Option> supportPointTypes, List<Option> emergencyNumbers,
+                          List<Option> emergencyKinds, List<IconOption> emergencyCategories,
+                          List<IconOption> supportPointTypes, List<Option> emergencyNumbers,
                           List<PlaceOption> addressPlaces, int maxAddresses, DirectoryOptions directory,
-                          List<Option> recommendationTags) {}
+                          List<Option> recommendationTags, MapOptions map) {}
 
     private static final List<Option> EMERGENCY_NUMBERS = List.of(
             new Option("105", "Policía"),
@@ -44,14 +56,20 @@ public class CatalogController {
             2000,
             List.of(new Option("recommended", "Más recomendados"), new Option("distance", "Más cerca")));
 
+    private static final List<RadiusOption> MAP_RADII = List.of(new RadiusOption(500, "500 m"),
+            new RadiusOption(1000, "1 km"), new RadiusOption(2000, "2 km"), new RadiusOption(5000, "5 km"));
+
     private final NeighborhoodRepository neighborhoods;
     private final BusinessService businesses;
     private final Locations locations;
+    private final String mapStyleUrl;
 
-    public CatalogController(NeighborhoodRepository neighborhoods, BusinessService businesses, Locations locations) {
+    public CatalogController(NeighborhoodRepository neighborhoods, BusinessService businesses, Locations locations,
+                             AppProperties props) {
         this.neighborhoods = neighborhoods;
         this.businesses = businesses;
         this.locations = locations;
+        this.mapStyleUrl = props.geo().styleUrl();
     }
 
     @GetMapping("/api/catalog")
@@ -59,16 +77,33 @@ public class CatalogController {
         return new Catalog(
                 locations.city(),
                 neighborhoods.findAllByOrderBySortOrderAsc().stream().map(Neighborhood::getName).toList(),
-                Arrays.stream(Category.values()).map(c -> new Option(c.name(), c.label())).toList(),
+                Arrays.stream(Category.values()).map(c -> new IconOption(c.name(), c.label(), c.icon())).toList(),
                 businesses.categories(),
                 Arrays.stream(EmergencyKind.values()).map(k -> new Option(k.name(), k.label())).toList(),
-                Arrays.stream(EmergencyCategory.values()).map(c -> new Option(c.name(), c.label())).toList(),
-                Arrays.stream(SupportPointType.values()).map(t -> new Option(t.name(), t.label())).toList(),
+                Arrays.stream(EmergencyCategory.values())
+                        .map(c -> new IconOption(c.name(), c.label(), c.icon())).toList(),
+                Arrays.stream(SupportPointType.values())
+                        .map(t -> new IconOption(t.name(), t.label(), t.icon())).toList(),
                 EMERGENCY_NUMBERS,
                 Arrays.stream(AddressPlace.values())
                         .map(p -> new PlaceOption(p.name(), p.label(), p.icon(), p.custom())).toList(),
                 AddressService.MAX_ADDRESSES,
                 DIRECTORY,
-                Arrays.stream(RecommendationTag.values()).map(t -> new Option(t.key(), t.label())).toList());
+                Arrays.stream(RecommendationTag.values()).map(t -> new Option(t.key(), t.label())).toList(),
+                mapOptions());
+    }
+
+    private MapOptions mapOptions() {
+        return new MapOptions(
+                mapStyleUrl,
+                MAP_RADII,
+                2000,
+                Arrays.stream(MapLayer.values()).map(l -> new IconOption(l.key(), l.label(), l.icon())).toList(),
+                List.of(MapLayer.EMERGENCIES.key(), MapLayer.SUPPORT_POINTS.key()),
+                Arrays.stream(PostType.values()).map(t -> new Option(t.name(), t.label())).toList(),
+                Arrays.stream(EmergencyStatus.values()).filter(s -> s != EmergencyStatus.ATTENDED)
+                        .map(s -> new Option(s.name(), s.label())).toList(),
+                Arrays.stream(MapPeriod.values()).map(p -> new Option(p.key(), p.label())).toList(),
+                LocationPrivacy.RADIUS_METERS);
     }
 }

@@ -59,7 +59,7 @@ public class AuthService {
         user.setEmail(email);
         user.setPasswordHash(encoder.encode(req.password()));
         user.setRole(role);
-        user.addAddress(locations.locate(req.address().toEntity()));
+        user.addAddress(locations.place(req.address().toEntity()));
         user = users.save(user);
         return respond(user);
     }

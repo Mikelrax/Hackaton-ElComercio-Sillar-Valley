@@ -53,6 +53,12 @@ public class Post {
     @Column(length = 120)
     private String neighborhood;
 
+    @Column(nullable = false)
+    private double latitude;
+
+    @Column(nullable = false)
+    private double longitude;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private PostStatus status = PostStatus.PENDING;
@@ -92,6 +98,10 @@ public class Post {
     public void setDescription(String description) { this.description = description; }
     public String getNeighborhood() { return neighborhood; }
     public void setNeighborhood(String neighborhood) { this.neighborhood = neighborhood; }
+    public double getLatitude() { return latitude; }
+    public void setLatitude(double latitude) { this.latitude = latitude; }
+    public double getLongitude() { return longitude; }
+    public void setLongitude(double longitude) { this.longitude = longitude; }
     public PostStatus getStatus() { return status; }
     public void setStatus(PostStatus status) { this.status = status; }
     public String getModerationNote() { return moderationNote; }

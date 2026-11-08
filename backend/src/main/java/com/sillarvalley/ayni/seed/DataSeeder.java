@@ -111,7 +111,10 @@ public class DataSeeder implements ApplicationRunner {
         p.setCategory(cat);
         p.setTitle(title);
         p.setDescription(desc);
-        p.setNeighborhood(author.primaryAddress().map(Address::getNeighborhood).orElse(null));
+        Address home = author.primaryAddress().orElseThrow();
+        p.setNeighborhood(home.getNeighborhood());
+        p.setLatitude(home.getLatitude());
+        p.setLongitude(home.getLongitude());
         p.setStatus(status);
         p.setModeratedBy(moderator);
         return posts.save(p);

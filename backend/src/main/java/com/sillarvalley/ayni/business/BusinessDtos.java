@@ -43,7 +43,7 @@ public final class BusinessDtos {
             @NotBlank(message = "Elige una categoría") String categorySlug,
             @Size(max = 1000) String description,
             String phone,
-            @Size(max = 120) String neighborhood,
+            Long addressId,
             @Size(max = 200) String reference,
             @DecimalMin("-90") @DecimalMax("90") Double latitude,
             @DecimalMin("-180") @DecimalMax("180") Double longitude,

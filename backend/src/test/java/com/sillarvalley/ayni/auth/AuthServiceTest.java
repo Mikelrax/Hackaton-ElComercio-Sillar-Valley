@@ -4,14 +4,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.sillarvalley.ayni.AppProperties;
+import com.sillarvalley.ayni.TestProps;
 import com.sillarvalley.ayni.address.AddressDtos;
 import com.sillarvalley.ayni.catalog.Locations;
+import com.sillarvalley.ayni.catalog.Neighborhood;
 import com.sillarvalley.ayni.catalog.NeighborhoodRepository;
 import com.sillarvalley.ayni.common.ApiException;
 import com.sillarvalley.ayni.user.Role;
@@ -37,11 +40,12 @@ class AuthServiceTest {
         users = mock(UserRepository.class);
         encoder = new BCryptPasswordEncoder(4);
         jwt = mock(JwtService.class);
-        AppProperties props = new AppProperties("x".repeat(32), 60, "http://localhost:3000", "JUNTA2026",
-                "America/Lima", "51", "uploads", "http://localhost:3001", false,
-                new AppProperties.City("Arequipa", -16.3988, -71.535));
-        service = new AuthService(users, encoder, jwt, props,
-                new Locations(mock(NeighborhoodRepository.class), props));
+        AppProperties props = TestProps.create();
+        Neighborhood yanahuara = new Neighborhood();
+        ReflectionTestUtils.setField(yanahuara, "name", "Yanahuara");
+        NeighborhoodRepository neighborhoods = mock(NeighborhoodRepository.class);
+        when(neighborhoods.findNearest(anyDouble(), anyDouble())).thenReturn(Optional.of(yanahuara));
+        service = new AuthService(users, encoder, jwt, props, new Locations(neighborhoods, props));
 
         when(users.save(any(User.class))).thenAnswer(inv -> {
             User u = inv.getArgument(0);
@@ -52,7 +56,7 @@ class AuthServiceTest {
     }
 
     private AuthDtos.RegisterRequest register(String phone, String invite) {
-        var address = new AddressDtos.AddressRequest(null, " Yanahuara ", "Cerca al parque", -16.39, -71.54);
+        var address = new AddressDtos.AddressRequest(null, "Cerca al parque", -16.39, -71.54);
         return new AuthDtos.RegisterRequest("Ana Pérez", phone, "ANA@Mail.com", "clave12345", invite, address);
     }
 

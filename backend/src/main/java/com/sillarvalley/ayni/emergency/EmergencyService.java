@@ -1,9 +1,10 @@
 package com.sillarvalley.ayni.emergency;
 
-import com.sillarvalley.ayni.business.BusinessService;
 import com.sillarvalley.ayni.catalog.Locations;
 import com.sillarvalley.ayni.common.ApiException;
 import com.sillarvalley.ayni.common.GeoPoint;
+import com.sillarvalley.ayni.geo.Distances;
+import com.sillarvalley.ayni.geo.LocationPrivacy;
 import com.sillarvalley.ayni.user.CurrentUser;
 import com.sillarvalley.ayni.user.Role;
 import com.sillarvalley.ayni.user.User;
@@ -11,6 +12,7 @@ import com.sillarvalley.ayni.user.UserRepository;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,16 +25,20 @@ public class EmergencyService {
     private final UserRepository users;
     private final CurrentUser currentUser;
     private final Locations locations;
+    private final Distances distances;
+    private final LocationPrivacy privacy;
 
     public EmergencyService(EmergencyActivationRepository activations, EmergencyReportRepository reports,
                             SupportPointRepository supportPoints, UserRepository users, CurrentUser currentUser,
-                            Locations locations) {
+                            Locations locations, Distances distances, LocationPrivacy privacy) {
         this.activations = activations;
         this.reports = reports;
         this.supportPoints = supportPoints;
         this.users = users;
         this.currentUser = currentUser;
         this.locations = locations;
+        this.distances = distances;
+        this.privacy = privacy;
     }
 
     @Transactional(readOnly = true)
@@ -45,14 +51,20 @@ public class EmergencyService {
     public EmergencyDtos.Overview overview(Long uid, Double lat, Double lng) {
         User user = currentUser.require(uid);
         boolean moderator = user.getRole() == Role.MODERATOR;
-        List<EmergencyDtos.ReportResponse> list = reports.findTop100ByOrderByCreatedAtDesc().stream()
-                .map(r -> toReport(r, user, moderator, lat, lng))
+        List<EmergencyReport> recent = reports.findTop100ByOrderByCreatedAtDesc();
+        Map<Long, Integer> reportDistances = distances.from(Distances.Table.EMERGENCY_REPORTS, lat, lng,
+                recent.stream().map(EmergencyReport::getId).toList());
+        List<EmergencyDtos.ReportResponse> list = recent.stream()
+                .map(r -> toReport(r, user, moderator, reportDistances.get(r.getId())))
                 .sorted(Comparator.comparing((EmergencyDtos.ReportResponse r) -> r.status().ordinal())
                         .thenComparing(r -> r.severity().ordinal())
                         .thenComparing(r -> r.distanceMeters() == null ? Integer.MAX_VALUE : r.distanceMeters()))
                 .toList();
-        List<EmergencyDtos.SupportPointResponse> points = supportPoints.findAllByOrderByNameAsc().stream()
-                .map(p -> toPoint(p, lat, lng))
+        List<SupportPoint> all = supportPoints.findAllByOrderByNameAsc();
+        Map<Long, Integer> pointDistances = distances.from(Distances.Table.SUPPORT_POINTS, lat, lng,
+                all.stream().map(SupportPoint::getId).toList());
+        List<EmergencyDtos.SupportPointResponse> points = all.stream()
+                .map(p -> toPoint(p, pointDistances.get(p.getId())))
                 .sorted(Comparator.comparing((EmergencyDtos.SupportPointResponse p) -> !p.open())
                         .thenComparing(p -> p.distanceMeters() == null ? Integer.MAX_VALUE : p.distanceMeters()))
                 .toList();
@@ -62,7 +74,7 @@ public class EmergencyService {
     @Transactional
     public EmergencyDtos.ReportResponse create(Long uid, EmergencyDtos.CreateReportRequest req) {
         User user = currentUser.require(uid);
-        GeoPoint where = locations.resolve(null, req.latitude(), req.longitude(), locations.of(user));
+        GeoPoint where = locations.pick(user, req.addressId(), req.latitude(), req.longitude());
         EmergencyReport r = new EmergencyReport();
         r.setKind(req.kind());
         r.setCategory(req.category());
@@ -77,7 +89,7 @@ public class EmergencyService {
         r.setLatitude(where.latitude());
         r.setLongitude(where.longitude());
         reports.save(r);
-        return toReport(r, user, user.getRole() == Role.MODERATOR, null, null);
+        return toReport(r, user, user.getRole() == Role.MODERATOR, null);
     }
 
     @Transactional
@@ -92,7 +104,7 @@ public class EmergencyService {
         }
         r.setStatus(EmergencyStatus.ON_THE_WAY);
         r.setHelper(user);
-        return toReport(r, user, user.getRole() == Role.MODERATOR, null, null);
+        return toReport(r, user, user.getRole() == Role.MODERATOR, null);
     }
 
     @Transactional
@@ -106,7 +118,7 @@ public class EmergencyService {
             throw ApiException.forbidden("Solo quien reportó, quien ayuda o un moderador pueden cerrarlo");
         }
         r.setStatus(EmergencyStatus.ATTENDED);
-        return toReport(r, user, user.getRole() == Role.MODERATOR, null, null);
+        return toReport(r, user, user.getRole() == Role.MODERATOR, null);
     }
 
     @Transactional
@@ -114,7 +126,7 @@ public class EmergencyService {
         User mod = requireModerator(uid);
         EmergencyReport r = find(id);
         r.setVerified(true);
-        return toReport(r, mod, true, null, null);
+        return toReport(r, mod, true, null);
     }
 
     @Transactional
@@ -149,7 +161,7 @@ public class EmergencyService {
         p.setLongitude(where.longitude());
         p.setCreatedBy(mod);
         supportPoints.save(p);
-        return toPoint(p, null, null);
+        return toPoint(p, null);
     }
 
     @Transactional
@@ -157,7 +169,7 @@ public class EmergencyService {
         requireModerator(uid);
         SupportPoint p = supportPoints.findById(id).orElseThrow(() -> ApiException.notFound("Punto no encontrado"));
         p.setOpen(open);
-        return toPoint(p, null, null);
+        return toPoint(p, null);
     }
 
     @Transactional(readOnly = true)
@@ -185,27 +197,25 @@ public class EmergencyService {
     }
 
     private EmergencyDtos.ReportResponse toReport(EmergencyReport r, User viewer, boolean moderator,
-                                                  Double lat, Double lng) {
+                                                  Integer distance) {
         boolean mine = r.getReporter().getId().equals(viewer.getId());
         boolean helping = r.getHelper() != null && r.getHelper().getId().equals(viewer.getId());
-        String phone = mine || helping || moderator ? r.getReporter().getPhone() : null;
+        boolean exact = mine || helping || moderator;
+        String phone = exact ? r.getReporter().getPhone() : null;
+        LocationPrivacy.Point where = exact
+                ? new LocationPrivacy.Point(r.getLatitude(), r.getLongitude())
+                : privacy.blur("report", r.getId(), r.getLatitude(), r.getLongitude());
         return new EmergencyDtos.ReportResponse(r.getId(), r.getKind(), r.getKind().label(), r.getCategory(),
                 r.getCategory().label(), r.getTitle(), r.getPeopleCount(), r.getSeverity(), r.getSeverity().label(),
                 r.getStatus(), r.getStatus().label(), r.isVerified(), firstName(r.getReporter().getFullName()), phone,
                 r.getHelper() == null ? null : firstName(r.getHelper().getFullName()), mine, helping,
-                r.getNeighborhood(), distance(lat, lng, r.getLatitude(), r.getLongitude()),
-                r.getLatitude(), r.getLongitude(), r.getCreatedAt());
+                r.getNeighborhood(), exact ? distance : LocationPrivacy.rough(distance),
+                where.latitude(), where.longitude(), !exact, r.getCreatedAt());
     }
 
-    private EmergencyDtos.SupportPointResponse toPoint(SupportPoint p, Double lat, Double lng) {
+    private EmergencyDtos.SupportPointResponse toPoint(SupportPoint p, Integer distance) {
         return new EmergencyDtos.SupportPointResponse(p.getId(), p.getName(), p.getType(), p.getType().label(),
-                p.getNeighborhood(), p.getAddress(), p.isOpen(), distance(lat, lng, p.getLatitude(), p.getLongitude()),
-                p.getLatitude(), p.getLongitude());
-    }
-
-    private static Integer distance(Double lat, Double lng, double toLat, double toLng) {
-        return lat == null || lng == null ? null
-                : (int) Math.round(BusinessService.distanceMeters(lat, lng, toLat, toLng));
+                p.getNeighborhood(), p.getAddress(), p.isOpen(), distance, p.getLatitude(), p.getLongitude());
     }
 
     private EmergencyReport find(Long id) {

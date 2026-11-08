@@ -35,7 +35,7 @@ public class AddressService {
         if (user.getAddresses().size() >= MAX_ADDRESSES) {
             throw ApiException.conflict("Puedes guardar hasta " + MAX_ADDRESSES + " direcciones");
         }
-        Address address = locations.locate(req.toEntity());
+        Address address = locations.place(req.toEntity());
         user.addAddress(address);
         return AddressDtos.AddressResponse.of(addresses.save(address));
     }

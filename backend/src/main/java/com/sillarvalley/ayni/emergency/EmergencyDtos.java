@@ -25,7 +25,8 @@ public final class EmergencyDtos {
             String title, int peopleCount, Severity severity, String severityLabel,
             EmergencyStatus status, String statusLabel, boolean verified,
             String reporter, String reporterPhone, String helper, boolean mine, boolean helpingByMe,
-            String neighborhood, Integer distanceMeters, double latitude, double longitude, Instant createdAt) {}
+            String neighborhood, Integer distanceMeters, double latitude, double longitude, boolean approximate,
+            Instant createdAt) {}
 
     public record SupportPointResponse(
             Long id, String name, SupportPointType type, String typeLabel, String neighborhood, String address,
@@ -38,6 +39,7 @@ public final class EmergencyDtos {
             @NotNull(message = "Elige qué tipo de ayuda") EmergencyCategory category,
             @Size(max = 150) String title,
             @Min(1) @Max(50) Integer peopleCount,
+            Long addressId,
             @DecimalMin("-90") @DecimalMax("90") Double latitude,
             @DecimalMin("-180") @DecimalMax("180") Double longitude) {}
 

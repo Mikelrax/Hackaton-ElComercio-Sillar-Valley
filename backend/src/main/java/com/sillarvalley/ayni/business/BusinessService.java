@@ -5,6 +5,7 @@ import com.sillarvalley.ayni.catalog.Locations;
 import com.sillarvalley.ayni.common.ApiException;
 import com.sillarvalley.ayni.common.GeoPoint;
 import com.sillarvalley.ayni.common.PhoneUtils;
+import com.sillarvalley.ayni.geo.Distances;
 import com.sillarvalley.ayni.user.CurrentUser;
 import com.sillarvalley.ayni.user.Role;
 import com.sillarvalley.ayni.user.User;
@@ -25,18 +26,21 @@ public class BusinessService {
     private final BusinessSearch search;
     private final CurrentUser currentUser;
     private final Locations locations;
+    private final Distances distances;
     private final ZoneId zone;
     private final String countryCode;
 
     public BusinessService(BusinessRepository businesses, CategoryRepository categories,
                            BusinessRecommendationRepository recommendations, BusinessSearch search,
-                           CurrentUser currentUser, Locations locations, AppProperties props) {
+                           CurrentUser currentUser, Locations locations, Distances distances,
+                           AppProperties props) {
         this.businesses = businesses;
         this.categories = categories;
         this.recommendations = recommendations;
         this.search = search;
         this.currentUser = currentUser;
         this.locations = locations;
+        this.distances = distances;
         this.zone = ZoneId.of(props.timezone());
         this.countryCode = props.countryCode();
     }
@@ -86,7 +90,7 @@ public class BusinessService {
         User user = currentUser.require(uid);
         Category category = categories.findBySlug(req.categorySlug())
                 .orElseThrow(() -> ApiException.badRequest("Esa categoría no existe"));
-        GeoPoint where = locations.resolve(req.neighborhood(), req.latitude(), req.longitude(), locations.of(user));
+        GeoPoint where = locations.pick(user, req.addressId(), req.latitude(), req.longitude());
 
         Business b = new Business();
         b.setName(req.name().trim());
@@ -169,8 +173,7 @@ public class BusinessService {
 
     private BusinessDtos.BusinessDetail toDetail(Business b, Long uid, Double lat, Double lng) {
         LocalDateTime now = LocalDateTime.now(zone);
-        Integer distance = lat == null || lng == null ? null
-                : (int) Math.round(distanceMeters(lat, lng, b.getLatitude(), b.getLongitude()));
+        Integer distance = distances.from(Distances.Table.BUSINESSES, lat, lng, b.getId());
         List<BusinessDtos.RecommendationResponse> recent = b.getId() == null ? List.of()
                 : recommendations.findTop10ByBusinessIdOrderByCreatedAtDesc(b.getId()).stream()
                 .map(r -> new BusinessDtos.RecommendationResponse(firstName(r.getUser().getFullName()),
@@ -186,14 +189,6 @@ public class BusinessService {
                 new BusinessDtos.Tags(b.getGoodPriceCount(), b.getPunctualCount(), b.getReliableCount()),
                 b.getLatitude(), b.getLongitude(), b.getStatus(), b.getModerationNote(),
                 firstName(b.getCreatedBy().getFullName()), mine, recent, b.getCreatedAt());
-    }
-
-    public static double distanceMeters(double lat1, double lng1, double lat2, double lng2) {
-        double dLat = Math.toRadians(lat2 - lat1);
-        double dLng = Math.toRadians(lng2 - lng1);
-        double a = Math.pow(Math.sin(dLat / 2), 2)
-                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) * Math.pow(Math.sin(dLng / 2), 2);
-        return 6_371_000 * 2 * Math.asin(Math.sqrt(a));
     }
 
     private String normalizePhone(String raw) {

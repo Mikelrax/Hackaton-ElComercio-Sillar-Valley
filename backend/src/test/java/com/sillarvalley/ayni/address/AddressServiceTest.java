@@ -5,10 +5,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.sillarvalley.ayni.AppProperties;
+import com.sillarvalley.ayni.TestProps;
 import com.sillarvalley.ayni.catalog.Locations;
 import com.sillarvalley.ayni.catalog.Neighborhood;
 import com.sillarvalley.ayni.catalog.NeighborhoodRepository;
@@ -37,30 +38,30 @@ class AddressServiceTest {
         when(repository.save(any(Address.class))).thenAnswer(inv -> inv.getArgument(0));
         Neighborhood cayma = new Neighborhood();
         ReflectionTestUtils.setField(cayma, "name", "Cayma");
-        ReflectionTestUtils.setField(cayma, "latitude", -16.3716);
-        ReflectionTestUtils.setField(cayma, "longitude", -71.5469);
         NeighborhoodRepository neighborhoods = mock(NeighborhoodRepository.class);
-        when(neighborhoods.findByNameIgnoreCase(any())).thenReturn(Optional.empty());
-        when(neighborhoods.findByNameIgnoreCase("Cayma")).thenReturn(Optional.of(cayma));
-        AppProperties props = new AppProperties("x".repeat(32), 60, "http://localhost:3000", "JUNTA2026",
-                "America/Lima", "51", "uploads", "http://localhost:3001", false,
-                new AppProperties.City("Arequipa", -16.3988, -71.535));
-        service = new AddressService(currentUser, repository, new Locations(neighborhoods, props));
+        when(neighborhoods.findNearest(anyDouble(), anyDouble())).thenReturn(Optional.of(cayma));
+        when(neighborhoods.findNearest(-15.0, -70.0)).thenReturn(Optional.empty());
+        service = new AddressService(currentUser, repository, new Locations(neighborhoods, TestProps.create()));
     }
 
     private Address saved(String neighborhood, int minutesAgo) {
-        Address a = new AddressDtos.AddressRequest(null, neighborhood, null, null, null).toEntity();
+        Address a = new AddressDtos.AddressRequest(null, null, -16.39, -71.54).toEntity();
+        a.setNeighborhood(neighborhood);
         ReflectionTestUtils.setField(a, "id", nextId++);
         ReflectionTestUtils.setField(a, "createdAt", Instant.now().minusSeconds(minutesAgo * 60L));
         user.addAddress(a);
         return a;
     }
 
+    private static AddressDtos.AddressRequest at(String label, double latitude, double longitude) {
+        return new AddressDtos.AddressRequest(label, null, latitude, longitude);
+    }
+
     @Test
     void nuevaDireccionNoReemplazaALaPrincipal() {
         saved("Yanahuara", 10);
 
-        var added = service.add(7L, new AddressDtos.AddressRequest("Trabajo", "Cayma", null, null, null));
+        var added = service.add(7L, at("Trabajo", -16.3716, -71.5469));
 
         assertFalse(added.primary());
         assertEquals("Trabajo", added.label());
@@ -68,30 +69,30 @@ class AddressServiceTest {
     }
 
     @Test
-    void direccionSinGpsUsaElCentroDelBarrio() {
+    void elBarrioSeDetectaDesdeElPunto() {
         saved("Yanahuara", 10);
 
-        var added = service.add(7L, new AddressDtos.AddressRequest("Trabajo", "Cayma", null, null, null));
+        var added = service.add(7L, at("Trabajo", -16.3716, -71.5469));
 
+        assertEquals("Cayma", added.neighborhood());
         assertEquals(-16.3716, added.latitude());
         assertEquals(-71.5469, added.longitude());
     }
 
     @Test
-    void barrioDesconocidoSinGpsUsaElCentroDeLaCiudad() {
+    void puntoSinBarrioCercanoUsaElNombreDeLaCiudad() {
         saved("Yanahuara", 10);
 
-        var added = service.add(7L, new AddressDtos.AddressRequest(null, "Pampa Nueva", null, null, null));
+        var added = service.add(7L, at(null, -15.0, -70.0));
 
-        assertEquals(-16.3988, added.latitude());
-        assertEquals("Pampa Nueva", added.neighborhood());
+        assertEquals("Arequipa", added.neighborhood());
     }
 
     @Test
     void elIconoSaleDelNombreDelLugar() {
         saved("Yanahuara", 10);
 
-        var added = service.add(7L, new AddressDtos.AddressRequest("Casa de mi abuela", "Cayma", null, null, null));
+        var added = service.add(7L, at("Casa de mi abuela", -16.3716, -71.5469));
 
         assertEquals(AddressPlace.FAMILY.icon(), added.icon());
     }
@@ -133,8 +134,7 @@ class AddressServiceTest {
             saved("Barrio " + i, i);
         }
 
-        ApiException e = assertThrows(ApiException.class,
-                () -> service.add(7L, new AddressDtos.AddressRequest(null, "Otro", null, null, null)));
+        ApiException e = assertThrows(ApiException.class, () -> service.add(7L, at(null, -16.39, -71.54)));
         assertEquals(HttpStatus.CONFLICT, e.getStatus());
     }
 }

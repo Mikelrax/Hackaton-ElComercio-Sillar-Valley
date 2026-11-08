@@ -1,19 +1,25 @@
 package com.sillarvalley.ayni.emergency;
 
 public enum SupportPointType {
-    SHELTER("Albergue"),
-    HEALTH("Salud"),
-    WATER("Agua potable"),
-    SUPPLIES("Centro de acopio"),
-    FIRST_AID("Botiquín comunitario");
+    SHELTER("Albergue", "tent"),
+    HEALTH("Salud", "hospital"),
+    WATER("Agua potable", "droplets"),
+    SUPPLIES("Centro de acopio", "package"),
+    FIRST_AID("Botiquín comunitario", "briefcase-medical");
 
     private final String label;
+    private final String icon;
 
-    SupportPointType(String label) {
+    SupportPointType(String label, String icon) {
         this.label = label;
+        this.icon = icon;
     }
 
     public String label() {
         return label;
+    }
+
+    public String icon() {
+        return icon;
     }
 }

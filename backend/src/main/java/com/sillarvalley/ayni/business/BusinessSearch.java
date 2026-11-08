@@ -1,6 +1,7 @@
 package com.sillarvalley.ayni.business;
 
 import com.sillarvalley.ayni.common.TextSearch;
+import com.sillarvalley.ayni.geo.Distances;
 import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.List;
@@ -11,12 +12,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class BusinessSearch {
 
-    public static final String DISTANCE_SQL = "(6371000 * 2 * asin(sqrt("
-            + "power(sin(radians(b.latitude - :lat) / 2), 2) + "
-            + "cos(radians(:lat)) * cos(radians(b.latitude)) * "
-            + "power(sin(radians(b.longitude - :lng) / 2), 2))))";
+    private static final String DISTANCE_SQL = "ST_Distance(b.geog, " + Distances.POINT + ")";
 
-    private static final String OPEN_NOW_SQL = " AND b.opens_at IS NOT NULL AND b.closes_at IS NOT NULL"
+    public static final String OPEN_NOW_SQL = " AND b.opens_at IS NOT NULL AND b.closes_at IS NOT NULL"
             + " AND (b.open_days IS NULL OR strpos(b.open_days, :dow) > 0)"
             + " AND ((b.opens_at <= b.closes_at AND :now >= b.opens_at AND :now < b.closes_at)"
             + " OR (b.opens_at > b.closes_at AND (:now >= b.opens_at OR :now < b.closes_at)))";
@@ -103,7 +101,7 @@ public class BusinessSearch {
             params.put("lat", c.latitude());
             params.put("lng", c.longitude());
             if (c.radius() != null) {
-                sql.append(" AND ").append(DISTANCE_SQL).append(" <= :radius");
+                sql.append(" AND ST_DWithin(b.geog, ").append(Distances.POINT).append(", :radius)");
                 params.put("radius", c.radius());
             }
         }

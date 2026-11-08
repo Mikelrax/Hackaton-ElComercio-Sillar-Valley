@@ -1,6 +1,8 @@
 package com.sillarvalley.ayni.post;
 
 import com.sillarvalley.ayni.user.UserDtos;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -16,7 +18,9 @@ public final class PostDtos {
             @NotNull Category category,
             @NotBlank @Size(max = 150) String title,
             @NotBlank @Size(max = 2000) String description,
-            @Size(max = 120) String neighborhood,
+            Long addressId,
+            @DecimalMin("-90") @DecimalMax("90") Double latitude,
+            @DecimalMin("-180") @DecimalMax("180") Double longitude,
             @Size(max = 4, message = "Máximo 4 imágenes") List<String> images) {}
 
     public record PostResponse(

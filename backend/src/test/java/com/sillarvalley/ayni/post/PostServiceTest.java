@@ -6,6 +6,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.sillarvalley.ayni.TestProps;
+import com.sillarvalley.ayni.address.Address;
+import com.sillarvalley.ayni.catalog.Locations;
+import com.sillarvalley.ayni.catalog.NeighborhoodRepository;
 import com.sillarvalley.ayni.common.ApiException;
 import com.sillarvalley.ayni.response.HelpResponse;
 import com.sillarvalley.ayni.response.HelpResponseRepository;
@@ -48,7 +52,8 @@ class PostServiceTest {
         responses = mock(HelpResponseRepository.class);
         currentUser = mock(CurrentUser.class);
         storage = mock(StorageService.class);
-        service = new PostService(posts, responses, currentUser, storage, new PostMapper(storage));
+        service = new PostService(posts, responses, currentUser, storage, new PostMapper(storage),
+                new Locations(mock(NeighborhoodRepository.class), TestProps.create()));
 
         vecino = user(1, Role.NEIGHBOR);
         moderador = user(2, Role.MODERATOR);
@@ -61,7 +66,50 @@ class PostServiceTest {
 
     private PostDtos.PostRequest request(List<String> images) {
         return new PostDtos.PostRequest(PostType.REQUEST, Category.HOGAR, " Necesito ayuda ",
-                "Descripción", null, images);
+                "Descripción", null, null, null, images);
+    }
+
+    private Address home(User owner, long id, String neighborhood) {
+        Address a = new Address();
+        ReflectionTestUtils.setField(a, "id", id);
+        a.setLabel("Casa");
+        a.setNeighborhood(neighborhood);
+        a.setLatitude(-16.3884);
+        a.setLongitude(-71.5418);
+        owner.addAddress(a);
+        return a;
+    }
+
+    @Test
+    void publicacionUsaLaDireccionElegida() {
+        home(vecino, 40, "Yanahuara");
+        Address mama = home(vecino, 41, "Cayma");
+        mama.setLatitude(-16.3716);
+
+        var req = new PostDtos.PostRequest(PostType.REQUEST, Category.HOGAR, "Ayuda", "Descripción", 41L,
+                null, null, null);
+        var res = service.create(1L, req);
+
+        assertEquals("Cayma", res.neighborhood());
+    }
+
+    @Test
+    void sinDireccionElegidaUsaLaPrincipal() {
+        home(vecino, 40, "Yanahuara");
+
+        var res = service.create(1L, request(null));
+
+        assertEquals("Yanahuara", res.neighborhood());
+    }
+
+    @Test
+    void direccionAjenaEsBadRequest() {
+        home(otro, 50, "Cayma");
+        var req = new PostDtos.PostRequest(PostType.REQUEST, Category.HOGAR, "Ayuda", "Descripción", 50L,
+                null, null, null);
+
+        ApiException e = assertThrows(ApiException.class, () -> service.create(1L, req));
+        assertEquals(HttpStatus.BAD_REQUEST, e.getStatus());
     }
 
     private Post approvedPost(PostType type) {

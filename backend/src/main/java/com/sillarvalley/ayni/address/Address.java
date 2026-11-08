@@ -33,9 +33,11 @@ public class Address {
     @Column(length = 200)
     private String reference;
 
-    private Double latitude;
+    @Column(nullable = false)
+    private double latitude;
 
-    private Double longitude;
+    @Column(nullable = false)
+    private double longitude;
 
     @Column(name = "is_primary", nullable = false)
     private boolean primary;
@@ -52,10 +54,10 @@ public class Address {
     public void setNeighborhood(String neighborhood) { this.neighborhood = neighborhood; }
     public String getReference() { return reference; }
     public void setReference(String reference) { this.reference = reference; }
-    public Double getLatitude() { return latitude; }
-    public void setLatitude(Double latitude) { this.latitude = latitude; }
-    public Double getLongitude() { return longitude; }
-    public void setLongitude(Double longitude) { this.longitude = longitude; }
+    public double getLatitude() { return latitude; }
+    public void setLatitude(double latitude) { this.latitude = latitude; }
+    public double getLongitude() { return longitude; }
+    public void setLongitude(double longitude) { this.longitude = longitude; }
     public boolean isPrimary() { return primary; }
     public void setPrimary(boolean primary) { this.primary = primary; }
     public Instant getCreatedAt() { return createdAt; }
