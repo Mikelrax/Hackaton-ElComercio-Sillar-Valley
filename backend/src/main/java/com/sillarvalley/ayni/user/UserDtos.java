@@ -1,6 +1,7 @@
 package com.sillarvalley.ayni.user;
 
 import com.sillarvalley.ayni.address.AddressDtos;
+import com.sillarvalley.ayni.common.GeoPoint;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -18,11 +19,11 @@ public final class UserDtos {
 
     public record UserResponse(Long id, String fullName, String phone, String email, Role role,
                                int ayniPoints, int helpGiven, int helpReceived, boolean active, Instant createdAt,
-                               AddressDtos.AddressResponse primaryAddress) {
-        public static UserResponse of(User u) {
+                               AddressDtos.AddressResponse primaryAddress, GeoPoint location) {
+        public static UserResponse of(User u, GeoPoint location) {
             return new UserResponse(u.getId(), u.getFullName(), u.getPhone(), u.getEmail(), u.getRole(),
                     u.getAyniPoints(), u.getHelpGiven(), u.getHelpReceived(), u.isActive(), u.getCreatedAt(),
-                    u.primaryAddress().map(AddressDtos.AddressResponse::of).orElse(null));
+                    u.primaryAddress().map(AddressDtos.AddressResponse::of).orElse(null), location);
         }
     }
 

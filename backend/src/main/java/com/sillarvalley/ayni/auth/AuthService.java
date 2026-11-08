@@ -1,6 +1,7 @@
 package com.sillarvalley.ayni.auth;
 
 import com.sillarvalley.ayni.AppProperties;
+import com.sillarvalley.ayni.catalog.Locations;
 import com.sillarvalley.ayni.common.ApiException;
 import com.sillarvalley.ayni.common.PhoneUtils;
 import com.sillarvalley.ayni.user.Role;
@@ -18,12 +19,15 @@ public class AuthService {
     private final PasswordEncoder encoder;
     private final JwtService jwt;
     private final AppProperties props;
+    private final Locations locations;
 
-    public AuthService(UserRepository users, PasswordEncoder encoder, JwtService jwt, AppProperties props) {
+    public AuthService(UserRepository users, PasswordEncoder encoder, JwtService jwt, AppProperties props,
+                       Locations locations) {
         this.users = users;
         this.encoder = encoder;
         this.jwt = jwt;
         this.props = props;
+        this.locations = locations;
     }
 
     @Transactional
@@ -55,7 +59,7 @@ public class AuthService {
         user.setEmail(email);
         user.setPasswordHash(encoder.encode(req.password()));
         user.setRole(role);
-        user.addAddress(req.address().toEntity());
+        user.addAddress(locations.locate(req.address().toEntity()));
         user = users.save(user);
         return respond(user);
     }
@@ -77,8 +81,8 @@ public class AuthService {
         return respond(user);
     }
 
-    private AuthDtos.AuthResponse respond(User user) {
+    AuthDtos.AuthResponse respond(User user) {
         return new AuthDtos.AuthResponse(jwt.issue(user), "Bearer",
-                props.jwtExpirationMinutes() * 60, UserDtos.UserResponse.of(user));
+                props.jwtExpirationMinutes() * 60, UserDtos.UserResponse.of(user, locations.of(user)));
     }
 }

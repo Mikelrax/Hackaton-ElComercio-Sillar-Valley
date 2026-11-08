@@ -12,5 +12,6 @@ public final class ResponseDtos {
     public record ResponseRequest(@NotBlank @Size(max = 1000) String message) {}
 
     public record HelpResponseDto(Long id, Long postId, String postTitle, UserDtos.UserSummary helper,
-                                  String message, HelpStatus status, String contactPhone, Instant createdAt) {}
+                                  String message, HelpStatus status, String statusLabel, String contactPhone,
+                                  Instant createdAt) {}
 }

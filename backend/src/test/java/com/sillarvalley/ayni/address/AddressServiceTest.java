@@ -8,10 +8,15 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.sillarvalley.ayni.AppProperties;
+import com.sillarvalley.ayni.catalog.Locations;
+import com.sillarvalley.ayni.catalog.Neighborhood;
+import com.sillarvalley.ayni.catalog.NeighborhoodRepository;
 import com.sillarvalley.ayni.common.ApiException;
 import com.sillarvalley.ayni.user.CurrentUser;
 import com.sillarvalley.ayni.user.User;
 import java.time.Instant;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -30,7 +35,17 @@ class AddressServiceTest {
         when(currentUser.require(7L)).thenReturn(user);
         AddressRepository repository = mock(AddressRepository.class);
         when(repository.save(any(Address.class))).thenAnswer(inv -> inv.getArgument(0));
-        service = new AddressService(currentUser, repository);
+        Neighborhood cayma = new Neighborhood();
+        ReflectionTestUtils.setField(cayma, "name", "Cayma");
+        ReflectionTestUtils.setField(cayma, "latitude", -16.3716);
+        ReflectionTestUtils.setField(cayma, "longitude", -71.5469);
+        NeighborhoodRepository neighborhoods = mock(NeighborhoodRepository.class);
+        when(neighborhoods.findByNameIgnoreCase(any())).thenReturn(Optional.empty());
+        when(neighborhoods.findByNameIgnoreCase("Cayma")).thenReturn(Optional.of(cayma));
+        AppProperties props = new AppProperties("x".repeat(32), 60, "http://localhost:3000", "JUNTA2026",
+                "America/Lima", "51", "uploads", "http://localhost:3001", false,
+                new AppProperties.City("Arequipa", -16.3988, -71.535));
+        service = new AddressService(currentUser, repository, new Locations(neighborhoods, props));
     }
 
     private Address saved(String neighborhood, int minutesAgo) {
@@ -50,6 +65,35 @@ class AddressServiceTest {
         assertFalse(added.primary());
         assertEquals("Trabajo", added.label());
         assertEquals(2, user.getAddresses().size());
+    }
+
+    @Test
+    void direccionSinGpsUsaElCentroDelBarrio() {
+        saved("Yanahuara", 10);
+
+        var added = service.add(7L, new AddressDtos.AddressRequest("Trabajo", "Cayma", null, null, null));
+
+        assertEquals(-16.3716, added.latitude());
+        assertEquals(-71.5469, added.longitude());
+    }
+
+    @Test
+    void barrioDesconocidoSinGpsUsaElCentroDeLaCiudad() {
+        saved("Yanahuara", 10);
+
+        var added = service.add(7L, new AddressDtos.AddressRequest(null, "Pampa Nueva", null, null, null));
+
+        assertEquals(-16.3988, added.latitude());
+        assertEquals("Pampa Nueva", added.neighborhood());
+    }
+
+    @Test
+    void elIconoSaleDelNombreDelLugar() {
+        saved("Yanahuara", 10);
+
+        var added = service.add(7L, new AddressDtos.AddressRequest("Casa de mi abuela", "Cayma", null, null, null));
+
+        assertEquals(AddressPlace.FAMILY.icon(), added.icon());
     }
 
     @Test

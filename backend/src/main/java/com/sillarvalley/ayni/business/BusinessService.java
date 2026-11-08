@@ -1,8 +1,9 @@
 package com.sillarvalley.ayni.business;
 
 import com.sillarvalley.ayni.AppProperties;
-import com.sillarvalley.ayni.address.Address;
+import com.sillarvalley.ayni.catalog.Locations;
 import com.sillarvalley.ayni.common.ApiException;
+import com.sillarvalley.ayni.common.GeoPoint;
 import com.sillarvalley.ayni.common.PhoneUtils;
 import com.sillarvalley.ayni.user.CurrentUser;
 import com.sillarvalley.ayni.user.Role;
@@ -18,25 +19,24 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class BusinessService {
 
-    public static final double DEFAULT_LATITUDE = -16.3988;
-    public static final double DEFAULT_LONGITUDE = -71.535;
-
     private final BusinessRepository businesses;
     private final CategoryRepository categories;
     private final BusinessRecommendationRepository recommendations;
     private final BusinessSearch search;
     private final CurrentUser currentUser;
+    private final Locations locations;
     private final ZoneId zone;
     private final String countryCode;
 
     public BusinessService(BusinessRepository businesses, CategoryRepository categories,
                            BusinessRecommendationRepository recommendations, BusinessSearch search,
-                           CurrentUser currentUser, AppProperties props) {
+                           CurrentUser currentUser, Locations locations, AppProperties props) {
         this.businesses = businesses;
         this.categories = categories;
         this.recommendations = recommendations;
         this.search = search;
         this.currentUser = currentUser;
+        this.locations = locations;
         this.zone = ZoneId.of(props.timezone());
         this.countryCode = props.countryCode();
     }
@@ -86,19 +86,17 @@ public class BusinessService {
         User user = currentUser.require(uid);
         Category category = categories.findBySlug(req.categorySlug())
                 .orElseThrow(() -> ApiException.badRequest("Esa categoría no existe"));
-        Address home = user.primaryAddress().orElse(null);
+        GeoPoint where = locations.resolve(req.neighborhood(), req.latitude(), req.longitude(), locations.of(user));
 
         Business b = new Business();
         b.setName(req.name().trim());
         b.setCategory(category);
         b.setDescription(blankToNull(req.description()));
         b.setPhone(normalizePhone(req.phone()));
-        b.setNeighborhood(firstNonBlank(req.neighborhood(), home == null ? null : home.getNeighborhood(), "Arequipa"));
+        b.setNeighborhood(where.neighborhood());
         b.setReference(blankToNull(req.reference()));
-        b.setLatitude(req.latitude() != null ? req.latitude()
-                : home != null && home.getLatitude() != null ? home.getLatitude() : DEFAULT_LATITUDE);
-        b.setLongitude(req.longitude() != null ? req.longitude()
-                : home != null && home.getLongitude() != null ? home.getLongitude() : DEFAULT_LONGITUDE);
+        b.setLatitude(where.latitude());
+        b.setLongitude(where.longitude());
         b.setOpensAt(req.opensAt() == null ? null : LocalTime.parse(req.opensAt()));
         b.setClosesAt(req.closesAt() == null ? null : LocalTime.parse(req.closesAt()));
         b.setOpenDays(blankToNull(req.openDays()));
@@ -235,14 +233,5 @@ public class BusinessService {
 
     private static String blankToNull(String s) {
         return s == null || s.isBlank() ? null : s.trim();
-    }
-
-    private static String firstNonBlank(String... values) {
-        for (String v : values) {
-            if (v != null && !v.isBlank()) {
-                return v.trim();
-            }
-        }
-        return null;
     }
 }

@@ -21,7 +21,13 @@ public class Neighborhood {
     @Column(nullable = false)
     private int sortOrder;
 
+    private Double latitude;
+
+    private Double longitude;
+
     public Long getId() { return id; }
     public String getName() { return name; }
     public int getSortOrder() { return sortOrder; }
+    public Double getLatitude() { return latitude; }
+    public Double getLongitude() { return longitude; }
 }

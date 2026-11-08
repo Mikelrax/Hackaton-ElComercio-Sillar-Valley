@@ -11,6 +11,8 @@ import static org.mockito.Mockito.when;
 
 import com.sillarvalley.ayni.AppProperties;
 import com.sillarvalley.ayni.address.AddressDtos;
+import com.sillarvalley.ayni.catalog.Locations;
+import com.sillarvalley.ayni.catalog.NeighborhoodRepository;
 import com.sillarvalley.ayni.common.ApiException;
 import com.sillarvalley.ayni.user.Role;
 import com.sillarvalley.ayni.user.User;
@@ -36,8 +38,10 @@ class AuthServiceTest {
         encoder = new BCryptPasswordEncoder(4);
         jwt = mock(JwtService.class);
         AppProperties props = new AppProperties("x".repeat(32), 60, "http://localhost:3000", "JUNTA2026",
-                "America/Lima", "51", "uploads", "http://localhost:3001", false);
-        service = new AuthService(users, encoder, jwt, props);
+                "America/Lima", "51", "uploads", "http://localhost:3001", false,
+                new AppProperties.City("Arequipa", -16.3988, -71.535));
+        service = new AuthService(users, encoder, jwt, props,
+                new Locations(mock(NeighborhoodRepository.class), props));
 
         when(users.save(any(User.class))).thenAnswer(inv -> {
             User u = inv.getArgument(0);
@@ -72,6 +76,15 @@ class AuthServiceTest {
         assertEquals("Yanahuara", address.neighborhood());
         assertEquals("Cerca al parque", address.reference());
         assertTrue(address.primary());
+    }
+
+    @Test
+    void registroDevuelveLaUbicacionDeLaDireccionPrincipal() {
+        var location = service.register(register("987654321", null)).user().location();
+
+        assertEquals(-16.39, location.latitude());
+        assertEquals(-71.54, location.longitude());
+        assertEquals("Yanahuara", location.neighborhood());
     }
 
     @Test

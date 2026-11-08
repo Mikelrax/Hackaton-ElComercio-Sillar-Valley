@@ -21,6 +21,7 @@ public final class PostDtos {
 
     public record PostResponse(
             Long id, PostType type, Category category, String categoryLabel, String title, String description,
-            String neighborhood, PostStatus status, List<String> imageUrls, UserDtos.UserSummary author,
+            String neighborhood, PostStatus status, String statusLabel, List<String> imageUrls,
+            UserDtos.UserSummary author,
             String moderationNote, Instant createdAt, Instant updatedAt) {}
 }

@@ -1,5 +1,6 @@
 package com.sillarvalley.ayni.user;
 
+import com.sillarvalley.ayni.catalog.Locations;
 import com.sillarvalley.ayni.common.ApiException;
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -10,15 +11,18 @@ public class UserService {
 
     private final UserRepository users;
     private final CurrentUser currentUser;
+    private final Locations locations;
 
-    public UserService(UserRepository users, CurrentUser currentUser) {
+    public UserService(UserRepository users, CurrentUser currentUser, Locations locations) {
         this.users = users;
         this.currentUser = currentUser;
+        this.locations = locations;
     }
 
     @Transactional(readOnly = true)
     public UserDtos.UserResponse me(Long uid) {
-        return UserDtos.UserResponse.of(currentUser.require(uid));
+        User u = currentUser.require(uid);
+        return UserDtos.UserResponse.of(u, locations.of(u));
     }
 
     @Transactional
@@ -30,7 +34,7 @@ public class UserService {
         }
         u.setFullName(req.fullName().trim());
         u.setEmail(email);
-        return UserDtos.UserResponse.of(u);
+        return UserDtos.UserResponse.of(u, locations.of(u));
     }
 
     @Transactional(readOnly = true)

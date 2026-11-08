@@ -8,7 +8,6 @@ import com.sillarvalley.ayni.post.PostStatus;
 import com.sillarvalley.ayni.post.PostType;
 import com.sillarvalley.ayni.response.HelpResponse;
 import com.sillarvalley.ayni.response.HelpResponseRepository;
-import com.sillarvalley.ayni.user.Role;
 import com.sillarvalley.ayni.user.User;
 import com.sillarvalley.ayni.user.UserRepository;
 import org.slf4j.Logger;
@@ -19,6 +18,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @Order(1)
@@ -41,15 +41,16 @@ public class DataSeeder implements ApplicationRunner {
     }
 
     @Override
+    @Transactional
     public void run(ApplicationArguments args) {
-        if (users.count() > 0) {
+        User rosa = ensure(SeedAccounts.ROSA);
+        User luis = ensure(SeedAccounts.LUIS);
+        User carmen = ensure(SeedAccounts.CARMEN);
+        ensure(SeedAccounts.JULIO);
+
+        if (posts.count() > 0) {
             return;
         }
-        User rosa = user("Rosa Quispe", "51900000001", "rosa@ayni.local", "Moderador123", Role.MODERATOR);
-        User luis = user("Luis Mamani", "51900000002", "luis@ayni.local", "Vecino1234", Role.NEIGHBOR);
-        User carmen = user("Carmen Huamán", "51900000003", null, "Vecino1234", Role.NEIGHBOR);
-        user("Julio Ccori", "51900000004", null, "Vecino1234", Role.NEIGHBOR);
-
         Post pedido = post(luis, PostType.REQUEST, Category.HERRAMIENTAS, "Necesito una escalera prestada",
                 "Voy a pintar el frente de mi casa este fin de semana y necesito una escalera de 3 metros.",
                 PostStatus.APPROVED, rosa);
@@ -69,23 +70,37 @@ public class DataSeeder implements ApplicationRunner {
         r.setMessage("Tengo una escalera de aluminio, te la presto el sábado temprano.");
         responses.save(r);
 
-        log.info("Datos de ejemplo creados. Moderador: 51900000001 / Moderador123 — Vecinos: 51900000002..4 / Vecino1234");
+        log.info("Publicaciones de ejemplo creadas");
     }
 
-    private User user(String name, String phone, String email, String password, Role role) {
+    private User ensure(SeedAccounts.Account account) {
+        User user = users.findByPhone(account.phone()).orElseGet(() -> create(account));
+        if (user.getAddresses().isEmpty()) {
+            user.addAddress(home(account.home()));
+            log.info("Dirección de ejemplo agregada a {}", user.getFullName());
+        }
+        return users.save(user);
+    }
+
+    private User create(SeedAccounts.Account account) {
         User u = new User();
-        u.setFullName(name);
-        u.setPhone(phone);
-        u.setEmail(email);
-        u.setPasswordHash(encoder.encode(password));
-        u.setRole(role);
-        Address home = new Address();
-        home.setLabel("Casa");
-        home.setNeighborhood("Yanahuara");
-        home.setLatitude(-16.3889);
-        home.setLongitude(-71.5422);
-        u.addAddress(home);
-        return users.save(u);
+        u.setFullName(account.fullName());
+        u.setPhone(account.phone());
+        u.setEmail(account.email());
+        u.setPasswordHash(encoder.encode(account.password()));
+        u.setRole(account.role());
+        log.info("Usuario de ejemplo creado: {} ({})", account.fullName(), account.role());
+        return u;
+    }
+
+    private static Address home(SeedAccounts.Home home) {
+        Address a = new Address();
+        a.setLabel("Casa");
+        a.setNeighborhood(home.neighborhood());
+        a.setReference(home.reference());
+        a.setLatitude(home.latitude());
+        a.setLongitude(home.longitude());
+        return a;
     }
 
     private Post post(User author, PostType type, Category cat, String title, String desc,
@@ -96,7 +111,7 @@ public class DataSeeder implements ApplicationRunner {
         p.setCategory(cat);
         p.setTitle(title);
         p.setDescription(desc);
-        p.setNeighborhood("Sector central");
+        p.setNeighborhood(author.primaryAddress().map(Address::getNeighborhood).orElse(null));
         p.setStatus(status);
         p.setModeratedBy(moderator);
         return posts.save(p);

@@ -121,6 +121,7 @@ public class ResponseService {
             phone = showHelperPhone ? r.getHelper().getPhone() : otherPartyPhone;
         }
         return new ResponseDtos.HelpResponseDto(r.getId(), r.getPost().getId(), r.getPost().getTitle(),
-                UserDtos.UserSummary.of(r.getHelper()), r.getMessage(), r.getStatus(), phone, r.getCreatedAt());
+                UserDtos.UserSummary.of(r.getHelper()), r.getMessage(), r.getStatus(), r.getStatus().label(), phone,
+                r.getCreatedAt());
     }
 }

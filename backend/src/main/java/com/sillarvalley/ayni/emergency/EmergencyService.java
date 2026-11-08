@@ -1,8 +1,9 @@
 package com.sillarvalley.ayni.emergency;
 
-import com.sillarvalley.ayni.address.Address;
 import com.sillarvalley.ayni.business.BusinessService;
+import com.sillarvalley.ayni.catalog.Locations;
 import com.sillarvalley.ayni.common.ApiException;
+import com.sillarvalley.ayni.common.GeoPoint;
 import com.sillarvalley.ayni.user.CurrentUser;
 import com.sillarvalley.ayni.user.Role;
 import com.sillarvalley.ayni.user.User;
@@ -21,14 +22,17 @@ public class EmergencyService {
     private final SupportPointRepository supportPoints;
     private final UserRepository users;
     private final CurrentUser currentUser;
+    private final Locations locations;
 
     public EmergencyService(EmergencyActivationRepository activations, EmergencyReportRepository reports,
-                            SupportPointRepository supportPoints, UserRepository users, CurrentUser currentUser) {
+                            SupportPointRepository supportPoints, UserRepository users, CurrentUser currentUser,
+                            Locations locations) {
         this.activations = activations;
         this.reports = reports;
         this.supportPoints = supportPoints;
         this.users = users;
         this.currentUser = currentUser;
+        this.locations = locations;
     }
 
     @Transactional(readOnly = true)
@@ -58,7 +62,7 @@ public class EmergencyService {
     @Transactional
     public EmergencyDtos.ReportResponse create(Long uid, EmergencyDtos.CreateReportRequest req) {
         User user = currentUser.require(uid);
-        Address home = user.primaryAddress().orElse(null);
+        GeoPoint where = locations.resolve(null, req.latitude(), req.longitude(), locations.of(user));
         EmergencyReport r = new EmergencyReport();
         r.setKind(req.kind());
         r.setCategory(req.category());
@@ -69,11 +73,9 @@ public class EmergencyService {
         r.setSeverity(req.kind() == EmergencyKind.OFFER ? Severity.LOW : req.category().severity());
         r.setStatus(req.kind() == EmergencyKind.OFFER ? EmergencyStatus.ON_THE_WAY : EmergencyStatus.URGENT);
         r.setReporter(user);
-        r.setNeighborhood(home == null ? "Arequipa" : home.getNeighborhood());
-        r.setLatitude(req.latitude() != null ? req.latitude()
-                : home != null && home.getLatitude() != null ? home.getLatitude() : BusinessService.DEFAULT_LATITUDE);
-        r.setLongitude(req.longitude() != null ? req.longitude()
-                : home != null && home.getLongitude() != null ? home.getLongitude() : BusinessService.DEFAULT_LONGITUDE);
+        r.setNeighborhood(where.neighborhood());
+        r.setLatitude(where.latitude());
+        r.setLongitude(where.longitude());
         reports.save(r);
         return toReport(r, user, user.getRole() == Role.MODERATOR, null, null);
     }
@@ -137,17 +139,14 @@ public class EmergencyService {
     @Transactional
     public EmergencyDtos.SupportPointResponse createPoint(Long uid, EmergencyDtos.SupportPointRequest req) {
         User mod = requireModerator(uid);
-        Address home = mod.primaryAddress().orElse(null);
+        GeoPoint where = locations.resolve(req.neighborhood(), req.latitude(), req.longitude(), locations.of(mod));
         SupportPoint p = new SupportPoint();
         p.setName(req.name().trim());
         p.setType(req.type());
-        p.setNeighborhood(req.neighborhood() != null && !req.neighborhood().isBlank() ? req.neighborhood().trim()
-                : home == null ? "Arequipa" : home.getNeighborhood());
+        p.setNeighborhood(where.neighborhood());
         p.setAddress(req.address() == null || req.address().isBlank() ? null : req.address().trim());
-        p.setLatitude(req.latitude() != null ? req.latitude()
-                : home != null && home.getLatitude() != null ? home.getLatitude() : BusinessService.DEFAULT_LATITUDE);
-        p.setLongitude(req.longitude() != null ? req.longitude()
-                : home != null && home.getLongitude() != null ? home.getLongitude() : BusinessService.DEFAULT_LONGITUDE);
+        p.setLatitude(where.latitude());
+        p.setLongitude(where.longitude());
         p.setCreatedBy(mod);
         supportPoints.save(p);
         return toPoint(p, null, null);

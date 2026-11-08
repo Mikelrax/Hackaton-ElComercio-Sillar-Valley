@@ -28,10 +28,10 @@ public final class AddressDtos {
     }
 
     public record AddressResponse(Long id, String label, String neighborhood, String reference,
-                                  Double latitude, Double longitude, boolean primary) {
+                                  Double latitude, Double longitude, boolean primary, String icon) {
         public static AddressResponse of(Address a) {
             return new AddressResponse(a.getId(), a.getLabel(), a.getNeighborhood(), a.getReference(),
-                    a.getLatitude(), a.getLongitude(), a.isPrimary());
+                    a.getLatitude(), a.getLongitude(), a.isPrimary(), AddressPlace.of(a.getLabel()).icon());
         }
     }
 }

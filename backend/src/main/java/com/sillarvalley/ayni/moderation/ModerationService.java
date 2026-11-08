@@ -1,5 +1,6 @@
 package com.sillarvalley.ayni.moderation;
 
+import com.sillarvalley.ayni.catalog.Locations;
 import com.sillarvalley.ayni.common.ApiException;
 import com.sillarvalley.ayni.common.PageResponse;
 import com.sillarvalley.ayni.post.Post;
@@ -27,14 +28,16 @@ public class ModerationService {
     private final UserRepository users;
     private final CurrentUser currentUser;
     private final PostMapper mapper;
+    private final Locations locations;
 
     public ModerationService(PostRepository posts, ReportRepository reports, UserRepository users,
-                             CurrentUser currentUser, PostMapper mapper) {
+                             CurrentUser currentUser, PostMapper mapper, Locations locations) {
         this.posts = posts;
         this.reports = reports;
         this.users = users;
         this.currentUser = currentUser;
         this.mapper = mapper;
+        this.locations = locations;
     }
 
     @Transactional(readOnly = true)
@@ -121,7 +124,7 @@ public class ModerationService {
     public List<UserDtos.UserResponse> listUsers(Long uid) {
         requireModerator(uid);
         return users.findAll(Sort.by(Sort.Direction.DESC, "createdAt")).stream()
-                .map(UserDtos.UserResponse::of).toList();
+                .map(u -> UserDtos.UserResponse.of(u, locations.of(u))).toList();
     }
 
     @Transactional
@@ -135,7 +138,7 @@ public class ModerationService {
             throw ApiException.forbidden("No se puede desactivar a otro moderador");
         }
         target.setActive(active);
-        return UserDtos.UserResponse.of(target);
+        return UserDtos.UserResponse.of(target, locations.of(target));
     }
 
     private User requireModerator(Long uid) {

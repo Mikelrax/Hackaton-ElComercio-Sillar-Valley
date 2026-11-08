@@ -56,8 +56,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/health", "/actuator/health", "/actuator/info").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/catalog").permitAll()
-                        .requestMatchers("/api/auth/register", "/api/auth/login").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/catalog", "/api/landing").permitAll()
+                        .requestMatchers("/api/auth/register", "/api/auth/login", "/api/auth/demo",
+                                "/api/auth/demo/*").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
                         .requestMatchers("/api/moderation/**").hasRole("MODERATOR")
                         .anyRequest().authenticated())

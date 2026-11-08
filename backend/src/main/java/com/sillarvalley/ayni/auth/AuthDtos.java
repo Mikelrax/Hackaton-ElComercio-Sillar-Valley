@@ -1,6 +1,7 @@
 package com.sillarvalley.ayni.auth;
 
 import com.sillarvalley.ayni.address.AddressDtos;
+import com.sillarvalley.ayni.user.Role;
 import com.sillarvalley.ayni.user.UserDtos;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -23,4 +24,7 @@ public final class AuthDtos {
     public record LoginRequest(@NotBlank String identifier, @NotBlank String password) {}
 
     public record AuthResponse(String token, String tokenType, long expiresInSeconds, UserDtos.UserResponse user) {}
+
+    public record DemoAccount(String key, String title, String summary, Role role, String fullName,
+                              String neighborhood) {}
 }

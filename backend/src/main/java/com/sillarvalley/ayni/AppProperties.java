@@ -1,7 +1,9 @@
 package com.sillarvalley.ayni;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.Arrays;
 import java.util.List;
@@ -19,8 +21,11 @@ public record AppProperties(
         @NotBlank String countryCode,
         @NotBlank String uploadDir,
         @NotBlank String publicBaseUrl,
-        boolean seed
+        boolean seed,
+        @NotNull @Valid City city
 ) {
+
+    public record City(@NotBlank String name, double latitude, double longitude) {}
 
     public List<String> corsOriginList() {
         return Arrays.stream(corsOrigins.split(","))

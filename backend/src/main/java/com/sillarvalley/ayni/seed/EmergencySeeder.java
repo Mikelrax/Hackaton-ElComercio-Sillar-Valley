@@ -20,7 +20,6 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.annotation.Order;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,7 +48,7 @@ public class EmergencySeeder implements ApplicationRunner {
         if (reports.count() > 0 || points.count() > 0) {
             return;
         }
-        List<User> people = users.findAll(Sort.by("id"));
+        List<User> people = SeedAccounts.users(users);
         if (people.size() < 2) {
             return;
         }

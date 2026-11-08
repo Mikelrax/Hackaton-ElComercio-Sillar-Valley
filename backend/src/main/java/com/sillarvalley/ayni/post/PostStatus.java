@@ -1,3 +1,19 @@
 package com.sillarvalley.ayni.post;
 
-public enum PostStatus { PENDING, APPROVED, REJECTED, FULFILLED, CANCELLED }
+public enum PostStatus {
+    PENDING("En revisión"),
+    APPROVED("Publicada"),
+    REJECTED("No aprobada"),
+    FULFILLED("Cumplida"),
+    CANCELLED("Cancelada");
+
+    private final String label;
+
+    PostStatus(String label) {
+        this.label = label;
+    }
+
+    public String label() {
+        return label;
+    }
+}

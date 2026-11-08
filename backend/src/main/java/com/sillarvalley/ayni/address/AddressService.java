@@ -1,5 +1,6 @@
 package com.sillarvalley.ayni.address;
 
+import com.sillarvalley.ayni.catalog.Locations;
 import com.sillarvalley.ayni.common.ApiException;
 import com.sillarvalley.ayni.user.CurrentUser;
 import com.sillarvalley.ayni.user.User;
@@ -15,10 +16,12 @@ public class AddressService {
 
     private final CurrentUser currentUser;
     private final AddressRepository addresses;
+    private final Locations locations;
 
-    public AddressService(CurrentUser currentUser, AddressRepository addresses) {
+    public AddressService(CurrentUser currentUser, AddressRepository addresses, Locations locations) {
         this.currentUser = currentUser;
         this.addresses = addresses;
+        this.locations = locations;
     }
 
     @Transactional(readOnly = true)
@@ -32,7 +35,7 @@ public class AddressService {
         if (user.getAddresses().size() >= MAX_ADDRESSES) {
             throw ApiException.conflict("Puedes guardar hasta " + MAX_ADDRESSES + " direcciones");
         }
-        Address address = req.toEntity();
+        Address address = locations.locate(req.toEntity());
         user.addAddress(address);
         return AddressDtos.AddressResponse.of(addresses.save(address));
     }

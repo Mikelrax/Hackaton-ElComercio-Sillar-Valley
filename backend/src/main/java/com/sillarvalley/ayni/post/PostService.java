@@ -1,5 +1,6 @@
 package com.sillarvalley.ayni.post;
 
+import com.sillarvalley.ayni.address.Address;
 import com.sillarvalley.ayni.common.ApiException;
 import com.sillarvalley.ayni.common.PageResponse;
 import com.sillarvalley.ayni.response.HelpResponse;
@@ -151,7 +152,8 @@ public class PostService {
         p.setTitle(req.title().trim());
         p.setDescription(req.description().trim());
         p.setNeighborhood(req.neighborhood() == null || req.neighborhood().isBlank()
-                ? null : req.neighborhood().trim());
+                ? p.getAuthor().primaryAddress().map(Address::getNeighborhood).orElse(null)
+                : req.neighborhood().trim());
         List<String> images = req.images() == null ? List.of() : req.images();
         for (String name : images) {
             if (!storage.exists(name)) {
