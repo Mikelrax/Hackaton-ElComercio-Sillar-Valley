@@ -32,6 +32,7 @@ export function AuthCard() {
   const [loginPhone, setLoginPhone] = useState("")
   const [loginPassword, setLoginPassword] = useState("")
   const [showLoginPassword, setShowLoginPassword] = useState(false)
+  const [showForgot, setShowForgot] = useState(false)
   const [loginLoading, setLoginLoading] = useState(false)
   const [loginError, setLoginError] = useState("")
 
@@ -131,10 +132,21 @@ export function AuthCard() {
                 <Lock className="size-3.5 text-[#087F72]" />
                 Contraseña
               </Label>
-              <span className="text-[11px] text-[#087F72] hover:underline cursor-pointer">
+              <button
+                type="button"
+                onClick={() => setShowForgot(!showForgot)}
+                aria-expanded={showForgot}
+                className="text-[11px] font-semibold text-[#087F72] hover:underline"
+              >
                 ¿Olvidaste tu clave?
-              </span>
+              </button>
             </div>
+            {showForgot && (
+              <p className="rounded-xl bg-[#EAF5F1] border border-[#087F72]/20 p-3 text-xs leading-relaxed text-[#115E59]" role="status">
+                Pide ayuda a un moderador de tu junta vecinal: desde su panel puede darte una clave temporal para que
+                vuelvas a entrar con tu mismo número.
+              </p>
+            )}
             <div className="relative">
               <Input
                 id="login-password"

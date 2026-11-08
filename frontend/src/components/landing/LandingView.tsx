@@ -9,13 +9,9 @@ import {
   ArrowRight,
   MapPin,
   CheckCircle2,
-  Clock,
   Sparkles,
   WifiOff,
-  Users2,
-  Heart,
   Store,
-  ChevronRight,
   ShieldCheck,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -103,12 +99,12 @@ export function LandingView() {
                     <ArrowRight className="size-4" />
                   </Button>
                 </Link>
-                <Link href="/login">
+                <a href="#como-funciona">
                   <Button variant="outline" className="w-full sm:w-auto h-12 px-6 rounded-xl font-semibold text-sm border-border hover:bg-muted/80 gap-2">
                     <Search className="size-4 text-emerald-600" />
-                    <span>Explorar Servicios y Favores</span>
+                    <span>Ver cómo funciona</span>
                   </Button>
-                </Link>
+                </a>
               </div>
 
               <div className="pt-4 flex flex-wrap items-center justify-center lg:justify-start gap-y-2 gap-x-5 text-xs text-muted-foreground font-medium">
@@ -122,7 +118,7 @@ export function LandingView() {
                 </div>
                 <div className="flex items-center gap-1.5">
                   <ShieldCheck className="size-4 text-emerald-600" />
-                  <span>Vecinos Verificados</span>
+                  <span>Moderado por tu junta vecinal</span>
                 </div>
               </div>
             </div>
@@ -157,7 +153,7 @@ export function LandingView() {
       </section>
       )}
 
-      <section id="directorio" className="py-16 sm:py-20 max-w-6xl mx-auto px-4 sm:px-6 w-full">
+      <section id="como-funciona" className="scroll-mt-16 py-16 sm:py-20 max-w-6xl mx-auto px-4 sm:px-6 w-full">
         <div className="text-center max-w-2xl mx-auto space-y-3 mb-12">
           <Badge variant="outline" className="text-emerald-700 dark:text-emerald-300 border-emerald-500/30">
             Arquitectura Cívica
@@ -171,7 +167,7 @@ export function LandingView() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="rounded-2xl border border-border/80 bg-card p-6 flex flex-col justify-between space-y-5 hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-500/5 transition-all">
+          <div id="directorio" className="scroll-mt-20 rounded-2xl border border-border/80 bg-card p-6 flex flex-col justify-between space-y-5">
             <div className="space-y-4">
               <div className="size-12 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center border border-emerald-500/20">
                 <Store className="size-6" />
@@ -186,13 +182,12 @@ export function LandingView() {
                 Gasfiteros, bodegas, técnicos y costureras avalados por vecinos reales de tu cuadra. Calificación transparente: <em>«Recomendado por 14 vecinos»</em> en lugar de estrellas dudosas.
               </p>
             </div>
-            <div className="pt-4 border-t border-border/60 flex items-center justify-between text-xs text-emerald-700 dark:text-emerald-300 font-medium">
-              <span>Contacto directo por WhatsApp</span>
-              <ChevronRight className="size-4" />
-            </div>
+            <p className="pt-4 border-t border-border/60 text-xs text-emerald-700 dark:text-emerald-300 font-medium">
+              Contacto directo por WhatsApp
+            </p>
           </div>
 
-          <div id="solidaridad" className="rounded-2xl border border-border/80 bg-card p-6 flex flex-col justify-between space-y-5 hover:border-blue-500/40 hover:shadow-lg hover:shadow-blue-500/5 transition-all">
+          <div id="solidaridad" className="scroll-mt-20 rounded-2xl border border-border/80 bg-card p-6 flex flex-col justify-between space-y-5">
             <div className="space-y-4">
               <div className="size-12 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center border border-blue-500/20">
                 <HandHelping className="size-6" />
@@ -207,13 +202,12 @@ export function LandingView() {
                 Préstamo de herramientas (escaleras, taladros), donación de materiales escolares, trueque de habilidades y acompañamiento para adultos mayores sin intermediarios de dinero.
               </p>
             </div>
-            <div className="pt-4 border-t border-border/60 flex items-center justify-between text-xs text-blue-700 dark:text-blue-300 font-medium">
-              <span>Publicaciones «Necesito» u «Ofrezco»</span>
-              <ChevronRight className="size-4" />
-            </div>
+            <p className="pt-4 border-t border-border/60 text-xs text-blue-700 dark:text-blue-300 font-medium">
+              Publicaciones «Necesito» u «Ofrezco»
+            </p>
           </div>
 
-          <div id="emergencias" className="rounded-2xl border border-rose-500/30 bg-rose-50/30 dark:bg-rose-950/20 p-6 flex flex-col justify-between space-y-5 hover:border-rose-500/50 hover:shadow-lg hover:shadow-rose-500/5 transition-all">
+          <div id="emergencias" className="scroll-mt-20 rounded-2xl border border-rose-500/30 bg-rose-50/30 dark:bg-rose-950/20 p-6 flex flex-col justify-between space-y-5">
             <div className="space-y-4">
               <div className="size-12 rounded-xl bg-rose-500/10 text-rose-600 flex items-center justify-center border border-rose-500/20">
                 <ShieldAlert className="size-6" />
@@ -228,10 +222,9 @@ export function LandingView() {
                 Ante sismos, huaycos o cortes de agua, la plataforma se transforma en un mapa de auxilio: reportes de personas vulnerables, puntos de agua potable y coordinación vecinal en tiempo real.
               </p>
             </div>
-            <div className="pt-4 border-t border-rose-500/20 flex items-center justify-between text-xs text-rose-700 dark:text-rose-300 font-medium">
-              <span>Activación comunitaria inmediata</span>
-              <ChevronRight className="size-4" />
-            </div>
+            <p className="pt-4 border-t border-rose-500/20 text-xs text-rose-700 dark:text-rose-300 font-medium">
+              Activación comunitaria inmediata
+            </p>
           </div>
         </div>
       </section>
@@ -263,10 +256,13 @@ export function LandingView() {
               <WifiOff className="size-3 text-[#087F72]" />
               Soporte Offline PWA
             </span>
-            <span className="flex items-center gap-1">
+            <Link href="/privacidad" className="flex items-center gap-1 hover:text-foreground hover:underline">
               <ShieldCheck className="size-3 text-[#087F72]" />
-              Privacidad y Seguridad
-            </span>
+              Privacidad
+            </Link>
+            <Link href="/reglas" className="hover:text-foreground hover:underline">
+              Reglas
+            </Link>
           </div>
         </div>
       </footer>

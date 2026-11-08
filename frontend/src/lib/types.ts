@@ -65,6 +65,7 @@ export interface Catalog {
   maxAddresses: number
   directory: DirectoryOptions
   recommendationTags: Option[]
+  openDays: Option[]
   map: MapOptions
 }
 
@@ -187,12 +188,14 @@ export interface FavorItem {
   categoryLabel: string
   title: string
   description?: string
+  details?: string
   author: string
   authorId?: string
   distanceText: string
   timeAgo: string
   isResolved?: boolean
   resolvedNote?: string
+  respondedByMe?: boolean
 }
 
 export interface EmergencyMode {

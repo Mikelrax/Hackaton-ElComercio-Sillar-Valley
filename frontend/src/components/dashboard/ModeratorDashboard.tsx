@@ -9,7 +9,9 @@ import {
   CheckCircle2,
   Clock,
   Home,
+  KeyRound,
   LogOut,
+  Smartphone,
   MapPin,
   Menu,
   PhoneCall,
@@ -28,7 +30,8 @@ import { User } from "@/lib/auth";
 import { ApiError } from "@/lib/api";
 import { AdminUser, emergencyApi } from "@/lib/emergency";
 import { formatDistance, useCatalog } from "@/lib/catalog";
-import { timeAgo } from "@/lib/posts";
+import { postsApi, timeAgo } from "@/lib/posts";
+import { businessesApi } from "@/lib/businesses";
 import { EmergencyOverview, EmergencyReport, ModerationStats } from "@/lib/types";
 import { PendingPostsPanel } from "@/components/dashboard/PendingPostsPanel";
 import { BigSelect } from "@/components/ui/big-select";
@@ -42,6 +45,7 @@ const LocationPicker = dynamic(() => import("@/components/map/LocationPicker"), 
 interface ModeratorDashboardProps {
   user: User;
   onLogout: () => void;
+  onOpenNeighborView: () => void;
 }
 
 type Section = "dashboard" | "posts" | "reports" | "resources" | "users" | "emergency";
@@ -146,7 +150,7 @@ function ReportCard({ report, onAction, busy }: { report: EmergencyReport; busy:
   );
 }
 
-export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) {
+export function ModeratorDashboard({ user, onLogout, onOpenNeighborView }: ModeratorDashboardProps) {
   const [activeSection, setActiveSection] = useState<Section>("dashboard");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { catalog } = useCatalog();
@@ -167,15 +171,25 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
   const [pointSpot, setPointSpot] = useState<Spot | null>(null);
   const [pointError, setPointError] = useState("");
   const [confirming, setConfirming] = useState<"activate" | "deactivate" | null>(null);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [confirmTempFor, setConfirmTempFor] = useState<number | null>(null);
+  const [tempPassword, setTempPassword] = useState<{ fullName: string; password: string } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([emergencyApi.stats(), emergencyApi.overview(user.location), emergencyApi.users()])
-      .then(([s, o, u]) => {
+    Promise.all([
+      emergencyApi.stats(),
+      emergencyApi.overview(user.location),
+      emergencyApi.users(),
+      postsApi.listPending(),
+      businessesApi.pending(),
+    ])
+      .then(([s, o, u, pendingPosts, pendingBusinesses]) => {
         if (cancelled) return;
         setStats(s);
         setOverview(o);
         setUsers(u);
+        setPendingCount(pendingPosts.length + pendingBusinesses.length);
         setError("");
       })
       .catch(err => {
@@ -233,9 +247,24 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
               {pendingReports.length}
             </span>
           )}
+          {item.id === "posts" && pendingCount > 0 && (
+            <span className="ml-auto rounded-full bg-amber-100 text-[#8A5800] text-[10px] font-bold px-2 py-0.5">
+              {pendingCount}
+            </span>
+          )}
         </button>
       );
     });
+
+  const neighborViewButton = (
+    <button
+      onClick={onOpenNeighborView}
+      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-[#087F72] hover:bg-[#EAF5F1]"
+    >
+      <Smartphone className="size-4" />
+      Ver la app como vecino
+    </button>
+  );
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-[#F8FAFC] text-[#172B2A] antialiased">
@@ -258,7 +287,8 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
           </div>
         </div>
         <nav className="flex-1 p-3 space-y-1">{navButtons(go)}</nav>
-        <div className="p-3 border-t border-gray-100">
+        <div className="p-3 border-t border-gray-100 space-y-1">
+          {neighborViewButton}
           <button
             onClick={onLogout}
             className="w-full flex items-center gap-2 px-3 h-10 rounded-xl text-sm text-gray-500 hover:text-rose-600 hover:bg-rose-50"
@@ -285,6 +315,7 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
         {mobileMenuOpen && (
           <div className="bg-white border-t border-gray-100 px-4 py-3 space-y-1 shadow-lg">
             {navButtons(go)}
+            {neighborViewButton}
             <button
               onClick={onLogout}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-rose-600 hover:bg-rose-50"
@@ -380,7 +411,7 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
             </>
           )}
 
-          {activeSection === "posts" && <PendingPostsPanel />}
+          {activeSection === "posts" && <PendingPostsPanel onChanged={refresh} />}
 
           {activeSection === "reports" && (
             <div className="space-y-4">
@@ -532,6 +563,24 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
           {activeSection === "users" && (
             <div className="space-y-4">
               <SectionHeader title="Vecinos registrados" onRefresh={refresh} />
+              {tempPassword && (
+                <div className="rounded-2xl bg-[#EAF5F1] border border-[#087F72]/30 p-4 space-y-2" role="status">
+                  <p className="text-sm font-bold text-[#087F72] flex items-center gap-2">
+                    <KeyRound className="size-4" />
+                    Clave temporal de {tempPassword.fullName}
+                  </p>
+                  <p className="text-2xl font-black tracking-widest text-[#172B2A] select-all">{tempPassword.password}</p>
+                  <p className="text-xs text-gray-600">
+                    Dísela en persona o por llamada. Con su número y esta clave puede volver a entrar. No la verás otra vez.
+                  </p>
+                  <button
+                    onClick={() => setTempPassword(null)}
+                    className="text-xs font-bold text-[#087F72] underline underline-offset-2"
+                  >
+                    Listo, ya se la di
+                  </button>
+                </div>
+              )}
               {!users && <Loading label="Cargando vecinos…" />}
               {users && (
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
@@ -561,13 +610,48 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
                           </td>
                           <td className="px-4 py-3 text-right">
                             {u.role !== "MODERATOR" && (
-                              <button
-                                disabled={busyKey !== null}
-                                onClick={() => run(`u-${u.id}`, () => emergencyApi.setUserActive(u.id, !u.active))}
-                                className="text-xs font-bold text-[#087F72] hover:underline disabled:opacity-60"
-                              >
-                                {u.active ? "Desactivar" : "Activar"}
-                              </button>
+                              <div className="flex flex-col items-end gap-1.5">
+                                <button
+                                  disabled={busyKey !== null}
+                                  onClick={() => run(`u-${u.id}`, () => emergencyApi.setUserActive(u.id, !u.active))}
+                                  className="text-xs font-bold text-[#087F72] hover:underline disabled:opacity-60"
+                                >
+                                  {u.active ? "Desactivar" : "Activar"}
+                                </button>
+                                {confirmTempFor === u.id ? (
+                                  <span className="flex items-center gap-2">
+                                    <button
+                                      disabled={busyKey !== null}
+                                      onClick={async () => {
+                                        setBusyKey(`t-${u.id}`);
+                                        setError("");
+                                        try {
+                                          setTempPassword(await emergencyApi.temporaryPassword(u.id));
+                                          setConfirmTempFor(null);
+                                        } catch (err) {
+                                          setError(errorText(err));
+                                        } finally {
+                                          setBusyKey(null);
+                                        }
+                                      }}
+                                      className="text-xs font-bold text-rose-700 hover:underline disabled:opacity-60"
+                                    >
+                                      {busyKey === `t-${u.id}` ? "Creando…" : "Sí, crear clave"}
+                                    </button>
+                                    <button onClick={() => setConfirmTempFor(null)} className="text-xs font-semibold text-gray-500 hover:underline">
+                                      No
+                                    </button>
+                                  </span>
+                                ) : (
+                                  <button
+                                    disabled={busyKey !== null}
+                                    onClick={() => setConfirmTempFor(u.id)}
+                                    className="text-xs font-semibold text-gray-600 hover:underline disabled:opacity-60"
+                                  >
+                                    Clave temporal
+                                  </button>
+                                )}
+                              </div>
                             )}
                           </td>
                         </tr>

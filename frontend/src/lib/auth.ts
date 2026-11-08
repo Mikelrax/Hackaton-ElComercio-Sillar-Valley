@@ -2,8 +2,7 @@ import { apiFetch, SESSION_KEY } from "@/lib/api"
 import { clearOutbox } from "@/lib/outbox-store"
 import { DemoAccount, GeoPoint } from "@/lib/types"
 
-export type UserRole = "vecino" | "emprendedor" | "moderador"
-export type UserProfile = "mayor" | "familia" | "joven" | "adulto"
+export type UserRole = "vecino" | "moderador"
 
 export interface UserLocation {
   lat: number
@@ -17,15 +16,9 @@ export interface User {
   name: string
   phone: string
   role: UserRole
-  profile: UserProfile
   location: UserLocation
   token?: string
   expiresAt?: number
-  verified?: boolean
-  reputation?: {
-    recommendationsCount: number
-    favorsCount: number
-  }
 }
 
 export interface LoginCredentials {
@@ -91,12 +84,9 @@ function toUser(res: AuthResponse): User {
     name: b.fullName,
     phone: b.phone,
     role: b.role === "MODERATOR" ? "moderador" : "vecino",
-    profile: "adulto",
     location: toLocation(b),
     token: res.token,
     expiresAt: Date.now() + res.expiresInSeconds * 1000,
-    verified: true,
-    reputation: { recommendationsCount: 0, favorsCount: b.helpGiven },
   }
 }
 

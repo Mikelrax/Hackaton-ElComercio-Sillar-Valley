@@ -27,6 +27,11 @@ export interface NewPostData {
   emergencyKind: EmergencyKindValue
   peopleCount: number
   where: Where | null
+  tags: string[]
+  comment: string
+  opensAt: string
+  closesAt: string
+  openDays: string
 }
 
 interface CreatePostModalProps {
@@ -39,6 +44,8 @@ interface CreatePostModalProps {
   mapStyleUrl: string | null
   categories: Record<PostTypeSelection, Option[]>
   emergencyKinds: Option[]
+  recommendationTags: Option[]
+  openDayOptions: Option[]
   onSubmitPost: (data: NewPostData) => Promise<PublishResult>
 }
 
@@ -54,12 +61,20 @@ const TYPES: { value: PostTypeSelection; title: string; hint: string; active: st
   { value: "emergencia", title: "Emergencia", hint: "Alguien necesita ayuda ya", active: "border-rose-500 bg-rose-50 ring-2 ring-rose-500/30", idle: "border-rose-200/80", titleColor: "text-[#BA1A1A]" },
 ]
 
-const PLACEHOLDERS: Record<PostTypeSelection, { label: string; placeholder: string; required: boolean }> = {
-  recomiendo: { label: "Nombre del negocio", placeholder: "Ej: Gasfitería Don Lucho", required: true },
-  necesito: { label: "Cuéntalo en pocas palabras", placeholder: "Ej: Una escalera por 2 horas", required: false },
-  ofrezco: { label: "Cuéntalo en pocas palabras", placeholder: "Ej: Presto mi taladro los fines de semana", required: false },
-  emergencia: { label: "¿Qué está pasando?", placeholder: "Ej: Adulto mayor sin agua", required: false },
+const PLACEHOLDERS: Record<
+  PostTypeSelection,
+  { label: string; placeholder: string; required: boolean; maxLength: number; reference: string }
+> = {
+  recomiendo: { label: "Nombre del negocio", placeholder: "Ej: Gasfitería Don Lucho", required: true, maxLength: 120, reference: "Ej: Cerca al parque principal" },
+  necesito: { label: "Cuéntalo en pocas palabras", placeholder: "Ej: Una escalera por 2 horas", required: false, maxLength: 500, reference: "Ej: Cerca al parque principal" },
+  ofrezco: { label: "Cuéntalo en pocas palabras", placeholder: "Ej: Presto mi taladro los fines de semana", required: false, maxLength: 500, reference: "Ej: Cerca al parque principal" },
+  emergencia: { label: "¿Qué está pasando?", placeholder: "Ej: Adulto mayor sin agua", required: false, maxLength: 100, reference: "Ej: Casa azul frente a la iglesia" },
 }
+
+const chipClass = (active: boolean) =>
+  `px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
+    active ? "bg-[#087F72] text-white" : "bg-white border border-gray-200 text-gray-600 hover:border-gray-300"
+  }`
 
 export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   isOpen,
@@ -71,6 +86,8 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   mapStyleUrl,
   categories,
   emergencyKinds,
+  recommendationTags,
+  openDayOptions,
   onSubmitPost,
 }) => {
   const [selectedType, setSelectedType] = useState<PostTypeSelection>(initialType)
@@ -87,6 +104,11 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const [gpsPoint, setGpsPoint] = useState<LatLng | null>(null)
   const [gpsState, setGpsState] = useState<"idle" | "locating" | "error">("idle")
   const [pickedSpot, setPickedSpot] = useState<Spot | null>(null)
+  const [tags, setTags] = useState<string[]>([])
+  const [comment, setComment] = useState("")
+  const [opensAt, setOpensAt] = useState("")
+  const [closesAt, setClosesAt] = useState("")
+  const [openDays, setOpenDays] = useState("")
 
   useEffect(() => {
     if (!isOpen) return
@@ -100,7 +122,11 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   if (!isOpen) return null
 
   const options = categories[selectedType] ?? []
-  const currentCategory = options.some(o => o.value === category) ? category : options[0]?.value ?? ""
+  const currentCategory = options.some(o => o.value === category)
+    ? category
+    : options.length === 1
+      ? options[0].value
+      : ""
   const text = PLACEHOLDERS[selectedType]
 
   const primary = addresses.find(a => a.primary) ?? addresses[0]
@@ -135,8 +161,18 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitError("")
+    if (!currentCategory) {
+      setSubmitError(
+        selectedType === "emergencia" ? "Elige qué tipo de ayuda se necesita." : "Elige una categoría para tu publicación."
+      )
+      return
+    }
     if (text.required && !description.trim()) {
       setSubmitError("Escribe el nombre del negocio que recomiendas.")
+      return
+    }
+    if (selectedType === "recomiendo" && Boolean(opensAt) !== Boolean(closesAt)) {
+      setSubmitError("Indica a qué hora abre y a qué hora cierra, o deja ambos vacíos.")
       return
     }
     const where = resolveWhere()
@@ -160,12 +196,22 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
         emergencyKind,
         peopleCount,
         where,
+        tags,
+        comment: comment.trim(),
+        opensAt,
+        closesAt,
+        openDays: opensAt ? openDays : "",
       })
       setResult(outcome)
       setDescription("")
       setReference("")
       setPhone("")
       setPeopleCount(1)
+      setTags([])
+      setComment("")
+      setOpensAt("")
+      setClosesAt("")
+      setOpenDays("")
       setTimeout(() => {
         setResult(null)
         onClose()
@@ -241,20 +287,21 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
           )}
 
           <div className="space-y-2">
-            <p className="text-xs font-bold text-gray-700">Categoría</p>
+            <p className="text-xs font-bold text-gray-700">
+              {selectedType === "emergencia" ? "¿Qué tipo de ayuda?" : "Categoría"}
+            </p>
             {options.length === 0 && <p className="text-xs text-gray-400">Cargando categorías…</p>}
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Categoría">
               {options.map(o => (
                 <button
                   type="button"
                   key={o.value}
                   aria-pressed={currentCategory === o.value}
-                  onClick={() => setCategory(o.value)}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
-                    currentCategory === o.value
-                      ? "bg-[#087F72] text-white"
-                      : "bg-white border border-gray-200 text-gray-600 hover:border-gray-300"
-                  }`}
+                  onClick={() => {
+                    setCategory(o.value)
+                    setSubmitError("")
+                  }}
+                  className={chipClass(currentCategory === o.value)}
                 >
                   {o.label}
                 </button>
@@ -272,7 +319,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
               value={description}
               onChange={e => setDescription(e.target.value)}
               placeholder={text.placeholder}
-              maxLength={selectedType === "recomiendo" ? 120 : 150}
+              maxLength={text.maxLength}
               className="w-full p-3.5 rounded-2xl bg-white border border-gray-200 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#087F72]/30 resize-none"
             />
           </div>
@@ -290,6 +337,81 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
                 onChange={e => setPhone(e.target.value)}
                 placeholder="987 654 321"
                 className="w-full h-11 px-3.5 rounded-2xl bg-white border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#087F72]/30"
+              />
+            </div>
+          )}
+
+          {selectedType === "recomiendo" && (
+            <fieldset className="space-y-2">
+              <legend className="text-xs font-bold text-gray-700 mb-2">
+                Horario <span className="font-normal text-gray-400">(opcional)</span>
+              </legend>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="space-y-1">
+                  <span className="block text-[11px] font-semibold text-gray-500">Abre</span>
+                  <input
+                    type="time"
+                    value={opensAt}
+                    onChange={e => setOpensAt(e.target.value)}
+                    className="w-full h-11 px-3 rounded-2xl bg-white border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#087F72]/30"
+                  />
+                </label>
+                <label className="space-y-1">
+                  <span className="block text-[11px] font-semibold text-gray-500">Cierra</span>
+                  <input
+                    type="time"
+                    value={closesAt}
+                    onChange={e => setClosesAt(e.target.value)}
+                    className="w-full h-11 px-3 rounded-2xl bg-white border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#087F72]/30"
+                  />
+                </label>
+              </div>
+              {opensAt && openDayOptions.length > 0 && (
+                <div className="flex flex-wrap gap-2" role="group" aria-label="Días que atiende">
+                  {openDayOptions.map(d => (
+                    <button
+                      key={d.value}
+                      type="button"
+                      aria-pressed={openDays === d.value}
+                      onClick={() => setOpenDays(current => (current === d.value ? "" : d.value))}
+                      className={chipClass(openDays === d.value)}
+                    >
+                      {d.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </fieldset>
+          )}
+
+          {selectedType === "recomiendo" && recommendationTags.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-bold text-gray-700">
+                ¿Qué destacas? <span className="font-normal text-gray-400">(opcional)</span>
+              </p>
+              <div className="flex flex-wrap gap-2" role="group" aria-label="Lo que destacas">
+                {recommendationTags.map(t => (
+                  <button
+                    key={t.value}
+                    type="button"
+                    aria-pressed={tags.includes(t.value)}
+                    onClick={() =>
+                      setTags(current => (current.includes(t.value) ? current.filter(v => v !== t.value) : [...current, t.value]))
+                    }
+                    className={chipClass(tags.includes(t.value))}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+              <textarea
+                rows={2}
+                value={comment}
+                onChange={e => setComment(e.target.value)}
+                maxLength={500}
+                aria-label="Tu comentario"
+                placeholder="Cuéntale a tus vecinos tu experiencia (opcional)"
+                className="w-full p-3.5 rounded-2xl bg-white border border-gray-200 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#087F72]/30 resize-none"
               />
             </div>
           )}
@@ -387,21 +509,19 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
             )}
           </div>
 
-          {selectedType !== "emergencia" && (
-            <div className="space-y-2">
-              <label htmlFor="post-reference" className="text-xs font-bold text-gray-700">
-                Referencia <span className="font-normal text-gray-400">(opcional)</span>
-              </label>
-              <input
-                id="post-reference"
-                value={reference}
-                onChange={e => setReference(e.target.value)}
-                placeholder="Ej: Cerca al parque principal"
-                maxLength={200}
-                className="w-full h-11 px-3.5 rounded-2xl bg-white border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#087F72]/30"
-              />
-            </div>
-          )}
+          <div className="space-y-2">
+            <label htmlFor="post-reference" className="text-xs font-bold text-gray-700">
+              Referencia <span className="font-normal text-gray-400">(opcional)</span>
+            </label>
+            <input
+              id="post-reference"
+              value={reference}
+              onChange={e => setReference(e.target.value)}
+              placeholder={text.reference}
+              maxLength={selectedType === "emergencia" ? 45 : 200}
+              className="w-full h-11 px-3.5 rounded-2xl bg-white border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#087F72]/30"
+            />
+          </div>
 
           <div className="pt-2 space-y-2">
             {submitError && (

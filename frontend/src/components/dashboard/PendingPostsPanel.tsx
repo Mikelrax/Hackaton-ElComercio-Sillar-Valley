@@ -57,7 +57,7 @@ async function loadPending(): Promise<PendingItem[]> {
   return [...fromPosts, ...fromBusinesses].sort((a, b) => a.createdAt.localeCompare(b.createdAt))
 }
 
-export function PendingPostsPanel() {
+export function PendingPostsPanel({ onChanged }: { onChanged?: () => void }) {
   const [items, setItems] = useState<PendingItem[] | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
   const [error, setError] = useState("")
@@ -91,6 +91,7 @@ export function PendingPostsPanel() {
       setRejectingKey(null)
       setRejectNote("")
       refresh()
+      onChanged?.()
     } catch (err) {
       setError(errorText(err))
     } finally {

@@ -43,7 +43,13 @@ public class CatalogController {
                           List<Option> emergencyKinds, List<IconOption> emergencyCategories,
                           List<IconOption> supportPointTypes, List<Option> emergencyNumbers,
                           List<PlaceOption> addressPlaces, int maxAddresses, DirectoryOptions directory,
-                          List<Option> recommendationTags, MapOptions map) {}
+                          List<Option> recommendationTags, List<Option> openDays, MapOptions map) {}
+
+    private static final List<Option> OPEN_DAYS = List.of(
+            new Option("1234567", "Todos los días"),
+            new Option("123456", "Lunes a sábado"),
+            new Option("12345", "Lunes a viernes"),
+            new Option("67", "Fines de semana"));
 
     private static final List<Option> EMERGENCY_NUMBERS = List.of(
             new Option("105", "Policía"),
@@ -90,6 +96,7 @@ public class CatalogController {
                 AddressService.MAX_ADDRESSES,
                 DIRECTORY,
                 Arrays.stream(RecommendationTag.values()).map(t -> new Option(t.key(), t.label())).toList(),
+                OPEN_DAYS,
                 mapOptions());
     }
 

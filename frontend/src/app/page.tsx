@@ -9,6 +9,7 @@ import { DashboardView } from "@/components/dashboard/DashboardView"
 export default function Home() {
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [mounted, setMounted] = useState(false)
+  const [neighborView, setNeighborView] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -17,6 +18,7 @@ export default function Home() {
 
   const handleLogout = () => {
     authService.logout()
+    setNeighborView(false)
     setCurrentUser(null)
   }
 
@@ -29,16 +31,24 @@ export default function Home() {
   }
 
   if (currentUser) {
-    if (currentUser.role === "moderador") {
+    const moderator = currentUser.role === "moderador"
+    if (moderator && !neighborView) {
       return (
         <ModeratorDashboard
           user={currentUser}
           onLogout={handleLogout}
+          onOpenNeighborView={() => setNeighborView(true)}
         />
       )
     }
 
-    return <DashboardView user={currentUser} onLogout={handleLogout} />
+    return (
+      <DashboardView
+        user={currentUser}
+        onLogout={handleLogout}
+        onOpenPanel={moderator ? () => setNeighborView(false) : undefined}
+      />
+    )
   }
 
   return <LandingView />

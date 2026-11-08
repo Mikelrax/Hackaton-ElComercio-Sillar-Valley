@@ -13,10 +13,12 @@ import com.sillarvalley.ayni.user.Role;
 import com.sillarvalley.ayni.user.User;
 import com.sillarvalley.ayni.user.UserDtos;
 import com.sillarvalley.ayni.user.UserRepository;
+import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.List;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,17 +29,24 @@ public class ModerationService {
     private final ReportRepository reports;
     private final UserRepository users;
     private final CurrentUser currentUser;
+    private static final String TEMP_LETTERS = "abcdefghjkmnpqrstuvwxyz";
+    private static final String TEMP_DIGITS = "23456789";
+    private static final SecureRandom RANDOM = new SecureRandom();
+
     private final PostMapper mapper;
     private final Locations locations;
+    private final PasswordEncoder encoder;
 
     public ModerationService(PostRepository posts, ReportRepository reports, UserRepository users,
-                             CurrentUser currentUser, PostMapper mapper, Locations locations) {
+                             CurrentUser currentUser, PostMapper mapper, Locations locations,
+                             PasswordEncoder encoder) {
         this.posts = posts;
         this.reports = reports;
         this.users = users;
         this.currentUser = currentUser;
         this.mapper = mapper;
         this.locations = locations;
+        this.encoder = encoder;
     }
 
     @Transactional(readOnly = true)
@@ -139,6 +148,29 @@ public class ModerationService {
         }
         target.setActive(active);
         return UserDtos.UserResponse.of(target, locations.of(target));
+    }
+
+    @Transactional
+    public ModerationDtos.TemporaryPasswordResponse temporaryPassword(Long uid, Long targetId) {
+        requireModerator(uid);
+        if (uid.equals(targetId)) {
+            throw ApiException.badRequest("No puedes darte una clave temporal a ti mismo");
+        }
+        User target = users.findById(targetId).orElseThrow(() -> ApiException.notFound("Usuario no encontrado"));
+        if (target.getRole() == Role.MODERATOR) {
+            throw ApiException.forbidden("No se puede cambiar la clave de otro moderador");
+        }
+        String password = randomFrom(TEMP_LETTERS, 5) + randomFrom(TEMP_DIGITS, 3);
+        target.setPasswordHash(encoder.encode(password));
+        return new ModerationDtos.TemporaryPasswordResponse(target.getFullName(), password);
+    }
+
+    private static String randomFrom(String alphabet, int length) {
+        StringBuilder out = new StringBuilder(length);
+        for (int i = 0; i < length; i++) {
+            out.append(alphabet.charAt(RANDOM.nextInt(alphabet.length())));
+        }
+        return out.toString();
     }
 
     private User requireModerator(Long uid) {

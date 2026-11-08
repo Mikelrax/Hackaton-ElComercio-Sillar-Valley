@@ -48,6 +48,22 @@ export function timeAgo(iso: string): string {
   return days === 1 ? "hace 1 día" : `hace ${days} días`
 }
 
+const TITLE_MAX = 120
+
+function headline(text: string): string {
+  if (text.length <= TITLE_MAX) return text
+  const cut = text.slice(0, TITLE_MAX - 1)
+  const space = cut.lastIndexOf(" ")
+  return `${(space > TITLE_MAX / 2 ? cut.slice(0, space) : cut).trimEnd()}…`
+}
+
+function detailsOf(p: BackendPost): string | undefined {
+  const body = p.description?.trim() ?? ""
+  if (!body || body === p.title) return undefined
+  if (body.startsWith(p.title)) return body.slice(p.title.length).trim() || undefined
+  return body
+}
+
 function toFavor(p: BackendPost): FavorItem {
   return {
     id: String(p.id),
@@ -56,6 +72,7 @@ function toFavor(p: BackendPost): FavorItem {
     categoryLabel: p.categoryLabel,
     title: p.title,
     description: p.description,
+    details: detailsOf(p),
     author: p.author.fullName.split(" ")[0] || p.author.fullName,
     authorId: String(p.author.id),
     distanceText: p.neighborhood ?? "",
@@ -75,16 +92,20 @@ export interface NewFavor {
 
 export const postsApi = {
   async listWall(): Promise<FavorItem[]> {
-    const page = await apiFetch<PageResponse<BackendPost>>("/api/posts?size=50")
-    return page.content.map(toFavor)
+    const [page, mine] = await Promise.all([
+      apiFetch<PageResponse<BackendPost>>("/api/posts?size=50"),
+      apiFetch<HelpResponse[]>("/api/responses/mine").catch(() => [] as HelpResponse[]),
+    ])
+    const responded = new Set(mine.filter(r => r.status !== "WITHDRAWN").map(r => r.postId))
+    return page.content.map(p => ({ ...toFavor(p), respondedByMe: responded.has(p.id) }))
   },
 
   async create(data: NewFavor): Promise<{ favor: FavorItem; pending: boolean }> {
     const text = data.text.trim()
-    const title =
-      text ||
-      (data.type === "necesito" ? `Necesito ayuda: ${data.categoryLabel}` : `Ofrezco ayuda: ${data.categoryLabel}`)
-    const description = [text || title, data.reference && `Referencia: ${data.reference}`]
+    const fallback =
+      data.type === "necesito" ? `Necesito ayuda: ${data.categoryLabel}` : `Ofrezco ayuda: ${data.categoryLabel}`
+    const title = text ? headline(text) : fallback
+    const description = [text || fallback, data.reference && `Referencia: ${data.reference}`]
       .filter(Boolean)
       .join("\n")
     const post = await apiFetch<BackendPost>("/api/posts", {

@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import dynamic from "next/dynamic"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -88,24 +88,40 @@ export function RegisterFlow() {
   const matches = confirm.length > 0 && confirm === password
   const firstName = name.trim().split(/\s+/)[0] || "vecino"
 
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has("paso")) window.history.replaceState(null, "", "/registro")
+    const onPop = () => {
+      const paso = Number(new URLSearchParams(window.location.search).get("paso"))
+      setStep(current => (current === "done" ? current : paso === 2 || paso === 3 ? paso : 1))
+    }
+    window.addEventListener("popstate", onPop)
+    return () => window.removeEventListener("popstate", onPop)
+  }, [])
+
+  const goForward = (next: 2 | 3) => {
+    window.history.pushState(null, "", `/registro?paso=${next}`)
+    setStep(next)
+  }
+
   const goBack = () => {
     if (step === 1) {
       if (window.history.length > 1) router.back()
       else router.push("/")
-    } else if (step === 2) setStep(1)
-    else if (step === 3) setStep(2)
+    } else {
+      window.history.back()
+    }
   }
 
   const submitStep1 = (e: React.FormEvent) => {
     e.preventDefault()
     setTriedStep1(true)
-    if (nameOk && phoneOk) setStep(2)
+    if (nameOk && phoneOk) goForward(2)
   }
 
   const submitStep2 = (e: React.FormEvent) => {
     e.preventDefault()
     setTriedStep2(true)
-    if (hasLength && hasNumber && matches) setStep(3)
+    if (hasLength && hasNumber && matches) goForward(3)
   }
 
   const submitStep3 = async (e: React.FormEvent) => {
@@ -333,8 +349,15 @@ export function RegisterFlow() {
                   className="mt-0.5 size-6 shrink-0 accent-[#087F72] cursor-pointer"
                 />
                 <span className="text-[15px] leading-snug">
-                  Acepto las <strong className="text-[#087F72]">reglas de la comunidad</strong> y la{" "}
-                  <strong className="text-[#087F72]">política de privacidad</strong>.
+                  Acepto las{" "}
+                  <Link href="/reglas" target="_blank" className="font-bold text-[#087F72] underline underline-offset-2">
+                    reglas de la comunidad
+                  </Link>{" "}
+                  y la{" "}
+                  <Link href="/privacidad" target="_blank" className="font-bold text-[#087F72] underline underline-offset-2">
+                    política de privacidad
+                  </Link>
+                  .
                 </span>
               </label>
 
@@ -363,7 +386,7 @@ export function RegisterFlow() {
                   {submitError.phoneTaken && (
                     <div className="mt-2 flex gap-4 text-[14px] font-bold">
                       <Link href="/login" className="text-[#087F72] hover:underline">Ingresar con ese número</Link>
-                      <button type="button" onClick={() => setStep(1)} className="text-[#087F72] hover:underline">
+                      <button type="button" onClick={() => window.history.go(-2)} className="text-[#087F72] hover:underline">
                         Usar otro celular
                       </button>
                     </div>

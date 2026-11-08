@@ -84,4 +84,8 @@ export const emergencyApi = {
   setUserActive(id: number, active: boolean): Promise<AdminUser> {
     return apiFetch<AdminUser>(`/api/moderation/users/${id}/active`, { method: "PATCH", body: { active } })
   },
+
+  temporaryPassword(id: number): Promise<{ fullName: string; password: string }> {
+    return apiFetch(`/api/moderation/users/${id}/temporary-password`, { method: "POST" })
+  },
 }

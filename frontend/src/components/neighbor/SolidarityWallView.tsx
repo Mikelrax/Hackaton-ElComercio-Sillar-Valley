@@ -189,7 +189,7 @@ export const SolidarityWallView: React.FC<SolidarityWallViewProps> = ({
 
             const isNecesito = favor.type === "necesito"
             const isMine = favor.authorId === currentUserId
-            const isSent = sentIds.includes(favor.id)
+            const isSent = favor.respondedByMe || sentIds.includes(favor.id)
             const isSending = sendingId === favor.id
 
             return (
@@ -214,6 +214,9 @@ export const SolidarityWallView: React.FC<SolidarityWallViewProps> = ({
                 <h3 className="text-base font-bold text-[#172B2A] leading-snug">
                   {favor.title}
                 </h3>
+                {favor.details && (
+                  <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line line-clamp-5">{favor.details}</p>
+                )}
 
                 <div className="flex items-center justify-between gap-3 pt-1">
                   <p className="text-xs text-gray-500 font-medium">
@@ -238,7 +241,7 @@ export const SolidarityWallView: React.FC<SolidarityWallViewProps> = ({
                   )}
                 </div>
 
-                {isSent && (
+                {sentIds.includes(favor.id) && (
                   <p className="text-[11px] text-gray-500">
                     Cuando {favor.author} acepte tu respuesta, verás su número en “Mi actividad” para coordinar.
                   </p>

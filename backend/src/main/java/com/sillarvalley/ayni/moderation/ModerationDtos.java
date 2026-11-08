@@ -17,6 +17,8 @@ public final class ModerationDtos {
 
     public record ActiveRequest(boolean active) {}
 
+    public record TemporaryPasswordResponse(String fullName, String password) {}
+
     public record ReportDto(Long id, Long postId, String postTitle, UserDtos.UserSummary reporter, String reason,
                             ReportStatus status, String resolutionNote, Instant createdAt, Instant resolvedAt) {}
 }

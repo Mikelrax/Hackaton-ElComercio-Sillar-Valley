@@ -48,7 +48,6 @@ export function WallActivityPanel() {
   const [busyKey, setBusyKey] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!open) return
     let cancelled = false
     loadActivity()
       .then(data => {
@@ -62,7 +61,7 @@ export function WallActivityPanel() {
     return () => {
       cancelled = true
     }
-  }, [open, reloadKey])
+  }, [reloadKey])
 
   const refresh = () => setReloadKey(k => k + 1)
 

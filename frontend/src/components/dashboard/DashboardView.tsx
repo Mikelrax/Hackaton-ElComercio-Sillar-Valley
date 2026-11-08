@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { AlertTriangle, CircleHelp, Heart, Home, LogOut, Map, MapPin, Plus, WifiOff } from "lucide-react"
+import { AlertTriangle, CircleHelp, Heart, Home, LogOut, Map, MapPin, Plus, Shield, WifiOff } from "lucide-react"
 import Link from "next/link"
 import { Logo } from "@/components/brand/Logo"
 import { Address, User } from "@/lib/auth"
@@ -33,11 +33,23 @@ import {
 interface DashboardViewProps {
   user: User
   onLogout: () => void
+  onOpenPanel?: () => void
 }
 
 type LoadStatus = "loading" | "ready" | "error"
 
 const LIVE_CHECK_MS = 20000
+
+const TAB_IDS: AppTab[] = ["inicio", "mapa", "muro", "emergencia"]
+
+function tabFromUrl(): AppTab {
+  const tab = new URLSearchParams(window.location.search).get("tab")
+  return TAB_IDS.find(t => t === tab) ?? "inicio"
+}
+
+function tabUrl(tab: AppTab): string {
+  return tab === "inicio" ? "/" : `/?tab=${tab}`
+}
 
 function modeChanged(prev: EmergencyMode | null, next: EmergencyMode): boolean {
   return !prev || prev.active !== next.active || prev.activatedAt !== next.activatedAt || prev.title !== next.title
@@ -49,8 +61,8 @@ const TABS: { id: AppTab; label: string; icon: typeof Home }[] = [
   { id: "muro", label: "Muro solidario", icon: Heart },
 ]
 
-export function DashboardView({ user, onLogout }: DashboardViewProps) {
-  const [activeTab, setActiveTab] = useState<AppTab>("inicio")
+export function DashboardView({ user, onLogout, onOpenPanel }: DashboardViewProps) {
+  const [activeTab, setActiveTab] = useState<AppTab>(tabFromUrl)
   const { catalog, error: catalogError, retry: retryCatalog } = useCatalog()
   const location = useMemo(() => ({ lat: user.location.lat, lng: user.location.lng }), [user.location.lat, user.location.lng])
   const neighborhoodName = user.location.neighborhood
@@ -79,7 +91,14 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
   const modeRef = useRef<EmergencyMode | null>(null)
 
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).has("tutorial")) window.history.replaceState(null, "", "/")
+    if (new URLSearchParams(window.location.search).has("tutorial")) window.history.replaceState(null, "", tabUrl(tabFromUrl()))
+    const onPop = () => {
+      const tab = tabFromUrl()
+      if (tab === "emergencia") setEmergencyReloadKey(k => k + 1)
+      setActiveTab(tab)
+    }
+    window.addEventListener("popstate", onPop)
+    return () => window.removeEventListener("popstate", onPop)
   }, [])
 
   useEffect(() => {
@@ -190,6 +209,7 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
 
   const goTo = (tab: AppTab) => {
     if (tab === "emergencia") setEmergencyReloadKey(k => k + 1)
+    if (tab !== activeTab) window.history.pushState(null, "", tabUrl(tab))
     setActiveTab(tab)
   }
 
@@ -265,24 +285,27 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
       if (pending) return "¡Enviado! Un moderador lo revisará y luego aparecerá en el muro."
       setFavors(prev => [favor, ...prev])
       setMapKey(k => k + 1)
-      setActiveTab("muro")
+      goTo("muro")
       return "¡Publicado en el barrio!"
     }
 
     if (data.type === "emergencia") {
+      const title = data.reference
+        ? `${data.description || data.categoryLabel} · Ref.: ${data.reference}`.slice(0, 150)
+        : data.description || undefined
       await emergencyApi.report(
         {
           kind: data.emergencyKind,
           category: data.category,
-          title: data.description || undefined,
+          title,
           peopleCount: data.emergencyKind === "NEED" ? data.peopleCount : undefined,
           ...(data.where ?? {}),
         },
-        data.description || `Emergencia: ${data.categoryLabel}`
+        title ?? `Emergencia: ${data.categoryLabel}`
       )
-      reloadEmergency()
       setMapKey(k => k + 1)
-      setActiveTab("emergencia")
+      if (activeTab === "emergencia") reloadEmergency()
+      else goTo("emergencia")
       return "¡Alerta enviada! Tus vecinos ya pueden verla."
     }
 
@@ -291,7 +314,15 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
       categorySlug: data.category,
       phone: data.phone || undefined,
       reference: data.reference || undefined,
-      recommendation: { goodPrice: false, punctual: false, reliable: false },
+      opensAt: data.opensAt || undefined,
+      closesAt: data.closesAt || undefined,
+      openDays: data.openDays || undefined,
+      recommendation: {
+        goodPrice: data.tags.includes("goodPrice"),
+        punctual: data.tags.includes("punctual"),
+        reliable: data.tags.includes("reliable"),
+        comment: data.comment || undefined,
+      },
       ...(data.where ?? {}),
     })
     if (created.status === "PENDING") {
@@ -299,7 +330,7 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
     }
     setDirectoryKey(k => k + 1)
     setMapKey(k => k + 1)
-    setActiveTab("inicio")
+    goTo("inicio")
     return "¡Recomendación publicada!"
   }
 
@@ -345,6 +376,20 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
           </nav>
 
           <div className="flex items-center gap-2.5">
+            {onOpenPanel && (
+              <button
+                onClick={() => {
+                  if (window.location.search) window.history.replaceState(null, "", "/")
+                  onOpenPanel()
+                }}
+                className="h-9 px-3 rounded-xl border border-[#087F72] text-[#087F72] bg-white hover:bg-[#EAF5F1] text-xs font-bold flex items-center gap-1.5"
+              >
+                <Shield className="size-4" />
+                <span className="hidden sm:inline">Panel de moderador</span>
+                <span className="sm:hidden">Panel</span>
+              </button>
+            )}
+
             <button
               onClick={() => setTutorialOpen(true)}
               aria-label="Cómo funciona AYNI"
@@ -548,6 +593,8 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
         mapStyleUrl={catalog?.map.styleUrl ?? null}
         categories={modalCategories}
         emergencyKinds={catalog?.emergencyKinds ?? []}
+        recommendationTags={catalog?.recommendationTags ?? []}
+        openDayOptions={catalog?.openDays ?? []}
         onSubmitPost={handleCreatePost}
       />
 

@@ -71,6 +71,12 @@ public class ModerationController {
         return service.setActive(CurrentUser.idOf(jwt), id, req.active());
     }
 
+    @PostMapping("/api/moderation/users/{id}/temporary-password")
+    public ModerationDtos.TemporaryPasswordResponse temporaryPassword(@AuthenticationPrincipal Jwt jwt,
+                                                                      @PathVariable Long id) {
+        return service.temporaryPassword(CurrentUser.idOf(jwt), id);
+    }
+
     @PostMapping("/api/posts/{postId}/reports")
     @ResponseStatus(HttpStatus.CREATED)
     public ModerationDtos.ReportDto report(@AuthenticationPrincipal Jwt jwt, @PathVariable Long postId,

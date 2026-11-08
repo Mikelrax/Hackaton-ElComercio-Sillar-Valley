@@ -26,6 +26,9 @@ export type NewBusiness = {
   description?: string
   phone?: string
   reference?: string
+  opensAt?: string
+  closesAt?: string
+  openDays?: string
   recommendation?: RecommendInput
 } & WhereFields
 
