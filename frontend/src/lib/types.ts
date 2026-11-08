@@ -5,6 +5,10 @@ export interface Option {
   label: string
 }
 
+export interface IconOption extends Option {
+  icon: string
+}
+
 export interface CategoryFacet {
   slug: string
   name: string
@@ -36,19 +40,76 @@ export interface DirectoryOptions {
   sorts: Option[]
 }
 
+export interface MapOptions {
+  styleUrl: string
+  radii: RadiusOption[]
+  defaultRadius: number
+  layers: IconOption[]
+  emergencyLayers: string[]
+  postTypes: Option[]
+  emergencyStatuses: Option[]
+  periods: Option[]
+  approximateRadius: number
+}
+
 export interface Catalog {
   city: GeoPoint
   neighborhoods: string[]
-  postCategories: Option[]
+  postCategories: IconOption[]
   businessCategories: CategoryFacet[]
   emergencyKinds: Option[]
-  emergencyCategories: Option[]
-  supportPointTypes: Option[]
+  emergencyCategories: IconOption[]
+  supportPointTypes: IconOption[]
   emergencyNumbers: Option[]
   addressPlaces: PlaceOption[]
   maxAddresses: number
   directory: DirectoryOptions
   recommendationTags: Option[]
+  map: MapOptions
+}
+
+export interface MapItem {
+  key: string
+  layer: string
+  id: number
+  type: string | null
+  title: string
+  subtitle: string
+  icon: string
+  badge: string | null
+  alert: boolean
+  mine: boolean
+  approximate: boolean
+  latitude: number
+  longitude: number
+  distanceMeters: number | null
+  createdAt: string | null
+}
+
+export interface MapResult {
+  items: MapItem[]
+  counts: Record<string, number>
+}
+
+export interface Place {
+  name: string
+  detail: string
+  latitude: number
+  longitude: number
+  neighborhood: string
+}
+
+export interface Spot {
+  latitude: number
+  longitude: number
+  neighborhood: string
+  street: string | null
+  area: string | null
+}
+
+export interface MapSearchResult {
+  items: MapItem[]
+  places: Place[]
 }
 
 export interface DemoAccount {
@@ -164,6 +225,7 @@ export interface EmergencyReport {
   distanceMeters: number | null
   latitude: number
   longitude: number
+  approximate: boolean
   createdAt: string
 }
 

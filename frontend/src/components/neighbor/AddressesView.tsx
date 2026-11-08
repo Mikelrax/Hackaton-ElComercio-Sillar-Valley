@@ -2,56 +2,49 @@
 
 import * as React from "react"
 import { useEffect, useState } from "react"
+import dynamic from "next/dynamic"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, LocateFixed, Lock, MapPin, Plus, Star } from "lucide-react"
+import { ArrowLeft, Lock, Plus, Star } from "lucide-react"
 import { Address, authService } from "@/lib/auth"
 import { ApiError } from "@/lib/api"
 import { addressesApi } from "@/lib/addresses"
 import { useCatalog } from "@/lib/catalog"
+import { Spot } from "@/lib/types"
 import { helpClass, inputClass, labelClass, primaryButton, secondaryButton } from "@/lib/form-styles"
 import { FormError } from "@/components/ui/form-error"
 import { SoftBackdrop } from "@/components/layout/SoftBackdrop"
 import { BigSelect, type BigSelectOption } from "@/components/ui/big-select"
 import { CategoryIcon } from "@/components/ui/category-icon"
 
-type GpsState = "idle" | "locating" | "ok" | "error"
+const LocationPicker = dynamic(() => import("@/components/map/LocationPicker"), {
+  ssr: false,
+  loading: () => <div className="h-72 rounded-2xl bg-[#E7E5E4] animate-pulse" />,
+})
 
 function errorText(err: unknown): string {
   return err instanceof ApiError ? err.friendlyMessage : "Algo salió mal. Intenta otra vez."
 }
 
-function AddressForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => void }) {
+function AddressForm({
+  start,
+  onSaved,
+  onCancel,
+}: {
+  start: { lat: number; lng: number } | null
+  onSaved: () => void
+  onCancel: () => void
+}) {
   const { catalog } = useCatalog()
   const places = catalog?.addressPlaces ?? []
   const placeOptions: BigSelectOption[] = places.map(p => ({ value: p.value, label: p.label, iconName: p.icon }))
   const [chosenPlace, setPlace] = useState("")
   const place = places.find(p => p.value === chosenPlace) ?? places[0]
   const [customLabel, setCustomLabel] = useState("")
-  const [chosenNeighborhood, setNeighborhood] = useState("")
-  const neighborhoodOptions: BigSelectOption[] = (catalog?.neighborhoods ?? []).map(n => ({ value: n, label: n }))
-  const neighborhood = chosenNeighborhood || neighborhoodOptions[0]?.value || ""
   const [reference, setReference] = useState("")
-  const [gps, setGps] = useState<GpsState>("idle")
-  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null)
+  const [spot, setSpot] = useState<Spot | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
-
-  const detectLocation = () => {
-    if (!navigator.geolocation) {
-      setGps("error")
-      return
-    }
-    setGps("locating")
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude })
-        setGps("ok")
-      },
-      () => setGps("error"),
-      { timeout: 10000, enableHighAccuracy: true }
-    )
-  }
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -61,14 +54,17 @@ function AddressForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () 
       setError("Escribe un nombre para este lugar, por ejemplo «Casa de mi abuela».")
       return
     }
+    if (!spot) {
+      setError("Marca el lugar en el mapa: muévelo con el dedo, busca la calle o toca «Usar mi ubicación».")
+      return
+    }
     setSaving(true)
     try {
       await addressesApi.add({
         label,
-        neighborhood,
         reference: reference.trim() || undefined,
-        latitude: coords?.lat,
-        longitude: coords?.lng,
+        latitude: spot.latitude,
+        longitude: spot.longitude,
       })
       onSaved()
     } catch (err) {
@@ -103,15 +99,18 @@ function AddressForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () 
       </div>
 
       <div>
-        <label htmlFor="addr-barrio" className={labelClass}>Barrio</label>
-        <BigSelect
-          id="addr-barrio"
-          value={neighborhood}
-          onValueChange={setNeighborhood}
-          options={neighborhoodOptions}
-          placeholder="Cargando barrios…"
-          icon={MapPin}
-        />
+        <p className={labelClass}>¿Dónde queda?</p>
+        {catalog ? (
+          <LocationPicker
+            styleUrl={catalog.map.styleUrl}
+            start={start ?? { lat: catalog.city.latitude, lng: catalog.city.longitude }}
+            startZoom={start ? 14 : 13}
+            large
+            onChange={setSpot}
+          />
+        ) : (
+          <div className="h-72 rounded-2xl bg-[#E7E5E4] animate-pulse" />
+        )}
       </div>
 
       <div>
@@ -126,23 +125,6 @@ function AddressForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () 
           maxLength={200}
           className={inputClass}
         />
-      </div>
-
-      <div>
-        <button
-          type="button"
-          onClick={detectLocation}
-          disabled={gps === "locating"}
-          className="w-full h-12 rounded-xl border-2 border-[#087F72] bg-[#EAF5F1] text-[#087F72] text-[16px] font-bold flex items-center justify-center gap-2 hover:bg-[#d4f3eb] disabled:opacity-60"
-        >
-          <LocateFixed className="size-5" />
-          {gps === "locating" ? "Buscando…" : gps === "ok" ? "Ubicación lista" : "Estoy aquí ahora (opcional)"}
-        </button>
-        {gps === "error" ? (
-          <FormError>No pudimos obtener tu ubicación. Puedes guardarla igual con el barrio.</FormError>
-        ) : (
-          <p className={helpClass}>Úsalo solo si estás en ese lugar en este momento.</p>
-        )}
       </div>
 
       {error && <FormError>{error}</FormError>}
@@ -211,6 +193,8 @@ export function AddressesView() {
   }
 
   const count = addresses?.length ?? 0
+  const primaryAddress = addresses?.find(a => a.primary)
+  const primaryPoint = primaryAddress ? { lat: primaryAddress.latitude, lng: primaryAddress.longitude } : null
   const maxAddresses = catalog?.maxAddresses ?? null
 
   return (
@@ -337,6 +321,7 @@ export function AddressesView() {
 
         {addresses && formOpen && (
           <AddressForm
+            start={primaryPoint}
             onCancel={() => setFormOpen(false)}
             onSaved={() => {
               setFormOpen(false)

@@ -1,9 +1,18 @@
 "use client"
 
 import React, { useEffect, useState } from "react"
-import { AlertCircle, Check, MapPin, Minus, Plus, X } from "lucide-react"
-import { Option } from "@/lib/types"
+import dynamic from "next/dynamic"
+import { AlertCircle, Check, LocateFixed, MapPin, Minus, Plus, X } from "lucide-react"
+import { Option, Spot } from "@/lib/types"
 import { ApiError } from "@/lib/api"
+import { Address } from "@/lib/auth"
+import { currentPosition, type LatLng, type Where } from "@/lib/map"
+import { CategoryIcon } from "@/components/ui/category-icon"
+
+const LocationPicker = dynamic(() => import("@/components/map/LocationPicker"), {
+  ssr: false,
+  loading: () => <div className="h-60 rounded-2xl bg-gray-100 animate-pulse" />,
+})
 
 export type PostTypeSelection = "recomiendo" | "necesito" | "ofrezco" | "emergencia"
 export type EmergencyKindValue = "NEED" | "OFFER"
@@ -17,6 +26,7 @@ export interface NewPostData {
   phone: string
   emergencyKind: EmergencyKindValue
   peopleCount: number
+  where: Where | null
 }
 
 interface CreatePostModalProps {
@@ -24,7 +34,9 @@ interface CreatePostModalProps {
   onClose: () => void
   initialType?: PostTypeSelection
   initialEmergencyKind?: EmergencyKindValue
-  userNeighborhood: string
+  addresses: Address[]
+  home: LatLng
+  mapStyleUrl: string | null
   categories: Record<PostTypeSelection, Option[]>
   emergencyKinds: Option[]
   onSubmitPost: (data: NewPostData) => Promise<string>
@@ -49,7 +61,9 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   onClose,
   initialType = "necesito",
   initialEmergencyKind = "NEED",
-  userNeighborhood,
+  addresses,
+  home,
+  mapStyleUrl,
   categories,
   emergencyKinds,
   onSubmitPost,
@@ -64,6 +78,10 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [successMessage, setSuccessMessage] = useState("")
   const [submitError, setSubmitError] = useState("")
+  const [whereKey, setWhereKey] = useState("")
+  const [gpsPoint, setGpsPoint] = useState<LatLng | null>(null)
+  const [gpsState, setGpsState] = useState<"idle" | "locating" | "error">("idle")
+  const [pickedSpot, setPickedSpot] = useState<Spot | null>(null)
 
   useEffect(() => {
     if (!isOpen) return
@@ -80,6 +98,29 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const currentCategory = options.some(o => o.value === category) ? category : options[0]?.value ?? ""
   const text = PLACEHOLDERS[selectedType]
 
+  const primary = addresses.find(a => a.primary) ?? addresses[0]
+  const currentWhere = whereKey || (primary ? `a-${primary.id}` : "")
+  const whereTitle =
+    selectedType === "recomiendo" ? "¿Dónde queda?" : selectedType === "emergencia" ? "¿Dónde es?" : "¿Dónde?"
+
+  const chooseGps = () => {
+    setWhereKey("gps")
+    setGpsState("locating")
+    currentPosition()
+      .then(point => {
+        setGpsPoint(point)
+        setGpsState("idle")
+      })
+      .catch(() => setGpsState("error"))
+  }
+
+  const resolveWhere = (): Where | null | "missing" => {
+    if (currentWhere.startsWith("a-")) return { addressId: Number(currentWhere.slice(2)) }
+    if (currentWhere === "gps") return gpsPoint ? { latitude: gpsPoint.lat, longitude: gpsPoint.lng } : "missing"
+    if (currentWhere === "map") return pickedSpot ? { latitude: pickedSpot.latitude, longitude: pickedSpot.longitude } : "missing"
+    return null
+  }
+
   const handleTypeSelect = (type: PostTypeSelection) => {
     setSelectedType(type)
     setCategory("")
@@ -93,6 +134,15 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
       setSubmitError("Escribe el nombre del negocio que recomiendas.")
       return
     }
+    const where = resolveWhere()
+    if (where === "missing") {
+      setSubmitError(
+        currentWhere === "gps"
+          ? "Todavía no tenemos tu ubicación. Espera un momento o elige una de tus direcciones."
+          : "Mueve el mapa hasta que el pin quede sobre el lugar."
+      )
+      return
+    }
     setIsSubmitting(true)
     try {
       const message = await onSubmitPost({
@@ -104,6 +154,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
         phone: phone.replace(/\D/g, ""),
         emergencyKind,
         peopleCount,
+        where,
       })
       setSuccessMessage(message)
       setDescription("")
@@ -263,11 +314,78 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
             </div>
           )}
 
+          <div className="space-y-2">
+            <p className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
+              <MapPin className="size-3.5 text-[#087F72]" />
+              {whereTitle}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {addresses.map(a => (
+                <button
+                  key={a.id}
+                  type="button"
+                  aria-pressed={currentWhere === `a-${a.id}`}
+                  onClick={() => setWhereKey(`a-${a.id}`)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all ${
+                    currentWhere === `a-${a.id}`
+                      ? "bg-[#087F72] text-white"
+                      : "bg-white border border-gray-200 text-gray-600 hover:border-gray-300"
+                  }`}
+                >
+                  <CategoryIcon name={a.icon} className="size-3.5" />
+                  {a.label}
+                  <span className={currentWhere === `a-${a.id}` ? "text-white/80 font-medium" : "text-gray-400 font-medium"}>
+                    · {a.neighborhood}
+                  </span>
+                </button>
+              ))}
+              <button
+                type="button"
+                aria-pressed={currentWhere === "gps"}
+                onClick={chooseGps}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all ${
+                  currentWhere === "gps"
+                    ? "bg-[#087F72] text-white"
+                    : "bg-white border border-gray-200 text-gray-600 hover:border-gray-300"
+                }`}
+              >
+                <LocateFixed className="size-3.5" />
+                Donde estoy ahora
+              </button>
+              {mapStyleUrl && (
+                <button
+                  type="button"
+                  aria-pressed={currentWhere === "map"}
+                  onClick={() => setWhereKey("map")}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all ${
+                    currentWhere === "map"
+                      ? "bg-[#087F72] text-white"
+                      : "bg-white border border-gray-200 text-gray-600 hover:border-gray-300"
+                  }`}
+                >
+                  <MapPin className="size-3.5" />
+                  Otro lugar
+                </button>
+              )}
+            </div>
+            {currentWhere === "gps" && (
+              <p className={`text-[11px] ${gpsState === "error" ? "font-semibold text-rose-600" : "text-gray-500"}`}>
+                {gpsState === "locating"
+                  ? "Buscando dónde estás…"
+                  : gpsState === "error"
+                    ? "No pudimos obtener tu ubicación. Elige una de tus direcciones u «Otro lugar»."
+                    : "Usaremos el lugar donde estás ahora."}
+              </p>
+            )}
+            {currentWhere === "map" && mapStyleUrl && (
+              <LocationPicker styleUrl={mapStyleUrl} start={home} startZoom={15} confirmed onChange={setPickedSpot} />
+            )}
+          </div>
+
           {selectedType !== "emergencia" && (
             <div className="space-y-2">
-              <label htmlFor="post-reference" className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
-                <MapPin className="size-3.5 text-[#087F72]" />
-                Referencia en {userNeighborhood} <span className="font-normal text-gray-400">(opcional)</span>
+              <label htmlFor="post-reference" className="text-xs font-bold text-gray-700">
+                Referencia <span className="font-normal text-gray-400">(opcional)</span>
               </label>
               <input
                 id="post-reference"

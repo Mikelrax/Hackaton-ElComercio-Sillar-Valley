@@ -2,30 +2,24 @@
 
 import * as React from "react"
 import { useState } from "react"
+import dynamic from "next/dynamic"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import {
-  ArrowLeft,
-  Check,
-  CheckCircle2,
-  Circle,
-  Eye,
-  EyeOff,
-  Home,
-  LocateFixed,
-  Lock,
-  MapPin,
-} from "lucide-react"
+import { ArrowLeft, Check, CheckCircle2, Circle, Eye, EyeOff, Lock } from "lucide-react"
 import { authService } from "@/lib/auth"
 import { ApiError } from "@/lib/api"
 import { useCatalog } from "@/lib/catalog"
+import { Spot } from "@/lib/types"
 import { helpClass, inputClass, labelClass, primaryButton, secondaryButton } from "@/lib/form-styles"
 import { FormError } from "@/components/ui/form-error"
 import { SoftBackdrop } from "@/components/layout/SoftBackdrop"
-import { BigSelect } from "@/components/ui/big-select"
+
+const LocationPicker = dynamic(() => import("@/components/map/LocationPicker"), {
+  ssr: false,
+  loading: () => <div className="h-72 rounded-2xl bg-[#E7E5E4] animate-pulse" />,
+})
 
 type Step = 1 | 2 | 3 | "done"
-type GpsState = "idle" | "locating" | "ok" | "error"
 
 function formatPhone(digits: string): string {
   return [digits.slice(0, 3), digits.slice(3, 6), digits.slice(6, 9)].filter(Boolean).join(" ")
@@ -76,12 +70,8 @@ export function RegisterFlow() {
   const [showPassword, setShowPassword] = useState(false)
   const [triedStep2, setTriedStep2] = useState(false)
 
-  const [gps, setGps] = useState<GpsState>("idle")
-  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null)
   const { catalog } = useCatalog()
-  const [chosenNeighborhood, setNeighborhood] = useState("")
-  const neighborhoodOptions = (catalog?.neighborhoods ?? []).map(n => ({ value: n, label: n }))
-  const neighborhood = chosenNeighborhood || neighborhoodOptions[0]?.value || ""
+  const [spot, setSpot] = useState<Spot | null>(null)
   const [reference, setReference] = useState("")
   const [accepted, setAccepted] = useState(false)
   const [showInvite, setShowInvite] = useState(false)
@@ -116,25 +106,13 @@ export function RegisterFlow() {
     if (hasLength && hasNumber && matches) setStep(3)
   }
 
-  const detectLocation = () => {
-    if (!navigator.geolocation) {
-      setGps("error")
-      return
-    }
-    setGps("locating")
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude })
-        setGps("ok")
-      },
-      () => setGps("error"),
-      { timeout: 10000, enableHighAccuracy: true }
-    )
-  }
-
   const submitStep3 = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitError(null)
+    if (!spot) {
+      setSubmitError({ message: "Marca tu casa en el mapa: muévelo con el dedo o toca «Usar mi ubicación»." })
+      return
+    }
     if (!accepted) {
       setSubmitError({ message: "Marca la casilla para aceptar las reglas de la comunidad." })
       return
@@ -148,10 +126,9 @@ export function RegisterFlow() {
         inviteCode: showInvite ? inviteCode : undefined,
         address: {
           label: "Casa",
-          neighborhood,
           reference: reference.trim() || undefined,
-          latitude: coords?.lat,
-          longitude: coords?.lng,
+          latitude: spot.latitude,
+          longitude: spot.longitude,
         },
       })
       setStep("done")
@@ -309,45 +286,16 @@ export function RegisterFlow() {
                 <p className="mt-1.5 text-[16px] text-[#57534E]">Así te mostramos lo que hay cerca de tu casa.</p>
               </div>
 
-              <button
-                type="button"
-                onClick={detectLocation}
-                disabled={gps === "locating"}
-                className="w-full h-14 rounded-2xl border-2 border-[#087F72] bg-[#EAF5F1] text-[#087F72] text-[17px] font-bold flex items-center justify-center gap-2 hover:bg-[#d4f3eb] transition-colors disabled:opacity-60"
-              >
-                <LocateFixed className={`size-5 ${gps === "locating" ? "animate-pulse" : ""}`} />
-                {gps === "locating" ? "Buscando tu ubicación…" : gps === "ok" ? "Ubicación lista" : "Usar mi ubicación actual"}
-              </button>
-
-              <div className="relative h-40 rounded-2xl overflow-hidden bg-[#E7E5E4] border border-[#E7E5E4]" aria-hidden="true">
-                <span className="absolute -left-6 top-14 w-[130%] h-6 bg-white rotate-[-12deg]" />
-                <span className="absolute left-24 -top-6 w-6 h-[140%] bg-white rotate-[8deg]" />
-                <span className="absolute right-16 -top-6 w-5 h-[140%] bg-white" />
-                <span className="absolute right-3 top-3 w-20 h-14 rounded-lg bg-[#CDE8D6]" />
-                <MapPin
-                  className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-full size-9 text-[#087F72] drop-shadow"
-                  fill="#087F72"
-                  stroke="white"
+              {catalog ? (
+                <LocationPicker
+                  styleUrl={catalog.map.styleUrl}
+                  start={{ lat: catalog.city.latitude, lng: catalog.city.longitude }}
+                  large
+                  onChange={setSpot}
                 />
-                <span className="absolute bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-white/95 px-3 py-1 text-[12px] font-semibold text-[#44403C] shadow-sm">
-                  {gps === "ok" ? "Encontramos tu ubicación" : "Tu ubicación exacta no se comparte"}
-                </span>
-              </div>
-              {gps === "error" && (
-                <FormError>No pudimos obtener tu ubicación. No pasa nada: elige tu barrio aquí abajo.</FormError>
+              ) : (
+                <div className="h-72 rounded-2xl bg-[#E7E5E4] animate-pulse" />
               )}
-
-              <div>
-                <label htmlFor="reg-barrio" className={labelClass}>Tu barrio</label>
-                <BigSelect
-                  id="reg-barrio"
-                  value={neighborhood}
-                  onValueChange={setNeighborhood}
-                  options={neighborhoodOptions}
-                  placeholder="Cargando barrios…"
-                  icon={Home}
-                />
-              </div>
 
               <div>
                 <label htmlFor="reg-reference" className={labelClass}>
@@ -431,7 +379,7 @@ export function RegisterFlow() {
               </div>
               <h1 className="mt-3 text-[32px] font-bold tracking-tight">¡Listo, {firstName}!</h1>
               <p className="text-[17px] leading-snug text-[#44403C]">
-                Ya eres parte de la comunidad de {neighborhood}.
+                Ya eres parte de la comunidad de {spot?.neighborhood}.
               </p>
             </div>
 

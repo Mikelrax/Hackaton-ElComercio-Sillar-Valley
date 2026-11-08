@@ -1,13 +1,14 @@
 import { apiFetch } from "@/lib/api"
 import { EmergencyMode, EmergencyOverview, EmergencyReport, ModerationStats, SupportPoint } from "@/lib/types"
 import { UserLocation } from "@/lib/auth"
+import { WhereFields } from "@/lib/map"
 
-export interface NewEmergencyReport {
+export type NewEmergencyReport = {
   kind: string
   category: string
   title?: string
   peopleCount?: number
-}
+} & WhereFields
 
 export interface NewSupportPoint {
   name: string

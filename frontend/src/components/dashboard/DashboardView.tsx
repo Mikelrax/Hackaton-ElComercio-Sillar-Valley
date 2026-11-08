@@ -4,11 +4,12 @@ import React, { useEffect, useMemo, useState } from "react"
 import { AlertTriangle, Heart, Home, LogOut, Map, MapPin, Plus } from "lucide-react"
 import Link from "next/link"
 import { Logo } from "@/components/brand/Logo"
-import { User } from "@/lib/auth"
-import { AppTab, BusinessSummary, EmergencyOverview, FavorItem, Option } from "@/lib/types"
+import { Address, User } from "@/lib/auth"
+import { AppTab, EmergencyOverview, FavorItem, MapItem, Option } from "@/lib/types"
 import { postsApi } from "@/lib/posts"
 import { businessesApi } from "@/lib/businesses"
 import { emergencyApi } from "@/lib/emergency"
+import { addressesApi } from "@/lib/addresses"
 import { useCatalog } from "@/lib/catalog"
 
 import { DirectoryView } from "@/components/neighbor/DirectoryView"
@@ -50,8 +51,9 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
   const [emergencyStatus, setEmergencyStatus] = useState<LoadStatus>("loading")
   const [emergencyReloadKey, setEmergencyReloadKey] = useState(0)
 
-  const [mapBusinesses, setMapBusinesses] = useState<BusinessSummary[]>([])
+  const [addresses, setAddresses] = useState<Address[]>([])
   const [directoryKey, setDirectoryKey] = useState(0)
+  const [mapKey, setMapKey] = useState(0)
 
   const [selectedBusinessId, setSelectedBusinessId] = useState<number | null>(null)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -94,20 +96,17 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
   }, [emergencyReloadKey, user.location])
 
   useEffect(() => {
-    if (activeTab !== "mapa") return
     let cancelled = false
-    businessesApi
-      .search({ radius: 2200, lat: location.lat, lng: location.lng, size: 50 })
-      .then(data => {
-        if (!cancelled) setMapBusinesses(data.content)
+    addressesApi
+      .list()
+      .then(list => {
+        if (!cancelled) setAddresses(list)
       })
-      .catch(() => {
-        if (!cancelled) setMapBusinesses([])
-      })
+      .catch(() => {})
     return () => {
       cancelled = true
     }
-  }, [activeTab, location, directoryKey])
+  }, [])
 
   const goTo = (tab: AppTab) => {
     if (tab === "emergencia") setEmergencyReloadKey(k => k + 1)
@@ -137,6 +136,17 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
       favor.type === "necesito" ? "¡Hola! Yo te puedo ayudar con esto." : "¡Hola! Me interesa lo que ofreces."
     )
 
+  const respondFromMap = (item: MapItem) =>
+    postsApi.respond(
+      String(item.id),
+      item.type === "REQUEST" ? "¡Hola! Yo te puedo ayudar con esto." : "¡Hola! Me interesa lo que ofreces."
+    )
+
+  const onTheWayFromMap = async (item: MapItem) => {
+    await emergencyApi.onTheWay(item.id)
+    setEmergencyReloadKey(k => k + 1)
+  }
+
   const modalCategories = useMemo<Record<PostTypeSelection, Option[]>>(
     () => ({
       necesito: catalog?.postCategories ?? [],
@@ -155,10 +165,11 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
         categoryLabel: data.categoryLabel,
         text: data.description,
         reference: data.reference,
-        neighborhood: user.location?.neighborhood,
+        where: data.where,
       })
       if (pending) return "¡Enviado! Un moderador lo revisará y luego aparecerá en el muro."
       setFavors(prev => [favor, ...prev])
+      setMapKey(k => k + 1)
       setActiveTab("muro")
       return "¡Publicado en el barrio!"
     }
@@ -169,8 +180,10 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
         category: data.category,
         title: data.description || undefined,
         peopleCount: data.emergencyKind === "NEED" ? data.peopleCount : undefined,
+        ...(data.where ?? {}),
       })
       reloadEmergency()
+      setMapKey(k => k + 1)
       setActiveTab("emergencia")
       return "¡Alerta enviada! Tus vecinos ya pueden verla."
     }
@@ -181,11 +194,13 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
       phone: data.phone || undefined,
       reference: data.reference || undefined,
       recommendation: { goodPrice: false, punctual: false, reliable: false },
+      ...(data.where ?? {}),
     })
     if (created.status === "PENDING") {
       return "¡Gracias! Un moderador revisará tu recomendación antes de publicarla."
     }
     setDirectoryKey(k => k + 1)
+    setMapKey(k => k + 1)
     setActiveTab("inicio")
     return "¡Recomendación publicada!"
   }
@@ -285,15 +300,24 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
             </div>
           ))}
 
-        {activeTab === "mapa" && (
-          <CommunityMapView
-            center={location}
-            businesses={mapBusinesses}
-            reports={emergency?.reports ?? []}
-            supportPoints={emergency?.supportPoints ?? []}
-            onSelectBusiness={setSelectedBusinessId}
-          />
-        )}
+        {activeTab === "mapa" &&
+          (catalog ? (
+            <CommunityMapView
+              catalog={catalog}
+              home={location}
+              addresses={addresses}
+              emergencyActive={!!mode?.active}
+              refreshKey={mapKey + directoryKey}
+              onSelectBusiness={setSelectedBusinessId}
+              onRespondPost={respondFromMap}
+              onOnTheWay={onTheWayFromMap}
+              onOpenEmergency={() => goTo("emergencia")}
+            />
+          ) : (
+            <div className="py-16 flex justify-center">
+              <div className="size-7 rounded-full border-2 border-[#087F72] border-t-transparent animate-spin" />
+            </div>
+          ))}
 
         {activeTab === "muro" && (
           <SolidarityWallView
@@ -373,7 +397,9 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
         onClose={() => setIsCreateModalOpen(false)}
         initialType={createInitialType}
         initialEmergencyKind={createEmergencyKind}
-        userNeighborhood={neighborhoodName}
+        addresses={addresses}
+        home={location}
+        mapStyleUrl={catalog?.map.styleUrl ?? null}
         categories={modalCategories}
         emergencyKinds={catalog?.emergencyKinds ?? []}
         onSubmitPost={handleCreatePost}

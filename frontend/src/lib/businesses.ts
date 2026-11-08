@@ -1,4 +1,5 @@
 import { apiFetch } from "@/lib/api"
+import { WhereFields } from "@/lib/map"
 import { BusinessDetail, BusinessSearchResult } from "@/lib/types"
 
 export interface BusinessFilters {
@@ -19,14 +20,14 @@ export interface RecommendInput {
   comment?: string
 }
 
-export interface NewBusiness {
+export type NewBusiness = {
   name: string
   categorySlug: string
   description?: string
   phone?: string
   reference?: string
   recommendation?: RecommendInput
-}
+} & WhereFields
 
 function query(filters: BusinessFilters): string {
   const params = new URLSearchParams()

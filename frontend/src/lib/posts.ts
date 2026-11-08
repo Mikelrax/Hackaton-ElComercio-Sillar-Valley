@@ -1,4 +1,5 @@
 import { apiFetch } from "@/lib/api"
+import { Where } from "@/lib/map"
 import { FavorItem, FavorType } from "@/lib/types"
 
 export interface BackendPost {
@@ -69,7 +70,7 @@ export interface NewFavor {
   categoryLabel: string
   text: string
   reference: string
-  neighborhood?: string
+  where: Where | null
 }
 
 export const postsApi = {
@@ -93,7 +94,7 @@ export const postsApi = {
         category: data.category,
         title: title.slice(0, 150),
         description: description.slice(0, 2000),
-        neighborhood: data.neighborhood?.slice(0, 120),
+        ...(data.where ?? {}),
       },
     })
     return { favor: toFavor(post), pending: post.status === "PENDING" }

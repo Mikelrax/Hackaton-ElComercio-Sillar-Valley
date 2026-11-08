@@ -34,10 +34,9 @@ export interface LoginCredentials {
 
 export interface AddressInput {
   label?: string
-  neighborhood: string
   reference?: string
-  latitude?: number
-  longitude?: number
+  latitude: number
+  longitude: number
 }
 
 export interface RegisterData {
@@ -53,8 +52,8 @@ export interface Address {
   label: string
   neighborhood: string
   reference: string | null
-  latitude: number | null
-  longitude: number | null
+  latitude: number
+  longitude: number
   primary: boolean
   icon: string
 }
