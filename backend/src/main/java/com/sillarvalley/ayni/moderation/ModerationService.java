@@ -13,7 +13,9 @@ import com.sillarvalley.ayni.user.User;
 import com.sillarvalley.ayni.user.UserDtos;
 import com.sillarvalley.ayni.user.UserRepository;
 import java.time.Instant;
+import java.util.List;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -113,6 +115,13 @@ public class ModerationService {
         r.setResolvedBy(mod);
         r.setResolvedAt(Instant.now());
         return toDto(r);
+    }
+
+    @Transactional(readOnly = true)
+    public List<UserDtos.UserResponse> listUsers(Long uid) {
+        requireModerator(uid);
+        return users.findAll(Sort.by(Sort.Direction.DESC, "createdAt")).stream()
+                .map(UserDtos.UserResponse::of).toList();
     }
 
     @Transactional

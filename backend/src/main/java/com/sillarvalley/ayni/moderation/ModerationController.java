@@ -60,6 +60,11 @@ public class ModerationController {
         return service.resolve(CurrentUser.idOf(jwt), id, req.removePost(), req.note());
     }
 
+    @GetMapping("/api/moderation/users")
+    public java.util.List<UserDtos.UserResponse> users(@AuthenticationPrincipal Jwt jwt) {
+        return service.listUsers(CurrentUser.idOf(jwt));
+    }
+
     @PatchMapping("/api/moderation/users/{id}/active")
     public UserDtos.UserResponse setActive(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id,
                                            @RequestBody ModerationDtos.ActiveRequest req) {
