@@ -1,5 +1,6 @@
 package com.sillarvalley.ayni.seed;
 
+import com.sillarvalley.ayni.address.Address;
 import com.sillarvalley.ayni.post.Category;
 import com.sillarvalley.ayni.post.Post;
 import com.sillarvalley.ayni.post.PostRepository;
@@ -18,10 +19,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
-/**
- * Datos de ejemplo para desarrollo. Solo corre si app.seed=true Y la tabla users está vacía,
- * así que nunca duplica ni pisa datos reales. En producción usa APP_SEED=false.
- */
 @Component
 @ConditionalOnProperty(prefix = "app", name = "seed", havingValue = "true")
 public class DataSeeder implements ApplicationRunner {
@@ -80,6 +77,12 @@ public class DataSeeder implements ApplicationRunner {
         u.setEmail(email);
         u.setPasswordHash(encoder.encode(password));
         u.setRole(role);
+        Address home = new Address();
+        home.setLabel("Casa");
+        home.setNeighborhood("Yanahuara");
+        home.setLatitude(-16.3889);
+        home.setLongitude(-71.5422);
+        u.addAddress(home);
         return users.save(u);
     }
 

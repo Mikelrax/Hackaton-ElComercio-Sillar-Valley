@@ -1,5 +1,7 @@
 package com.sillarvalley.ayni.user;
 
+import com.sillarvalley.ayni.address.Address;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -7,14 +9,18 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import org.hibernate.annotations.BatchSize;
 
-// "users" (plural) porque "user" es palabra reservada en PostgreSQL.
 @Entity
 @Table(name = "users")
-@BatchSize(size = 50) // evita N+1 al listar publicaciones con su autor
+@BatchSize(size = 50)
 public class User {
 
     @Id
@@ -24,7 +30,6 @@ public class User {
     @Column(nullable = false, length = 120)
     private String fullName;
 
-    /** Normalizado con código de país: 51987654321 */
     @Column(nullable = false, unique = true, length = 15)
     private String phone;
 
@@ -41,7 +46,6 @@ public class User {
     @Column(nullable = false)
     private boolean active = true;
 
-    /** Reputación "ayni": puntos por ayudar. */
     @Column(nullable = false)
     private int ayniPoints;
 
@@ -53,6 +57,20 @@ public class User {
 
     @Column(nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("primary DESC, createdAt ASC")
+    private List<Address> addresses = new ArrayList<>();
+
+    public void addAddress(Address address) {
+        address.setUser(this);
+        address.setPrimary(addresses.isEmpty());
+        addresses.add(address);
+    }
+
+    public Optional<Address> primaryAddress() {
+        return addresses.stream().filter(Address::isPrimary).findFirst();
+    }
 
     public Long getId() { return id; }
     public String getFullName() { return fullName; }
@@ -74,4 +92,5 @@ public class User {
     public int getHelpReceived() { return helpReceived; }
     public void setHelpReceived(int helpReceived) { this.helpReceived = helpReceived; }
     public Instant getCreatedAt() { return createdAt; }
+    public List<Address> getAddresses() { return addresses; }
 }

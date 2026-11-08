@@ -2,6 +2,7 @@ package com.sillarvalley.ayni.auth;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -9,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.sillarvalley.ayni.AppProperties;
+import com.sillarvalley.ayni.address.AddressDtos;
 import com.sillarvalley.ayni.common.ApiException;
 import com.sillarvalley.ayni.user.Role;
 import com.sillarvalley.ayni.user.User;
@@ -31,7 +33,7 @@ class AuthServiceTest {
     @BeforeEach
     void setUp() {
         users = mock(UserRepository.class);
-        encoder = new BCryptPasswordEncoder(4); // costo bajo: tests rápidos
+        encoder = new BCryptPasswordEncoder(4);
         jwt = mock(JwtService.class);
         AppProperties props = new AppProperties("x".repeat(32), 60, "http://localhost:3000", "JUNTA2026",
                 "America/Lima", "51", "uploads", "http://localhost:3001", false);
@@ -46,7 +48,8 @@ class AuthServiceTest {
     }
 
     private AuthDtos.RegisterRequest register(String phone, String invite) {
-        return new AuthDtos.RegisterRequest("Ana Pérez", phone, "ANA@Mail.com", "clave12345", invite);
+        var address = new AddressDtos.AddressRequest(null, " Yanahuara ", "Cerca al parque", -16.39, -71.54);
+        return new AuthDtos.RegisterRequest("Ana Pérez", phone, "ANA@Mail.com", "clave12345", invite, address);
     }
 
     @Test
@@ -58,6 +61,17 @@ class AuthServiceTest {
         assertEquals("ana@mail.com", res.user().email());
         assertEquals("token-falso", res.token());
         assertEquals(3600, res.expiresInSeconds());
+    }
+
+    @Test
+    void registroGuardaLaPrimeraDireccionComoPrincipal() {
+        var res = service.register(register("987654321", null));
+
+        var address = res.user().primaryAddress();
+        assertEquals("Casa", address.label());
+        assertEquals("Yanahuara", address.neighborhood());
+        assertEquals("Cerca al parque", address.reference());
+        assertTrue(address.primary());
     }
 
     @Test

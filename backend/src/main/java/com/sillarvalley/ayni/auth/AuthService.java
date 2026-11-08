@@ -55,6 +55,7 @@ public class AuthService {
         user.setEmail(email);
         user.setPasswordHash(encoder.encode(req.password()));
         user.setRole(role);
+        user.addAddress(req.address().toEntity());
         user = users.save(user);
         return respond(user);
     }
@@ -67,7 +68,6 @@ public class AuthService {
                 : users.findByPhone(PhoneUtils.normalize(id, props.countryCode())))
                 .orElse(null);
 
-        // Mismo mensaje para usuario inexistente o clave incorrecta (no revelar cuál falló).
         if (user == null || !encoder.matches(req.password(), user.getPasswordHash())) {
             throw ApiException.unauthorized("Credenciales incorrectas");
         }
