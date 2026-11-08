@@ -1,0 +1,318 @@
+.ld-float {
+  animation: ld-float 7s ease-in-out infinite;
+}
+
+.ld-float-slow {
+  animation: ld-float 9s ease-in-out infinite;
+  animation-delay: -3s;
+}
+
+.ld-float-alt {
+  animation: ld-float-alt 8s ease-in-out infinite;
+  animation-delay: -1.5s;
+}
+
+.ld-blob-a,
+.ld-blob-b,
+.ld-blob-c {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(64px);
+  pointer-events: none;
+}
+
+.ld-blob-a {
+  background: radial-gradient(circle, rgb(8 127 114 / 0.32), transparent 70%);
+  animation: ld-drift 18s ease-in-out infinite;
+}
+
+.ld-blob-b {
+  background: radial-gradient(circle, rgb(245 158 11 / 0.26), transparent 70%);
+  animation: ld-drift 22s ease-in-out infinite reverse;
+}
+
+.ld-blob-c {
+  background: radial-gradient(circle, rgb(14 165 233 / 0.16), transparent 70%);
+  animation: ld-drift 26s ease-in-out infinite;
+  animation-delay: -8s;
+}
+
+.ld-dots {
+  background-image: radial-gradient(rgb(8 127 114 / 0.22) 1px, transparent 1px);
+  background-size: 26px 26px;
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+}
+
+.ld-spin {
+  animation: ld-spin 60s linear infinite;
+}
+
+.ld-spin-reverse {
+  animation: ld-spin 80s linear infinite reverse;
+}
+
+.ld-gradient-text {
+  background-image: linear-gradient(90deg, #087f72, #0ea5a4, #f59e0b, #087f72);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: ld-slide 9s ease-in-out infinite;
+}
+
+.ld-underline path {
+  stroke-dasharray: 320;
+  stroke-dashoffset: 320;
+  animation: ld-draw 1.4s cubic-bezier(0.65, 0, 0.35, 1) 0.6s forwards;
+}
+
+.ld-shine {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.ld-shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgb(255 255 255 / 0.35) 50%, transparent 70%);
+  transform: translateX(-120%);
+  animation: ld-sweep 4.5s ease-in-out infinite;
+  animation-delay: 1.5s;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.ld-pulse-dot {
+  position: relative;
+}
+
+.ld-pulse-dot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: currentColor;
+  animation: ld-ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.ld-marquee {
+  display: flex;
+  width: max-content;
+  animation: ld-marquee 40s linear infinite;
+}
+
+.ld-marquee-mask {
+  mask-image: linear-gradient(90deg, transparent, black 8%, black 92%, transparent);
+}
+
+.ld-marquee-mask:hover .ld-marquee {
+  animation-play-state: paused;
+}
+
+.ld-spotlight {
+  position: relative;
+  isolation: isolate;
+}
+
+.ld-spotlight::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(420px circle at var(--x, 50%) var(--y, 0%), var(--glow, rgb(8 127 114 / 0.12)), transparent 45%);
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.ld-spotlight:hover::before {
+  opacity: 1;
+}
+
+.ld-screen-in {
+  animation: ld-screen-in 0.55s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.ld-panel-in {
+  animation: ld-panel-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.ld-glow {
+  animation: ld-glow 4s ease-in-out infinite;
+}
+
+.ld-ring {
+  animation: ld-ring 2.4s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+}
+
+.ld-bounce-in {
+  animation: ld-bounce-in 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes ld-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+@keyframes ld-float-alt {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(10px) rotate(-1.5deg);
+  }
+}
+
+@keyframes ld-drift {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(40px, -30px) scale(1.08);
+  }
+  66% {
+    transform: translate(-30px, 25px) scale(0.95);
+  }
+}
+
+@keyframes ld-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes ld-slide {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes ld-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes ld-sweep {
+  0% {
+    transform: translateX(-120%);
+  }
+  45%,
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+@keyframes ld-ping {
+  75%,
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+@keyframes ld-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes ld-screen-in {
+  from {
+    opacity: 0;
+    transform: scale(1.04);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes ld-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ld-glow {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes ld-ring {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+@keyframes ld-bounce-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ld-float,
+  .ld-float-slow,
+  .ld-float-alt,
+  .ld-blob-a,
+  .ld-blob-b,
+  .ld-blob-c,
+  .ld-spin,
+  .ld-spin-reverse,
+  .ld-gradient-text,
+  .ld-shine::after,
+  .ld-pulse-dot::after,
+  .ld-marquee,
+  .ld-screen-in,
+  .ld-panel-in,
+  .ld-glow,
+  .ld-ring,
+  .ld-bounce-in {
+    animation: none;
+  }
+
+  .ld-underline path {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
