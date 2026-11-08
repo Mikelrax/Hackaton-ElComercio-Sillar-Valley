@@ -4,6 +4,8 @@ server:
 spring:
   application:
     name: ayni
+  config:
+    import: optional:file:.env[.properties]
 
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/ayni}
@@ -46,3 +48,11 @@ app:
   geo:
     style-url: ${MAP_STYLE_URL:https://tiles.openfreemap.org/styles/liberty}
     places-url: ${PLACES_URL:https://photon.komoot.io}
+
+assistant:
+  api-key: ${ANTHROPIC_API_KEY:}
+  model: ${ASSISTANT_MODEL:claude-haiku-5-5}
+  effort: ${ASSISTANT_EFFORT:low}
+  hourly-limit: ${ASSISTANT_HOURLY_LIMIT:30}
+  max-tokens: 2048
+  timeout-seconds: 45

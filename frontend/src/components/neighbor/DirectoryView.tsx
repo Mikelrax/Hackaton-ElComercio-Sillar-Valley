@@ -2,12 +2,13 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
-import { Check, MapPin, RefreshCw, Search, SlidersHorizontal, Store, ThumbsUp, X } from "lucide-react"
+import { Check, ChevronRight, MapPin, RefreshCw, Search, SlidersHorizontal, Store, ThumbsUp, X } from "lucide-react"
 import { BusinessSearchResult, DirectoryOptions } from "@/lib/types"
 import { businessesApi } from "@/lib/businesses"
 import { formatDistance } from "@/lib/catalog"
 import { CategoryIcon, categoryTone } from "@/components/ui/category-icon"
 import { useDialog } from "@/lib/use-dialog"
+import { KusiAvatar } from "@/components/kusi/KusiAvatar"
 
 interface DirectoryViewProps {
   userName: string
@@ -18,6 +19,7 @@ interface DirectoryViewProps {
   onSelectBusiness: (id: number) => void
   onOpenMap: () => void
   onRecommendNew: () => void
+  onAskKusi?: () => void
 }
 
 export const DirectoryView: React.FC<DirectoryViewProps> = ({
@@ -29,6 +31,7 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
   onSelectBusiness,
   onOpenMap,
   onRecommendNew,
+  onAskKusi,
 }) => {
   const defaultRadius = options.defaultRadius
   const defaultSort = options.sorts[0]?.value ?? ""
@@ -110,6 +113,21 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
           <span className="font-semibold text-[#087F72]">· Cambiar</span>
         </Link>
       </div>
+
+      {onAskKusi && (
+        <button
+          onClick={onAskKusi}
+          aria-haspopup="dialog"
+          className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl bg-white border-2 border-[#FDE68A] hover:border-[#F59E0B] text-left shadow-2xs transition-colors"
+        >
+          <KusiAvatar size={48} />
+          <span className="flex-1 min-w-0">
+            <span className="block text-base font-extrabold text-[#172B2A]">Pregúntale a Kusi</span>
+            <span className="block text-sm text-gray-600">Te ayudo a encontrar lo que necesitas en tu barrio</span>
+          </span>
+          <ChevronRight className="size-5 text-[#B45309] shrink-0" />
+        </button>
+      )}
 
       <div className="flex gap-2">
         <div className="relative flex-1">
@@ -289,6 +307,14 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
               >
                 Recomendar un negocio
               </button>
+              {onAskKusi && (
+                <button
+                  onClick={onAskKusi}
+                  className="h-9 px-4 rounded-xl border border-[#F59E0B] text-[#B45309] font-bold text-xs"
+                >
+                  Pregúntale a Kusi
+                </button>
+              )}
             </div>
           </div>
         )}

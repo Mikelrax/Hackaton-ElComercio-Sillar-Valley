@@ -40,6 +40,7 @@ interface CreatePostModalProps {
   onClose: () => void
   initialType?: PostTypeSelection
   initialEmergencyKind?: EmergencyKindValue
+  initialText?: string
   addresses: Address[]
   home: LatLng
   mapStyleUrl: string | null
@@ -82,6 +83,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   onClose,
   initialType = "necesito",
   initialEmergencyKind = "NEED",
+  initialText = "",
   addresses,
   home,
   mapStyleUrl,
@@ -94,7 +96,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const [selectedType, setSelectedType] = useState<PostTypeSelection>(initialType)
   const [emergencyKind, setEmergencyKind] = useState<EmergencyKindValue>(initialEmergencyKind)
   const [category, setCategory] = useState("")
-  const [description, setDescription] = useState("")
+  const [description, setDescription] = useState(initialText)
   const [reference, setReference] = useState("")
   const [phone, setPhone] = useState("")
   const [peopleCount, setPeopleCount] = useState(1)

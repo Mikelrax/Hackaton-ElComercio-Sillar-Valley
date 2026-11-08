@@ -1,6 +1,7 @@
 package com.sillarvalley.ayni.catalog;
 
 import com.sillarvalley.ayni.AppProperties;
+import com.sillarvalley.ayni.assistant.AssistantProperties;
 import com.sillarvalley.ayni.emergency.EmergencyStatus;
 import com.sillarvalley.ayni.geo.LocationPrivacy;
 import com.sillarvalley.ayni.map.MapLayer;
@@ -43,7 +44,8 @@ public class CatalogController {
                           List<Option> emergencyKinds, List<IconOption> emergencyCategories,
                           List<IconOption> supportPointTypes, List<Option> emergencyNumbers,
                           List<PlaceOption> addressPlaces, int maxAddresses, DirectoryOptions directory,
-                          List<Option> recommendationTags, List<Option> openDays, MapOptions map) {}
+                          List<Option> recommendationTags, List<Option> openDays, MapOptions map,
+                          boolean assistantEnabled) {}
 
     private static final List<Option> OPEN_DAYS = List.of(
             new Option("1234567", "Todos los días"),
@@ -51,7 +53,7 @@ public class CatalogController {
             new Option("12345", "Lunes a viernes"),
             new Option("67", "Fines de semana"));
 
-    private static final List<Option> EMERGENCY_NUMBERS = List.of(
+    public static final List<Option> EMERGENCY_NUMBERS = List.of(
             new Option("105", "Policía"),
             new Option("116", "Bomberos"),
             new Option("106", "SAMU"));
@@ -69,13 +71,15 @@ public class CatalogController {
     private final BusinessService businesses;
     private final Locations locations;
     private final String mapStyleUrl;
+    private final boolean assistantEnabled;
 
     public CatalogController(NeighborhoodRepository neighborhoods, BusinessService businesses, Locations locations,
-                             AppProperties props) {
+                             AppProperties props, AssistantProperties assistant) {
         this.neighborhoods = neighborhoods;
         this.businesses = businesses;
         this.locations = locations;
         this.mapStyleUrl = props.geo().styleUrl();
+        this.assistantEnabled = assistant.enabled();
     }
 
     @GetMapping("/api/catalog")
@@ -97,7 +101,8 @@ public class CatalogController {
                 DIRECTORY,
                 Arrays.stream(RecommendationTag.values()).map(t -> new Option(t.key(), t.label())).toList(),
                 OPEN_DAYS,
-                mapOptions());
+                mapOptions(),
+                assistantEnabled);
     }
 
     private MapOptions mapOptions() {

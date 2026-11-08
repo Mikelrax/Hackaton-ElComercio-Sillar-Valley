@@ -6,7 +6,7 @@ import Link from "next/link"
 import { Logo } from "@/components/brand/Logo"
 import { Address, User } from "@/lib/auth"
 import { ApiError } from "@/lib/api"
-import { AppTab, EmergencyMode, EmergencyOverview, FavorItem, MapItem, Option } from "@/lib/types"
+import { AppTab, EmergencyMode, EmergencyOverview, FavorItem, KusiDraft, MapItem, Option } from "@/lib/types"
 import { postsApi } from "@/lib/posts"
 import { businessesApi } from "@/lib/businesses"
 import { emergencyApi } from "@/lib/emergency"
@@ -15,6 +15,7 @@ import { useCatalog } from "@/lib/catalog"
 import { flushOutbox, useOutbox } from "@/lib/outbox"
 import { outboxSnapshot, setOutboxFailure } from "@/lib/outbox-store"
 import { markTutorialSeen, TutorialOverlay, tutorialRequested } from "@/components/onboarding/TutorialOverlay"
+import { KusiChat } from "@/components/kusi/KusiChat"
 
 import { DirectoryView } from "@/components/neighbor/DirectoryView"
 import { SolidarityWallView } from "@/components/neighbor/SolidarityWallView"
@@ -84,6 +85,8 @@ export function DashboardView({ user, onLogout, onOpenPanel }: DashboardViewProp
   const [modalKey, setModalKey] = useState(0)
   const [createInitialType, setCreateInitialType] = useState<PostTypeSelection>("necesito")
   const [createEmergencyKind, setCreateEmergencyKind] = useState<EmergencyKindValue>("NEED")
+  const [createInitialText, setCreateInitialText] = useState("")
+  const [kusiOpen, setKusiOpen] = useState(false)
 
   const [tutorialOpen, setTutorialOpen] = useState(tutorialRequested)
   const outbox = useOutbox()
@@ -223,9 +226,10 @@ export function DashboardView({ user, onLogout, onOpenPanel }: DashboardViewProp
     setEmergencyReloadKey(k => k + 1)
   }
 
-  const openCreate = (type: PostTypeSelection, kind: EmergencyKindValue = "NEED") => {
+  const openCreate = (type: PostTypeSelection, kind: EmergencyKindValue = "NEED", text = "") => {
     setCreateInitialType(type)
     setCreateEmergencyKind(kind)
+    setCreateInitialText(text)
     setModalKey(k => k + 1)
     setIsCreateModalOpen(true)
   }
@@ -335,6 +339,10 @@ export function DashboardView({ user, onLogout, onOpenPanel }: DashboardViewProp
   }
 
   const mode = emergency?.mode
+  const assistantEnabled = !!catalog?.assistantEnabled
+  const openKusi = useCallback(() => setKusiOpen(true), [])
+  const closeKusi = useCallback(() => setKusiOpen(false), [])
+  const draftFromKusi = (draft: KusiDraft) => openCreate(draft.type, "NEED", draft.text)
 
   const catalogFallback = catalogError ? (
     <LoadError onRetry={retryCatalog} />
@@ -391,9 +399,9 @@ export function DashboardView({ user, onLogout, onOpenPanel }: DashboardViewProp
             )}
 
             <button
-              onClick={() => setTutorialOpen(true)}
-              aria-label="Cómo funciona Ayni"
-              title="Cómo funciona"
+              onClick={() => (assistantEnabled ? openKusi() : setTutorialOpen(true))}
+              aria-label={assistantEnabled ? "Ayuda: pregúntale a Kusi" : "Cómo funciona Ayni"}
+              title={assistantEnabled ? "Ayuda" : "Cómo funciona"}
               className="size-9 rounded-xl border border-gray-200 bg-white text-[#087F72] hover:border-[#087F72] flex items-center justify-center"
             >
               <CircleHelp className="size-4" />
@@ -488,6 +496,7 @@ export function DashboardView({ user, onLogout, onOpenPanel }: DashboardViewProp
               onSelectBusiness={setSelectedBusinessId}
               onOpenMap={() => goTo("mapa")}
               onRecommendNew={() => openCreate("recomiendo")}
+              onAskKusi={assistantEnabled ? openKusi : undefined}
             />
           ) : (
             catalogFallback
@@ -575,6 +584,22 @@ export function DashboardView({ user, onLogout, onOpenPanel }: DashboardViewProp
         </button>
       </nav>
 
+      {assistantEnabled && (
+        <KusiChat
+          open={kusiOpen}
+          covered={selectedBusinessId !== null}
+          firstName={user.name.split(" ")[0] || user.name}
+          location={location}
+          emergencyNumbers={catalog?.emergencyNumbers ?? []}
+          onClose={closeKusi}
+          onSelectBusiness={setSelectedBusinessId}
+          onOpenWall={() => goTo("muro")}
+          onOpenEmergency={() => goTo("emergencia")}
+          onDraft={draftFromKusi}
+          onOpenTutorial={() => setTutorialOpen(true)}
+        />
+      )}
+
       <BusinessDetailModal
         businessId={selectedBusinessId}
         location={location}
@@ -588,6 +613,7 @@ export function DashboardView({ user, onLogout, onOpenPanel }: DashboardViewProp
         onClose={() => setIsCreateModalOpen(false)}
         initialType={createInitialType}
         initialEmergencyKind={createEmergencyKind}
+        initialText={createInitialText}
         addresses={addresses}
         home={location}
         mapStyleUrl={catalog?.map.styleUrl ?? null}
