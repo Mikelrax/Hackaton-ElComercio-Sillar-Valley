@@ -1,27 +1,36 @@
 // src/components/neighbor/SolidarityWallView.tsx
-// Pantalla 3 del Figma: Muro Solidario (Favores sin dinero entre vecinos)
+// Pantalla 3 del Figma: Muro Solidario (Favores sin dinero entre vecinos), conectado a /api/posts
 "use client"
 
 import React, { useState, useMemo } from "react"
-import { CheckCircle2, HeartHandshake, Plus } from "lucide-react"
-import { FavorItem, FavorType, FavorCategory } from "@/lib/types"
+import { Check, CheckCircle2, HeartHandshake, Plus, RefreshCw } from "lucide-react"
+import { FavorItem, FavorType } from "@/lib/types"
+import { ApiError } from "@/lib/api"
+import { FAVOR_CATEGORIES } from "@/lib/posts"
+import { WallActivityPanel } from "@/components/neighbor/WallActivityPanel"
 
 interface SolidarityWallViewProps {
   favors: FavorItem[]
+  status: "loading" | "ready" | "error"
+  onRetry: () => void
+  currentUserId: string
+  onRespond: (favor: FavorItem) => Promise<void>
   onOpenCreate: (initialType?: "necesito" | "ofrezco") => void
 }
 
-const CATEGORIES: FavorCategory[] = [
-  "Herramientas",
-  "Ayuda temporal",
-  "Donaciones",
-  "Habilidades",
-  "Movilidad",
-]
-
-export const SolidarityWallView: React.FC<SolidarityWallViewProps> = ({ favors, onOpenCreate }) => {
+export const SolidarityWallView: React.FC<SolidarityWallViewProps> = ({
+  favors,
+  status,
+  onRetry,
+  currentUserId,
+  onRespond,
+  onOpenCreate,
+}) => {
   const [selectedType, setSelectedType] = useState<"todo" | FavorType>("todo")
   const [selectedCategory, setSelectedCategory] = useState<string>("todas")
+  const [sentIds, setSentIds] = useState<string[]>([])
+  const [sendingId, setSendingId] = useState<string | null>(null)
+  const [respondError, setRespondError] = useState<{ id: string; message: string } | null>(null)
 
   const filteredFavors = useMemo(() => {
     return favors.filter(f => {
@@ -30,6 +39,27 @@ export const SolidarityWallView: React.FC<SolidarityWallViewProps> = ({ favors, 
       return matchesType && matchesCategory
     })
   }, [favors, selectedType, selectedCategory])
+
+  const handleRespond = async (favor: FavorItem) => {
+    setRespondError(null)
+    setSendingId(favor.id)
+    try {
+      await onRespond(favor)
+      setSentIds(prev => [...prev, favor.id])
+    } catch (err) {
+      // 409 = ya habías respondido antes: se muestra como enviado.
+      if (err instanceof ApiError && err.status === 409) {
+        setSentIds(prev => [...prev, favor.id])
+      } else {
+        setRespondError({
+          id: favor.id,
+          message: err instanceof ApiError ? err.friendlyMessage : "No pudimos enviar tu respuesta.",
+        })
+      }
+    } finally {
+      setSendingId(null)
+    }
+  }
 
   return (
     <div className="w-full max-w-5xl mx-auto space-y-6">
@@ -52,6 +82,9 @@ export const SolidarityWallView: React.FC<SolidarityWallViewProps> = ({ favors, 
           <span>Pedir u ofrecer favor</span>
         </button>
       </div>
+
+      {/* ================= MI ACTIVIDAD: mis publicaciones, respuestas recibidas y enviadas ================= */}
+      <WallActivityPanel />
 
       {/* ================= TABS PRINCIPALES (Figma: Todo | Necesito | Ofrezco) ================= */}
       <div className="p-1 rounded-2xl bg-gray-100 flex items-center max-w-md">
@@ -99,7 +132,7 @@ export const SolidarityWallView: React.FC<SolidarityWallViewProps> = ({ favors, 
         >
           Todas
         </button>
-        {CATEGORIES.map(cat => {
+        {FAVOR_CATEGORIES.map(cat => {
           const isSelected = selectedCategory === cat
           return (
             <button
@@ -119,83 +152,116 @@ export const SolidarityWallView: React.FC<SolidarityWallViewProps> = ({ favors, 
 
       {/* ================= LISTADO DE PUBLICACIONES SOLIDARIAS (Figma) ================= */}
       <div className="space-y-3.5">
-        {filteredFavors.map(favor => {
-          // Si es un caso resuelto (Figma: tarjeta verde menta con check)
-          if (favor.isResolved) {
+        {status === "loading" && (
+          <div className="py-12 flex flex-col items-center gap-3 text-gray-500">
+            <div className="size-7 rounded-full border-2 border-[#087F72] border-t-transparent animate-spin" />
+            <p className="text-xs font-semibold">Cargando el muro…</p>
+          </div>
+        )}
+
+        {status === "error" && (
+          <div className="py-10 text-center bg-white rounded-2xl border border-gray-200/70 p-6 space-y-3">
+            <p className="text-sm font-bold text-gray-700">No pudimos cargar el muro</p>
+            <p className="text-xs text-gray-500">Revisa tu conexión a internet e intenta otra vez.</p>
+            <button
+              onClick={onRetry}
+              className="mx-auto h-9 px-4 rounded-xl border border-[#087F72] text-[#087F72] font-bold text-xs flex items-center gap-1.5 hover:bg-[#EAF5F1]"
+            >
+              <RefreshCw className="size-3.5" />
+              Reintentar
+            </button>
+          </div>
+        )}
+
+        {status === "ready" &&
+          filteredFavors.map(favor => {
+            // Si es un caso resuelto (Figma: tarjeta verde menta con check)
+            if (favor.isResolved) {
+              return (
+                <div
+                  key={favor.id}
+                  className="p-4 rounded-2xl bg-[#EAF5F1] border border-[#087F72]/30 flex items-start gap-3 shadow-2xs"
+                >
+                  <div className="size-6 rounded-full bg-white flex items-center justify-center shrink-0 mt-0.5 text-emerald-700 shadow-2xs">
+                    <CheckCircle2 className="size-4" />
+                  </div>
+                  <div className="space-y-0.5">
+                    <p className="text-xs font-bold text-[#087F72]">{favor.title}</p>
+                    <p className="text-xs text-emerald-900 font-medium">
+                      {favor.resolvedNote || "Favor completado entre vecinos solidarios."}
+                    </p>
+                  </div>
+                </div>
+              )
+            }
+
+            const isNecesito = favor.type === "necesito"
+            const isMine = favor.authorId === currentUserId
+            const isSent = sentIds.includes(favor.id)
+            const isSending = sendingId === favor.id
+
             return (
               <div
                 key={favor.id}
-                className="p-4 rounded-2xl bg-[#EAF5F1] border border-[#087F72]/30 flex items-start gap-3 shadow-2xs"
+                className="p-4 sm:p-5 rounded-2xl bg-white border border-gray-200/90 shadow-2xs space-y-3 hover:border-gray-300 transition-all"
               >
-                <div className="size-6 rounded-full bg-white flex items-center justify-center shrink-0 mt-0.5 text-emerald-700 shadow-2xs">
-                  <CheckCircle2 className="size-4" />
+                {/* Badges superiores: Tipo (Necesito/Ofrezco) y Categoría */}
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`px-2.5 py-0.5 rounded-md text-[11px] font-bold ${
+                      isNecesito
+                        ? "bg-amber-100 text-[#8A5800]"
+                        : "bg-[#d4f3eb] text-[#087F72]"
+                    }`}
+                  >
+                    {isNecesito ? "Necesito" : "Ofrezco"}
+                  </span>
+                  <span className="text-xs font-medium text-gray-400">·</span>
+                  <span className="text-xs font-medium text-gray-500">{favor.category}</span>
                 </div>
-                <div className="space-y-0.5">
-                  <p className="text-xs font-bold text-[#087F72]">{favor.title}</p>
-                  <p className="text-xs text-emerald-900 font-medium">
-                    {favor.resolvedNote || "Favor completado entre vecinos solidarios."}
+
+                {/* Título de la solicitud */}
+                <h3 className="text-base font-bold text-[#172B2A] leading-snug">
+                  {favor.title}
+                </h3>
+
+                {/* Pie de tarjeta con autor, barrio, tiempo y botón de acción (Figma) */}
+                <div className="flex items-center justify-between gap-3 pt-1">
+                  <p className="text-xs text-gray-500 font-medium">
+                    {favor.author} · {favor.distanceText} · {favor.timeAgo}
                   </p>
+
+                  {isMine ? (
+                    <span className="shrink-0 text-[11px] font-bold text-gray-400">Tu publicación</span>
+                  ) : isSent ? (
+                    <span className="shrink-0 h-8 px-3 rounded-xl bg-[#EAF5F1] text-[#087F72] font-bold text-xs flex items-center gap-1">
+                      <Check className="size-3.5" />
+                      Respuesta enviada
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => handleRespond(favor)}
+                      disabled={isSending}
+                      className="shrink-0 h-8 px-4 rounded-xl border border-[#087F72] text-[#087F72] font-bold text-xs flex items-center justify-center hover:bg-[#EAF5F1] active:scale-98 transition-all disabled:opacity-60"
+                    >
+                      {isSending ? "Enviando…" : isNecesito ? "Yo te ayudo" : "Me interesa"}
+                    </button>
+                  )}
                 </div>
-              </div>
-            )
-          }
 
-          const isNecesito = favor.type === "necesito"
-
-          return (
-            <div
-              key={favor.id}
-              className="p-4 sm:p-5 rounded-2xl bg-white border border-gray-200/90 shadow-2xs space-y-3 hover:border-gray-300 transition-all"
-            >
-              {/* Badges superiores: Tipo (Necesito/Ofrezco) y Categoría */}
-              <div className="flex items-center gap-2">
-                <span
-                  className={`px-2.5 py-0.5 rounded-md text-[11px] font-bold ${
-                    isNecesito
-                      ? "bg-amber-100 text-[#8A5800]"
-                      : "bg-[#d4f3eb] text-[#087F72]"
-                  }`}
-                >
-                  {isNecesito ? "Necesito" : "Ofrezco"}
-                </span>
-                <span className="text-xs font-medium text-gray-400">·</span>
-                <span className="text-xs font-medium text-gray-500">{favor.category}</span>
-              </div>
-
-              {/* Título de la solicitud */}
-              <h3 className="text-base font-bold text-[#172B2A] leading-snug">
-                {favor.title}
-              </h3>
-
-              {/* Pie de tarjeta con autor, distancia, tiempo y botón de acción (Figma) */}
-              <div className="flex items-center justify-between pt-1">
-                <p className="text-xs text-gray-500 font-medium">
-                  {favor.author} · {favor.distanceText} · {favor.timeAgo}
-                </p>
-
-                {favor.whatsapp ? (
-                  <a
-                    href={`https://wa.me/${favor.whatsapp}?text=Hola%20${encodeURIComponent(favor.author)}%2C%20vi%20tu%20publicaci%C3%B3n%20en%20el%20Muro%20Solidario%20de%20AYNI:%20"${encodeURIComponent(favor.title)}"`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="h-8 px-4 rounded-xl border border-[#087F72] text-[#087F72] font-bold text-xs flex items-center justify-center hover:bg-[#EAF5F1] active:scale-98 transition-all"
-                  >
-                    {isNecesito ? "Yo te ayudo" : "Me interesa"}
-                  </a>
-                ) : (
-                  <button
-                    onClick={() => alert(`Conectando con ${favor.author}...`)}
-                    className="h-8 px-4 rounded-xl border border-[#087F72] text-[#087F72] font-bold text-xs flex items-center justify-center hover:bg-[#EAF5F1] active:scale-98 transition-all"
-                  >
-                    {isNecesito ? "Yo te ayudo" : "Me interesa"}
-                  </button>
+                {isSent && (
+                  <p className="text-[11px] text-gray-500">
+                    Cuando {favor.author} acepte tu respuesta, verás su número en “Mi actividad” para coordinar.
+                  </p>
+                )}
+                {respondError?.id === favor.id && (
+                  <p className="text-[11px] font-semibold text-rose-600">{respondError.message}</p>
                 )}
               </div>
-            </div>
-          )
-        })}
+            )
+          })}
 
-        {filteredFavors.length === 0 && (
+        {status === "ready" && filteredFavors.length === 0 && (
           <div className="py-12 text-center bg-white rounded-2xl border border-gray-200/70 p-6 space-y-2">
             <HeartHandshake className="size-10 text-gray-300 mx-auto" />
             <p className="text-sm font-bold text-gray-700">No hay solicitudes en esta sección</p>
@@ -208,4 +274,3 @@ export const SolidarityWallView: React.FC<SolidarityWallViewProps> = ({ favors, 
     </div>
   )
 }
-

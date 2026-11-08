@@ -40,18 +40,29 @@ export interface BusinessItem {
 
 // F3: Muro Solidario
 export type FavorType = "necesito" | "ofrezco"
-export type FavorCategory = "Herramientas" | "Ayuda temporal" | "Donaciones" | "Habilidades" | "Movilidad"
+// Etiquetas de las categorías del backend (ver lib/posts.ts)
+export type FavorCategory =
+  | "Herramientas"
+  | "Hogar"
+  | "Cuidado"
+  | "Alimentos"
+  | "Educación"
+  | "Movilidad"
+  | "Salud"
+  | "Otros"
 
 export interface FavorItem {
   id: string
   type: FavorType
   category: FavorCategory
   title: string
+  description?: string
   author: string
+  authorId?: string
   distanceMeters: number
   distanceText: string
   timeAgo: string
-  whatsapp: string
+  whatsapp?: string
   isResolved?: boolean
   resolvedNote?: string
   coords?: { x: number; y: number }

@@ -3,8 +3,9 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { X, MapPin, Check } from "lucide-react"
+import { X, MapPin, Check, AlertCircle } from "lucide-react"
 import { FavorCategory } from "@/lib/types"
+import { ApiError } from "@/lib/api"
 
 export type PostTypeSelection = "recomiendo" | "necesito" | "ofrezco" | "emergencia"
 
@@ -13,18 +14,23 @@ interface CreatePostModalProps {
   onClose: () => void
   initialType?: PostTypeSelection
   userNeighborhood: string
+  /** Devuelve el mensaje de confirmación; si falla, lanza un error. */
   onSubmitPost: (data: {
     type: PostTypeSelection
     category: string
     description: string
     location: string
-  }) => void
+  }) => Promise<string>
 }
+
+// Necesito / Ofrezco usan las categorías del backend (ver lib/posts.ts)
+const NECESITO: FavorCategory[] = ["Herramientas", "Hogar", "Cuidado", "Alimentos", "Movilidad", "Salud", "Educación", "Otros"]
+const OFREZCO: FavorCategory[] = ["Herramientas", "Educación", "Hogar", "Cuidado", "Alimentos", "Movilidad", "Salud", "Otros"]
 
 const CATEGORY_OPTIONS: Record<PostTypeSelection, string[]> = {
   recomiendo: ["Gasfitería", "Comida casera", "Costura", "Bodega", "Técnico", "Salud"],
-  necesito: ["Herramientas", "Ayuda temporal", "Donaciones", "Movilidad", "Cuidado"],
-  ofrezco: ["Herramientas", "Habilidades", "Ayuda temporal", "Donaciones", "Movilidad"],
+  necesito: NECESITO,
+  ofrezco: OFREZCO,
   emergencia: ["Agua potable", "Refugio", "Medicinas", "Rescate", "Primeros auxilios"],
 }
 
@@ -43,6 +49,8 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   )
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
+  const [successMessage, setSuccessMessage] = useState("")
+  const [submitError, setSubmitError] = useState("")
 
   // Cierre con la tecla Escape
   useEffect(() => {
@@ -61,27 +69,35 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const handleTypeSelect = (type: PostTypeSelection) => {
     setSelectedType(type)
     setCategory(CATEGORY_OPTIONS[type][0])
+    setSubmitError("")
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setSubmitError("")
     setIsSubmitting(true)
-
-    // Simula envío rápido garantizando confirmación
-    setTimeout(() => {
-      onSubmitPost({
+    try {
+      const message = await onSubmitPost({
         type: selectedType,
         category,
-        description: description || (selectedType === "necesito" ? "Petición de apoyo barrial" : "Aporte comunitario"),
+        description: description.trim(),
         location: locationText,
       })
-      setIsSubmitting(false)
+      setSuccessMessage(message)
       setShowSuccess(true)
+      setDescription("")
       setTimeout(() => {
         setShowSuccess(false)
+        setSuccessMessage("")
         onClose()
-      }, 1000)
-    }, 400)
+      }, 2200)
+    } catch (err) {
+      setSubmitError(
+        err instanceof ApiError ? err.friendlyMessage : "No pudimos publicar. Intenta otra vez."
+      )
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -233,6 +249,18 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
 
           {/* Botón Grande: "Publicar" (Figma) */}
           <div className="pt-2 space-y-2">
+            {submitError && (
+              <div className="flex items-start gap-2 rounded-xl bg-rose-50 p-3 text-xs text-rose-700 border border-rose-200">
+                <AlertCircle className="size-4 shrink-0" />
+                <span>{submitError}</span>
+              </div>
+            )}
+            {showSuccess && successMessage && (
+              <div className="flex items-start gap-2 rounded-xl bg-[#EAF5F1] p-3 text-xs font-semibold text-[#087F72] border border-[#087F72]/30">
+                <Check className="size-4 shrink-0" />
+                <span>{successMessage}</span>
+              </div>
+            )}
             <button
               type="submit"
               disabled={isSubmitting || showSuccess}
@@ -241,7 +269,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
               {showSuccess ? (
                 <>
                   <Check className="size-5 text-white" />
-                  <span>¡Publicado en el barrio!</span>
+                  <span>Listo</span>
                 </>
               ) : isSubmitting ? (
                 <span>Publicando...</span>

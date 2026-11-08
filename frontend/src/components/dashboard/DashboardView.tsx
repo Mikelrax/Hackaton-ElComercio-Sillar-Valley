@@ -2,7 +2,7 @@
 // Dashboard Principal AYNI Responsive (Móvil con Figma Bottom Bar + Desktop Multi-columna)
 "use client"
 
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import {
   Home,
   Map,
@@ -17,13 +17,13 @@ import {
 } from "lucide-react"
 import { Logo } from "@/components/brand/Logo"
 import { User } from "@/lib/auth"
-import { AppTab, BusinessItem, FavorItem, EmergencyReportItem, SupportPointItem } from "@/lib/types"
+import { AppTab, BusinessItem, FavorCategory, FavorItem, EmergencyReportItem, SupportPointItem } from "@/lib/types"
 import {
   INITIAL_BUSINESSES,
-  INITIAL_FAVORS,
   INITIAL_EMERGENCY_REPORTS,
   INITIAL_SUPPORT_POINTS,
 } from "@/lib/mockData"
+import { postsApi } from "@/lib/posts"
 
 // Subvistas
 import { DirectoryView } from "@/components/neighbor/DirectoryView"
@@ -42,7 +42,38 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
   const [activeTab, setActiveTab] = useState<AppTab>("inicio")
   const [activeRadius, setActiveRadius] = useState("1 km")
   const [businesses, setBusinesses] = useState<BusinessItem[]>(INITIAL_BUSINESSES)
-  const [favors, setFavors] = useState<FavorItem[]>(INITIAL_FAVORS)
+  // Muro solidario: viene del backend (/api/posts)
+  const [favors, setFavors] = useState<FavorItem[]>([])
+  const [wallStatus, setWallStatus] = useState<"loading" | "ready" | "error">("loading")
+  const [wallReloadKey, setWallReloadKey] = useState(0)
+
+  useEffect(() => {
+    let cancelled = false
+    postsApi
+      .listWall()
+      .then(items => {
+        if (cancelled) return
+        setFavors(items)
+        setWallStatus("ready")
+      })
+      .catch(() => {
+        if (!cancelled) setWallStatus("error")
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [wallReloadKey])
+
+  const reloadWall = () => {
+    setWallStatus("loading")
+    setWallReloadKey(k => k + 1)
+  }
+
+  const handleRespond = (favor: FavorItem) =>
+    postsApi.respond(
+      favor.id,
+      favor.type === "necesito" ? "¡Hola! Yo te puedo ayudar con esto." : "¡Hola! Me interesa lo que ofreces."
+    )
   const [emergencyReports, setEmergencyReports] = useState<EmergencyReportItem[]>(
     INITIAL_EMERGENCY_REPORTS
   )
@@ -62,32 +93,31 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
     )
   }
 
-  // Crear nueva publicación
-  const handleCreatePost = (data: {
+  // Crear nueva publicación. Devuelve el mensaje de confirmación que muestra el modal.
+  const handleCreatePost = async (data: {
     type: PostTypeSelection
     category: string
     description: string
     location: string
-  }) => {
+  }): Promise<string> => {
     if (data.type === "necesito" || data.type === "ofrezco") {
-      const newFavor: FavorItem = {
-        id: "fav-" + Date.now(),
+      const { favor, pending } = await postsApi.create({
         type: data.type,
-        category: data.category as any,
-        title: data.description,
-        author: user.name.split(" ")[0] || "Vecino",
-        distanceMeters: 100,
-        distanceText: "100 m",
-        timeAgo: "ahora mismo",
-        whatsapp: user.phone || "51999888777",
-        coords: { x: 50, y: 50 },
+        category: data.category as FavorCategory,
+        text: data.description,
+        reference: data.location,
+        neighborhood: user.location?.neighborhood,
+      })
+      if (pending) {
+        return "¡Enviado! Un moderador lo revisará y luego aparecerá en el muro."
       }
-      setFavors(prev => [newFavor, ...prev])
+      setFavors(prev => [favor, ...prev])
       setActiveTab("muro")
+      return "¡Publicado en el barrio!"
     } else if (data.type === "emergencia") {
       const newReport: EmergencyReportItem = {
         id: "em-" + Date.now(),
-        title: data.description,
+        title: data.description || "Emergencia en el barrio",
         peopleCount: 1,
         severity: "alta",
         status: "urgente",
@@ -101,11 +131,15 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
       }
       setEmergencyReports(prev => [newReport, ...prev])
       setActiveTab("emergencia")
-    } else if (data.type === "recomiendo") {
+      return "¡Alerta enviada al barrio!"
+    }
+    // Recomendación de negocio (todavía local, sin backend)
+    {
+      const bizName = data.description || "Negocio recomendado"
       const newBiz: BusinessItem = {
         id: "biz-" + Date.now(),
-        name: data.description,
-        category: data.category as any,
+        name: bizName,
+        category: data.category as BusinessItem["category"],
         distanceMeters: 200,
         distanceText: "200 m",
         scheduleText: "Abierto",
@@ -116,7 +150,7 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
         estimatedPrice: "Precios accesibles",
         phone: user.phone || "999888777",
         whatsapp: user.phone || "51999888777",
-        initial: data.description.charAt(0).toUpperCase() || "N",
+        initial: bizName.charAt(0).toUpperCase() || "N",
         colorBg: "bg-teal-100",
         colorText: "text-teal-800",
         coords: { x: 45, y: 45 },
@@ -133,6 +167,7 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
       }
       setBusinesses(prev => [newBiz, ...prev])
       setActiveTab("inicio")
+      return "¡Recomendación publicada!"
     }
   }
 
@@ -254,6 +289,10 @@ export function DashboardView({ user, onLogout }: DashboardViewProps) {
         {activeTab === "muro" && (
           <SolidarityWallView
             favors={favors}
+            status={wallStatus}
+            onRetry={reloadWall}
+            currentUserId={user.id}
+            onRespond={handleRespond}
             onOpenCreate={type => {
               setCreateInitialType(type || "necesito")
               setIsCreateModalOpen(true)

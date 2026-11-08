@@ -35,6 +35,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Logo } from "@/components/brand/Logo";
 import { User } from "@/lib/auth";
+import { PendingPostsPanel } from "@/components/dashboard/PendingPostsPanel";
 
 interface ModeratorDashboardProps {
   user: User;
@@ -99,6 +100,7 @@ const DEMO_USERS = [
 
 const SIDEBAR_ITEMS = [
   { id: "dashboard", label: "Panel General", icon: Home },
+  { id: "posts", label: "Muro: por aprobar", icon: CheckCircle2 },
   { id: "reports", label: "Reportes de Emergencia", icon: AlertTriangle },
   { id: "resources", label: "Recursos Críticos", icon: MapPin },
   { id: "users", label: "Gestión de Usuarios", icon: Users },
@@ -412,6 +414,9 @@ export function ModeratorDashboard({ user, onLogout }: ModeratorDashboardProps) 
               </div>
             </>
           )}
+
+          {/* ===== MURO SOLIDARIO: PUBLICACIONES POR APROBAR (backend) ===== */}
+          {activeSection === "posts" && <PendingPostsPanel />}
 
           {/* ===== REPORTES DE EMERGENCIA ===== */}
           {activeSection === "reports" && (

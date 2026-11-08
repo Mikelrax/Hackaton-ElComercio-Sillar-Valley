@@ -34,6 +34,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Logo } from "@/components/brand/Logo"
 import { authService, UserProfile, UserRole } from "@/lib/auth"
+import { ApiError } from "@/lib/api"
+
+// Cuentas de ejemplo que crea el backend cuando APP_SEED=true (ver README).
+const DEMO_ACCOUNTS = {
+  vecino: { phone: "900000002", password: "Vecino1234" },
+  moderador: { phone: "900000001", password: "Moderador123" },
+}
+
+function errorMessage(err: unknown, fallback: string): string {
+  return err instanceof ApiError ? err.friendlyMessage : fallback
+}
 
 const NEIGHBORHOODS = [
   "Yanahuara",
@@ -96,6 +107,8 @@ export function AuthCard() {
   const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number } | null>(null)
   const [gpsLoading, setGpsLoading] = useState(false)
   const [gpsMessage, setGpsMessage] = useState("")
+  const [inviteCode, setInviteCode] = useState("")
+  const [showInvite, setShowInvite] = useState(false)
   const [registerLoading, setRegisterLoading] = useState(false)
   const [registerError, setRegisterError] = useState("")
 
@@ -147,18 +160,32 @@ export function AuthCard() {
       await authService.login({ phone: loginPhone, password: loginPassword })
       // Forzar redirección limpia a la raíz
       window.location.href = "/"
-    } catch {
-      setLoginError("Error al iniciar sesión.")
+    } catch (err) {
+      setLoginError(
+        err instanceof ApiError && err.status === 401
+          ? "El número o la contraseña no coinciden. Revísalos e intenta otra vez."
+          : errorMessage(err, "No pudimos iniciar sesión. Intenta otra vez.")
+      )
       setLoginLoading(false)
     }
   }
 
-  // Acceso de Demostración para evaluación
-  const handleDemoAccess = async (demoRole: "vecino" | "moderador" | "mayor") => {
+  // Acceso de Demostración para evaluación (cuentas de ejemplo del backend)
+  const handleDemoAccess = async (demoRole: keyof typeof DEMO_ACCOUNTS) => {
+    setLoginError("")
     setLoginLoading(true)
-    const demoPhone = demoRole === "moderador" ? "999888777" : "958123456"
-    await authService.login({ phone: demoPhone, password: "password123" })
-    window.location.href = "/"
+    try {
+      await authService.login(DEMO_ACCOUNTS[demoRole])
+      window.location.href = "/"
+    } catch (err) {
+      setMode("login")
+      setLoginError(
+        err instanceof ApiError && err.status === 401
+          ? "Las cuentas de demostración no están activas en este servidor."
+          : errorMessage(err, "No pudimos iniciar sesión. Intenta otra vez.")
+      )
+      setLoginLoading(false)
+    }
   }
 
   // Envío de Registro
@@ -174,8 +201,8 @@ export function AuthCard() {
       setRegisterError("Ingresa un número de celular válido de 9 dígitos.")
       return
     }
-    if (!password || password.length < 4) {
-      setRegisterError("La contraseña debe tener al menos 4 caracteres.")
+    if (!password || password.length < 8) {
+      setRegisterError("La contraseña debe tener al menos 8 letras o números.")
       return
     }
 
@@ -194,11 +221,12 @@ export function AuthCard() {
         role,
         profile,
         location,
+        inviteCode: showInvite ? inviteCode : undefined,
       })
 
       window.location.href = "/"
-    } catch {
-      setRegisterError("Error al registrar tu cuenta vecinal.")
+    } catch (err) {
+      setRegisterError(errorMessage(err, "No pudimos crear tu cuenta. Intenta otra vez."))
       setRegisterLoading(false)
     }
   }
@@ -351,7 +379,7 @@ export function AuthCard() {
                 <Input
                   id="reg-password"
                   type={showRegisterPassword ? "text" : "password"}
-                  placeholder="Crea una contraseña segura"
+                  placeholder="Mínimo 8 letras o números"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="h-10 rounded-xl text-xs pr-10"
@@ -469,6 +497,27 @@ export function AuthCard() {
                 onChange={(e) => setRole(e.target.checked ? "emprendedor" : "vecino")}
                 className="size-4 accent-emerald-600 rounded cursor-pointer"
               />
+            </div>
+
+            {/* Código de la junta vecinal (solo moderadores) */}
+            <div className="space-y-1.5">
+              <button
+                type="button"
+                onClick={() => setShowInvite(!showInvite)}
+                className="text-[11px] font-semibold text-[#087F72] hover:underline flex items-center gap-1"
+              >
+                <ShieldCheck className="size-3.5" />
+                ¿Eres parte de la junta vecinal?
+              </button>
+              {showInvite && (
+                <Input
+                  id="reg-invite"
+                  placeholder="Código que te dio la junta"
+                  value={inviteCode}
+                  onChange={(e) => setInviteCode(e.target.value)}
+                  className="h-10 rounded-xl text-xs"
+                />
+              )}
             </div>
 
             <Button

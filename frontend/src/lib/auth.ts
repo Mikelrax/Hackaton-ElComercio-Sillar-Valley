@@ -1,3 +1,5 @@
+import { apiFetch, SESSION_KEY } from "@/lib/api"
+
 export type UserRole = "vecino" | "emprendedor" | "moderador"
 export type UserProfile = "mayor" | "familia" | "joven" | "adulto"
 
@@ -16,6 +18,8 @@ export interface User {
   profile: UserProfile
   location: UserLocation
   token?: string
+  /** Momento (ms) en que vence el token. */
+  expiresAt?: number
   verified?: boolean
   reputation?: {
     recommendationsCount: number
@@ -35,118 +39,131 @@ export interface RegisterData {
   role: UserRole
   profile: UserProfile
   location: UserLocation
+  /** Código de la junta vecinal: si es correcto, la cuenta se crea como moderador. */
+  inviteCode?: string
 }
 
-const STORAGE_KEY = "sillar_user_session"
+// Respuesta de /api/auth/login y /api/auth/register
+interface BackendUser {
+  id: number
+  fullName: string
+  phone: string
+  email: string | null
+  role: "NEIGHBOR" | "MODERATOR"
+  ayniPoints: number
+  helpGiven: number
+  helpReceived: number
+}
+
+interface AuthResponse {
+  token: string
+  expiresInSeconds: number
+  user: BackendUser
+}
+
+// El backend todavía no guarda el perfil, si es emprendedor ni la ubicación:
+// se recuerdan en este navegador, por usuario.
+const PREFS_KEY = "ayni_profile_prefs"
+const DEFAULT_LOCATION: UserLocation = { lat: -16.3988, lng: -71.535 }
+
+interface ProfilePrefs {
+  role?: "vecino" | "emprendedor"
+  profile?: UserProfile
+  location?: UserLocation
+}
+
+function readAllPrefs(): Record<string, ProfilePrefs> {
+  try {
+    return JSON.parse(localStorage.getItem(PREFS_KEY) || "{}")
+  } catch {
+    return {}
+  }
+}
+
+function savePrefs(userId: string, prefs: ProfilePrefs): void {
+  try {
+    localStorage.setItem(PREFS_KEY, JSON.stringify({ ...readAllPrefs(), [userId]: prefs }))
+  } catch {
+    // Sin almacenamiento disponible: se usan los valores por defecto.
+  }
+}
+
+function toUser(res: AuthResponse): User {
+  const b = res.user
+  const id = String(b.id)
+  const prefs = readAllPrefs()[id] ?? {}
+  return {
+    id,
+    name: b.fullName,
+    phone: b.phone,
+    role: b.role === "MODERATOR" ? "moderador" : prefs.role ?? "vecino",
+    profile: prefs.profile ?? "adulto",
+    location: prefs.location ?? DEFAULT_LOCATION,
+    token: res.token,
+    expiresAt: Date.now() + res.expiresInSeconds * 1000,
+    verified: true,
+    reputation: { recommendationsCount: 0, favorsCount: b.helpGiven },
+  }
+}
 
 export const authService = {
-  // Obtener usuario guardado en el navegador
+  // Usuario con sesión válida guardada en el navegador
   getCurrentUser(): User | null {
     if (typeof window === "undefined") return null
     try {
-      const data = localStorage.getItem(STORAGE_KEY)
-      return data ? JSON.parse(data) : null
+      const data = localStorage.getItem(SESSION_KEY)
+      const user: User | null = data ? JSON.parse(data) : null
+      if (!user?.token || (user.expiresAt && user.expiresAt < Date.now())) {
+        localStorage.removeItem(SESSION_KEY)
+        return null
+      }
+      return user
     } catch {
       return null
     }
   },
 
-  // Guardar sesión en el navegador
   setCurrentUser(user: User): void {
     if (typeof window === "undefined") return
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(user))
+    localStorage.setItem(SESSION_KEY, JSON.stringify(user))
   },
 
-  // Cerrar sesión
   logout(): void {
     if (typeof window === "undefined") return
-    localStorage.removeItem(STORAGE_KEY)
+    localStorage.removeItem(SESSION_KEY)
   },
 
-  // Iniciar sesión (conecta a backend con timeout rápido o usa fallback para demo)
+  // Ingreso con celular y contraseña (POST /api/auth/login)
   async login(credentials: LoginCredentials): Promise<User> {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
-    try {
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 1500) // 1.5s max para no colgar el botón
-
-      const response = await fetch(`${apiUrl}/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(credentials),
-        signal: controller.signal,
-      })
-      clearTimeout(timeoutId)
-
-      if (response.ok) {
-        const user: User = await response.json()
-        this.setCurrentUser(user)
-        return user
-      }
-    } catch (e) {
-      console.warn("Backend no disponible o demoró, usando sesión local de demostración", e)
-    }
-
-    // Modo Demostración / Offline
-    const demoUser: User = {
-      id: "demo-vecino-1",
-      name: credentials.phone === "999888777" ? "Don Lucho (Junta Vecinal)" : "Vecino del Barrio",
-      phone: credentials.phone,
-      role: credentials.phone === "999888777" ? "moderador" : "vecino",
-      profile: "adulto",
-      location: {
-        lat: -16.3988,
-        lng: -71.535,
-        neighborhood: "Yanahuara",
-        address: "Calle Los Arcos 210",
-      },
-      verified: true,
-      reputation: {
-        recommendationsCount: 14,
-        favorsCount: 8,
-      },
-      token: "demo-jwt-token-sillar-valley",
-    }
-    this.setCurrentUser(demoUser)
-    return demoUser
+    const res = await apiFetch<AuthResponse>("/api/auth/login", {
+      method: "POST",
+      auth: false,
+      body: { identifier: credentials.phone, password: credentials.password },
+    })
+    const user = toUser(res)
+    this.setCurrentUser(user)
+    return user
   },
 
-  // Registro de nuevo vecino (F1.1)
+  // Registro de nuevo vecino (POST /api/auth/register)
   async register(data: RegisterData): Promise<User> {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
-    try {
-      const response = await fetch(`${apiUrl}/api/auth/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      })
-
-      if (response.ok) {
-        const user: User = await response.json()
-        this.setCurrentUser(user)
-        return user
-      }
-    } catch (e) {
-      console.warn("Backend no disponible, guardando registro localmente", e)
-    }
-
-    // Guardado local de demostración
-    const newUser: User = {
-      id: "user-" + Date.now(),
-      name: data.name,
-      phone: data.phone,
-      role: data.role,
+    const res = await apiFetch<AuthResponse>("/api/auth/register", {
+      method: "POST",
+      auth: false,
+      body: {
+        fullName: data.name.trim(),
+        phone: data.phone,
+        password: data.password,
+        inviteCode: data.inviteCode?.trim() || undefined,
+      },
+    })
+    savePrefs(String(res.user.id), {
+      role: data.role === "emprendedor" ? "emprendedor" : "vecino",
       profile: data.profile,
       location: data.location,
-      verified: false,
-      reputation: {
-        recommendationsCount: 0,
-        favorsCount: 0,
-      },
-      token: "jwt-" + Date.now(),
-    }
-    this.setCurrentUser(newUser)
-    return newUser
+    })
+    const user = toUser(res)
+    this.setCurrentUser(user)
+    return user
   },
 }
-

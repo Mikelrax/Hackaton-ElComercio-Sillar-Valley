@@ -1,6 +1,6 @@
 // src/lib/mockData.ts
 // Datos demostrativos identificados y consistentes con las capturas oficiales de Figma
-import { BusinessItem, FavorItem, EmergencyReportItem, SupportPointItem } from "./types"
+import { BusinessItem, EmergencyReportItem, SupportPointItem } from "./types"
 
 export const INITIAL_BUSINESSES: BusinessItem[] = [
   {
@@ -142,58 +142,6 @@ export const INITIAL_BUSINESSES: BusinessItem[] = [
         avatarColor: "bg-rose-200 text-rose-900",
       },
     ],
-  },
-]
-
-export const INITIAL_FAVORS: FavorItem[] = [
-  {
-    id: "fav-1",
-    type: "necesito",
-    category: "Herramientas",
-    title: "Préstamo de una escalera por 2 horas",
-    author: "Juan P.",
-    distanceMeters: 200,
-    distanceText: "200 m",
-    timeAgo: "hace 15 min",
-    whatsapp: "51958123456",
-    coords: { x: 38, y: 70 },
-  },
-  {
-    id: "fav-2",
-    type: "ofrezco",
-    category: "Habilidades",
-    title: "Clases de matemática para escolares, sábados en la mañana",
-    author: "Ana L.",
-    distanceMeters: 350,
-    distanceText: "350 m",
-    timeAgo: "hace 1 h",
-    whatsapp: "51959654321",
-    coords: { x: 74, y: 51 },
-  },
-  {
-    id: "fav-3",
-    type: "necesito",
-    category: "Movilidad",
-    title: "Alguien que me lleve al centro de salud el jueves",
-    author: "Don Víctor",
-    distanceMeters: 500,
-    distanceText: "500 m",
-    timeAgo: "hace 3 h",
-    whatsapp: "51957889900",
-    coords: { x: 84, y: 71 },
-  },
-  {
-    id: "fav-4",
-    type: "ofrezco",
-    category: "Herramientas",
-    title: "Resuelto: taladro prestado",
-    author: "Carmen R.",
-    distanceMeters: 100,
-    distanceText: "100 m",
-    timeAgo: "hace 1 día",
-    whatsapp: "",
-    isResolved: true,
-    resolvedNote: "Rosa agradeció a Carmen. +1 favor para Carmen.",
   },
 ]
 
