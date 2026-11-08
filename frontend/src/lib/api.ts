@@ -63,7 +63,7 @@ export async function apiFetch<T>(path: string, { method = "GET", body, auth = t
       body: body !== undefined ? JSON.stringify(body) : undefined,
     })
   } catch {
-    throw saveForLater(0) ?? new ApiError(0, "No pudimos conectar con AYNI. Revisa tu internet e intenta de nuevo.")
+    throw saveForLater(0) ?? new ApiError(0, "No pudimos conectar con Ayni. Revisa tu internet e intenta de nuevo.")
   }
 
   if (UNREACHABLE.has(response.status)) {

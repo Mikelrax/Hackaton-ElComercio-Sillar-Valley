@@ -1,15 +1,15 @@
 import { LegalPage } from "@/components/legal/LegalPage"
 
 export const metadata = {
-  title: "Reglas de la comunidad · AYNI",
-  description: "Cómo nos cuidamos entre vecinos en AYNI.",
+  title: "Reglas de la comunidad · Ayni",
+  description: "Cómo nos cuidamos entre vecinos en Ayni.",
 }
 
 export default function ReglasPage() {
   return (
     <LegalPage
       title="Reglas de la comunidad"
-      intro="AYNI funciona porque los vecinos confiamos unos en otros. Estas reglas ayudan a que siga siendo así."
+      intro="Ayni funciona porque los vecinos confiamos unos en otros. Estas reglas ayudan a que siga siendo así."
       sections={[
         {
           title: "Trata a todos con respeto",
@@ -36,7 +36,7 @@ export default function ReglasPage() {
           title: "Las emergencias son serias",
           items: [
             "Usa el botón de emergencia solo cuando alguien necesita ayuda de verdad.",
-            "Si es urgente, llama también al 105, 116 o 106: AYNI no reemplaza a los servicios de emergencia.",
+            "Si es urgente, llama también al 105, 116 o 106: Ayni no reemplaza a los servicios de emergencia.",
             "Cuando la ayuda llegue, marca el reporte como atendido para que otros sepan que ya no hace falta.",
           ],
         },

@@ -94,7 +94,7 @@ export function WallActivityPanel() {
           <p className="text-sm font-black text-[#172B2A] flex items-center gap-2">
             Mi actividad
             {!!pendingToReview && (
-              <span className="px-2 py-0.5 rounded-full bg-amber-100 text-[#8A5800] text-[11px] font-bold">
+              <span className="px-2 py-0.5 rounded-full bg-amber-100 text-[#8A5800] text-xs font-bold">
                 {pendingToReview} por responder
               </span>
             )}
@@ -122,7 +122,7 @@ export function WallActivityPanel() {
                   <h3 className="text-xs font-black uppercase tracking-wide text-gray-500">Mis publicaciones</h3>
                   <button
                     onClick={refresh}
-                    className="text-[11px] font-bold text-[#087F72] flex items-center gap-1 hover:underline"
+                    className="text-xs font-bold text-[#087F72] flex items-center gap-1 hover:underline"
                   >
                     <RefreshCw className="size-3" />
                     Actualizar
@@ -139,20 +139,20 @@ export function WallActivityPanel() {
                     <div key={post.id} className="p-3 rounded-xl border border-gray-200 space-y-2">
                       <div className="flex items-start justify-between gap-2">
                         <p className="text-sm font-bold text-[#172B2A] leading-snug">{post.title}</p>
-                        <span className={`shrink-0 px-2 py-0.5 rounded-md text-[11px] font-bold ${POST_STATUS_STYLE[post.status]}`}>
+                        <span className={`shrink-0 px-2 py-0.5 rounded-md text-xs font-bold ${POST_STATUS_STYLE[post.status]}`}>
                           {post.statusLabel}
                         </span>
                       </div>
 
                       {post.status === "PENDING" && (
-                        <p className="text-[11px] text-gray-500">Un moderador la revisará antes de que aparezca en el muro.</p>
+                        <p className="text-xs text-gray-500">Un moderador la revisará antes de que aparezca en el muro.</p>
                       )}
                       {post.status === "REJECTED" && post.moderationNote && (
-                        <p className="text-[11px] text-rose-700">Motivo: {post.moderationNote}</p>
+                        <p className="text-xs text-rose-700">Motivo: {post.moderationNote}</p>
                       )}
 
                       {post.status === "APPROVED" && post.responses.length === 0 && (
-                        <p className="text-[11px] text-gray-500">Aún nadie respondió.</p>
+                        <p className="text-xs text-gray-500">Aún nadie respondió.</p>
                       )}
 
                       {post.responses.map(r => (
@@ -183,7 +183,7 @@ export function WallActivityPanel() {
 
                           {r.status === "ACCEPTED" && r.contactPhone && (
                             <a
-                              href={whatsappLink(r.contactPhone, `Hola ${r.helper.fullName}, te escribo por AYNI: "${post.title}"`)}
+                              href={whatsappLink(r.contactPhone, `Hola ${r.helper.fullName}, te escribo por Ayni: "${post.title}"`)}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="inline-flex items-center gap-1.5 text-xs font-bold text-[#087F72] hover:underline"
@@ -192,7 +192,7 @@ export function WallActivityPanel() {
                               Escribir por WhatsApp · {formatPhone(r.contactPhone)}
                             </a>
                           )}
-                          {r.status === "DECLINED" && <p className="text-[11px] text-gray-400">No aceptada</p>}
+                          {r.status === "DECLINED" && <p className="text-xs text-gray-400">No aceptada</p>}
                         </div>
                       ))}
 
@@ -228,7 +228,7 @@ export function WallActivityPanel() {
                     </p>
                     {r.status === "ACCEPTED" && r.contactPhone && (
                       <a
-                        href={whatsappLink(r.contactPhone, `Hola, te escribo por AYNI sobre "${r.postTitle}"`)}
+                        href={whatsappLink(r.contactPhone, `Hola, te escribo por Ayni sobre "${r.postTitle}"`)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1.5 text-xs font-bold text-[#087F72] hover:underline"

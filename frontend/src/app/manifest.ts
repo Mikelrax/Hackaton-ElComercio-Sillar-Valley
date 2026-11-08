@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next"
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "AYNI · Red Comunitaria y Soporte Vecinal",
-    short_name: "AYNI",
+    name: "Ayni · Red comunitaria y apoyo vecinal",
+    short_name: "Ayni",
     description: "Servicios recomendados por vecinos, favores sin dinero y ayuda en emergencias para tu barrio.",
     lang: "es-PE",
     start_url: "/",

@@ -62,7 +62,7 @@ const SIDEBAR_ITEMS: { id: Section; label: string; icon: LucideIcon }[] = [
 const SEVERITY_STYLE: Record<EmergencyReport["severity"], string> = {
   HIGH: "bg-rose-100 text-rose-700",
   MEDIUM: "bg-amber-100 text-amber-800",
-  LOW: "bg-emerald-100 text-emerald-700",
+  LOW: "bg-gray-100 text-gray-600",
 };
 
 const STATUS_STYLE: Record<EmergencyReport["status"], string> = {
@@ -112,7 +112,7 @@ function ReportCard({ report, onAction, busy }: { report: EmergencyReport; busy:
             {report.neighborhood} · {report.categoryLabel} · {report.kindLabel}
           </p>
         </div>
-        <span className={`shrink-0 px-2 py-0.5 rounded-md text-[11px] font-bold ${SEVERITY_STYLE[report.severity]}`}>
+        <span className={`shrink-0 px-2 py-0.5 rounded-md text-xs font-bold ${SEVERITY_STYLE[report.severity]}`}>
           {report.severityLabel}
         </span>
       </div>
@@ -125,7 +125,7 @@ function ReportCard({ report, onAction, busy }: { report: EmergencyReport; busy:
         {report.helper && <span>Ayuda: {report.helper}</span>}
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <span className={`px-2 py-1 rounded-md text-[11px] font-bold ${STATUS_STYLE[report.status]}`}>{report.statusLabel}</span>
+        <span className={`px-2 py-1 rounded-md text-xs font-bold ${STATUS_STYLE[report.status]}`}>{report.statusLabel}</span>
         <div className="flex-1" />
         {!report.verified && (
           <button
@@ -243,12 +243,12 @@ export function ModeratorDashboard({ user, onLogout, onOpenNeighborView }: Moder
           <Icon className="size-4" />
           <span>{item.label}</span>
           {item.id === "reports" && pendingReports.length > 0 && (
-            <span className="ml-auto rounded-full bg-rose-100 text-rose-700 text-[10px] font-bold px-2 py-0.5">
+            <span className="ml-auto rounded-full bg-rose-100 text-rose-700 text-xs font-bold px-2 py-0.5">
               {pendingReports.length}
             </span>
           )}
           {item.id === "posts" && pendingCount > 0 && (
-            <span className="ml-auto rounded-full bg-amber-100 text-[#8A5800] text-[10px] font-bold px-2 py-0.5">
+            <span className="ml-auto rounded-full bg-amber-100 text-[#8A5800] text-xs font-bold px-2 py-0.5">
               {pendingCount}
             </span>
           )}
@@ -279,7 +279,7 @@ export function ModeratorDashboard({ user, onLogout, onOpenNeighborView }: Moder
             </div>
             <div>
               <p className="text-sm font-bold leading-tight">{user.name}</p>
-              <p className="text-[11px] text-gray-500 flex items-center gap-0.5">
+              <p className="text-xs text-gray-500 flex items-center gap-0.5">
                 <Shield className="size-3" />
                 Moderador
               </p>
@@ -356,7 +356,7 @@ export function ModeratorDashboard({ user, onLogout, onOpenNeighborView }: Moder
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {[
-                    { label: "Reportes sin cerrar", value: stats.activeReports, icon: AlertTriangle, tone: "bg-rose-100 text-rose-600", to: "reports" as Section },
+                    { label: "Reportes sin atender", value: stats.activeReports, icon: AlertTriangle, tone: "bg-rose-100 text-rose-600", to: "reports" as Section },
                     { label: "Puntos de apoyo abiertos", value: stats.openSupportPoints, icon: MapPin, tone: "bg-emerald-100 text-emerald-600", to: "resources" as Section },
                     { label: "Vecinos registrados", value: stats.users, icon: Users, tone: "bg-blue-100 text-blue-600", to: "users" as Section },
                     { label: "Estado de la zona", value: stats.emergencyActive ? "Emergencia" : "Normal", icon: Radio, tone: "bg-amber-100 text-amber-600", to: "emergency" as Section },
@@ -370,7 +370,7 @@ export function ModeratorDashboard({ user, onLogout, onOpenNeighborView }: Moder
                         <card.icon className="size-4" />
                       </span>
                       <p className="text-2xl font-extrabold">{card.value}</p>
-                      <p className="text-[11px] text-gray-500">{card.label}</p>
+                      <p className="text-xs text-gray-500">{card.label}</p>
                     </button>
                   ))}
                 </div>
@@ -443,12 +443,12 @@ export function ModeratorDashboard({ user, onLogout, onOpenNeighborView }: Moder
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <p className="text-sm font-bold">{p.name}</p>
-                        <p className="text-[11px] text-gray-500">
+                        <p className="text-xs text-gray-500">
                           {p.typeLabel} · {p.address ?? p.neighborhood}
                           {p.distanceMeters !== null && ` · ${formatDistance(p.distanceMeters)}`}
                         </p>
                       </div>
-                      <span className={`shrink-0 px-2 py-0.5 rounded-md text-[11px] font-bold ${p.open ? "bg-emerald-100 text-emerald-800" : "bg-gray-100 text-gray-600"}`}>
+                      <span className={`shrink-0 px-2 py-0.5 rounded-md text-xs font-bold ${p.open ? "bg-emerald-100 text-emerald-800" : "bg-gray-100 text-gray-600"}`}>
                         {p.open ? "Abierto" : "Cerrado"}
                       </span>
                     </div>
@@ -599,12 +599,12 @@ export function ModeratorDashboard({ user, onLogout, onOpenNeighborView }: Moder
                         <tr key={u.id}>
                           <td className="px-4 py-3">
                             <p className="font-medium">{u.fullName}</p>
-                            <p className="text-[11px] text-gray-400">+{u.phone} · {u.ayniPoints} puntos ayni</p>
+                            <p className="text-xs text-gray-400">+{u.phone} · {u.ayniPoints} puntos ayni</p>
                           </td>
                           <td className="px-4 py-3 text-gray-600 hidden sm:table-cell">{u.primaryAddress?.neighborhood ?? "—"}</td>
                           <td className="px-4 py-3 text-gray-600 hidden sm:table-cell">{u.role === "MODERATOR" ? "Moderador" : "Vecino"}</td>
                           <td className="px-4 py-3">
-                            <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold ${u.active ? "bg-emerald-100 text-emerald-800" : "bg-gray-100 text-gray-600"}`}>
+                            <span className={`px-2 py-0.5 rounded-md text-xs font-bold ${u.active ? "bg-emerald-100 text-emerald-800" : "bg-gray-100 text-gray-600"}`}>
                               {u.active ? "Activo" : "Desactivado"}
                             </span>
                           </td>

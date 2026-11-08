@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React, { useCallback, useEffect, useRef, useState } from "react"
 import { ArrowLeft, Check, MessageCircle, Phone, ThumbsUp } from "lucide-react"
 import { BusinessDetail } from "@/lib/types"
 import { ApiError } from "@/lib/api"
@@ -8,6 +8,7 @@ import { businessesApi, RecommendInput } from "@/lib/businesses"
 import { formatDistance, useCatalog } from "@/lib/catalog"
 import { timeAgo, whatsappLink } from "@/lib/posts"
 import { CategoryIcon, categoryTone } from "@/components/ui/category-icon"
+import { useDialog } from "@/lib/use-dialog"
 
 interface BusinessDetailModalProps {
   businessId: number | null
@@ -19,7 +20,9 @@ interface BusinessDetailModalProps {
 type TagKey = keyof Omit<RecommendInput, "comment">
 
 function initials(name: string): string {
-  return name.slice(0, 2).toUpperCase()
+  const words = name.trim().split(/\s+/).filter(Boolean)
+  const letters = words.length > 1 ? words[0][0] + words[1][0] : name.trim().slice(0, 2)
+  return letters.toUpperCase()
 }
 
 export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({ businessId, location, onClose, onChanged }) => {
@@ -30,6 +33,17 @@ export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({ busine
   const [recommending, setRecommending] = useState(false)
   const [form, setForm] = useState<RecommendInput>({ goodPrice: false, punctual: false, reliable: false, comment: "" })
   const [saving, setSaving] = useState(false)
+  const dialogRef = useRef<HTMLDivElement>(null)
+
+  const close = useCallback(() => {
+    setBusiness(null)
+    setError("")
+    setRecommending(false)
+    setForm({ goodPrice: false, punctual: false, reliable: false, comment: "" })
+    onClose()
+  }, [onClose])
+
+  useDialog(businessId !== null, dialogRef, close)
 
   useEffect(() => {
     if (businessId === null) return
@@ -48,14 +62,6 @@ export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({ busine
   }, [businessId, location])
 
   if (businessId === null) return null
-
-  const close = () => {
-    setBusiness(null)
-    setError("")
-    setRecommending(false)
-    setForm({ goodPrice: false, punctual: false, reliable: false, comment: "" })
-    onClose()
-  }
 
   const submitRecommendation = async () => {
     if (!business) return
@@ -79,6 +85,8 @@ export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({ busine
       onClick={close}
     >
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label={business?.name ?? "Ficha del negocio"}
@@ -130,7 +138,7 @@ export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({ busine
                 {business.recommendations.slice(0, 3).map((r, i) => (
                   <span
                     key={i}
-                    className="size-7 rounded-full bg-white text-[#087F72] text-[10px] font-bold flex items-center justify-center border-2 border-[#EAF5F1]"
+                    className="size-7 rounded-full bg-white text-[#087F72] text-xs font-bold flex items-center justify-center border-2 border-[#EAF5F1]"
                   >
                     {initials(r.author)}
                   </span>
@@ -165,7 +173,7 @@ export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({ busine
             {business.phone && (
               <div className="grid grid-cols-2 gap-3">
                 <a
-                  href={whatsappLink(business.phone, `Hola ${business.name}, te escribo porque te recomendaron en AYNI.`)}
+                  href={whatsappLink(business.phone, `Hola ${business.name}, te escribo porque te recomendaron en Ayni.`)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="h-11 rounded-xl bg-[#087F72] text-white font-bold text-sm flex items-center justify-center gap-2 hover:bg-[#075E54]"
@@ -185,11 +193,11 @@ export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({ busine
 
             {business.recommendedByMe ? (
               <p className="h-12 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 font-bold text-sm flex items-center justify-center gap-2">
-                <Check className="size-4 text-emerald-700" />
+                <Check className="size-4 text-[#087F72]" />
                 Ya lo recomendaste
               </p>
             ) : recommending ? (
-              <div className="rounded-2xl border-2 border-[#F2A900]/50 p-4 space-y-3">
+              <div className="rounded-2xl border-2 border-[#F59E0B]/50 p-4 space-y-3">
                 <p className="text-sm font-bold text-[#172B2A]">¿Qué destacas de este lugar?</p>
                 <div className="flex flex-wrap gap-2">
                   {tags.map(t => (
@@ -222,7 +230,7 @@ export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({ busine
                   <button
                     onClick={submitRecommendation}
                     disabled={saving}
-                    className="h-11 rounded-xl bg-[#F9DA73] hover:bg-[#F2A900] text-[#7A4B00] text-sm font-bold disabled:opacity-60"
+                    className="h-11 rounded-xl bg-[#FCD34D] hover:bg-[#F59E0B] text-[#78350F] text-sm font-bold disabled:opacity-60"
                   >
                     {saving ? "Guardando…" : "Recomendar"}
                   </button>
@@ -231,7 +239,7 @@ export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({ busine
             ) : (
               <button
                 onClick={() => setRecommending(true)}
-                className="w-full h-12 rounded-xl font-bold text-sm flex items-center justify-center gap-2 bg-[#F9DA73] hover:bg-[#F2A900] text-[#7A4B00]"
+                className="w-full h-12 rounded-xl font-bold text-sm flex items-center justify-center gap-2 bg-[#FCD34D] hover:bg-[#F59E0B] text-[#78350F]"
               >
                 <ThumbsUp className="size-4" />
                 Lo recomiendo
@@ -248,12 +256,12 @@ export const BusinessDetailModal: React.FC<BusinessDetailModalProps> = ({ busine
                 .map((r, i) => (
                   <div key={i} className="p-3.5 rounded-2xl bg-white border border-gray-200/80 space-y-1.5">
                     <div className="flex items-center gap-2">
-                      <span className="size-7 rounded-full bg-[#EAF5F1] text-[#087F72] text-[10px] font-bold flex items-center justify-center shrink-0">
+                      <span className="size-7 rounded-full bg-[#EAF5F1] text-[#087F72] text-xs font-bold flex items-center justify-center shrink-0">
                         {initials(r.author)}
                       </span>
                       <div>
                         <p className="text-xs font-bold text-gray-800">{r.author}</p>
-                        <p className="text-[10px] text-gray-400">{timeAgo(r.createdAt)}</p>
+                        <p className="text-xs text-gray-400">{timeAgo(r.createdAt)}</p>
                       </div>
                     </div>
                     <p className="text-sm text-gray-600 pl-9 leading-relaxed">«{r.comment}»</p>

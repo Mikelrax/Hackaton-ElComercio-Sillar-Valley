@@ -1,12 +1,13 @@
 "use client"
 
-import React, { useEffect, useMemo, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { Check, MapPin, RefreshCw, Search, SlidersHorizontal, Store, ThumbsUp, X } from "lucide-react"
 import { BusinessSearchResult, DirectoryOptions } from "@/lib/types"
 import { businessesApi } from "@/lib/businesses"
 import { formatDistance } from "@/lib/catalog"
 import { CategoryIcon, categoryTone } from "@/components/ui/category-icon"
+import { useDialog } from "@/lib/use-dialog"
 
 interface DirectoryViewProps {
   userName: string
@@ -40,6 +41,9 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
   const [openNow, setOpenNow] = useState(false)
   const [sort, setSort] = useState(defaultSort)
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const filtersRef = useRef<HTMLDivElement>(null)
+  const closeFilters = useCallback(() => setFiltersOpen(false), [])
+  useDialog(filtersOpen, filtersRef, closeFilters)
   const [result, setResult] = useState<BusinessSearchResult | null>(null)
   const [error, setError] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
@@ -133,22 +137,24 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
         </div>
         <button
           onClick={() => setFiltersOpen(true)}
+          aria-label={activeFilterCount > 0 ? `Filtros (${activeFilterCount} activos)` : "Filtros"}
+          aria-haspopup="dialog"
           className="relative h-12 px-4 rounded-2xl bg-white border border-gray-200 text-sm font-bold text-[#172B2A] flex items-center gap-2 hover:border-[#087F72] shadow-2xs"
         >
           <SlidersHorizontal className="size-4 text-[#087F72]" />
           <span className="hidden sm:inline">Filtros</span>
           {activeFilterCount > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 size-5 rounded-full bg-[#087F72] text-white text-[11px] font-bold flex items-center justify-center">
+            <span className="absolute -top-1.5 -right-1.5 size-5 rounded-full bg-[#087F72] text-white text-xs font-bold flex items-center justify-center">
               {activeFilterCount}
             </span>
           )}
         </button>
       </div>
 
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none" role="list" aria-label="Categorías">
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none" role="group" aria-label="Categorías">
         <button
-          role="listitem"
           onClick={() => update(() => setCategory(null))}
+          aria-pressed={category === null}
           className={`shrink-0 h-9 px-3.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all ${
             category === null ? "bg-[#087F72] text-white" : "bg-white text-gray-700 border border-gray-200 hover:border-gray-300"
           }`}
@@ -160,8 +166,8 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
           const selected = category === f.slug
           return (
             <button
-              role="listitem"
               key={f.slug}
+              aria-pressed={selected}
               onClick={() => update(() => setCategory(selected ? null : f.slug))}
               className={`shrink-0 h-9 px-3.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all ${
                 selected ? "bg-[#087F72] text-white" : "bg-white text-gray-700 border border-gray-200 hover:border-gray-300"
@@ -247,7 +253,7 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
                 </span>
                 <span className="min-w-0 flex-1 space-y-1">
                   <span className="block text-sm font-extrabold text-[#172B2A] truncate">{biz.name}</span>
-                  <span className="block text-[11px] text-gray-500 font-medium">
+                  <span className="block text-xs text-gray-500 font-medium">
                     {biz.categoryName}
                     {biz.distanceMeters !== null && ` · ${formatDistance(biz.distanceMeters)}`}
                     {" · "}
@@ -294,6 +300,8 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
           onClick={() => setFiltersOpen(false)}
         >
           <div
+            ref={filtersRef}
+            tabIndex={-1}
             role="dialog"
             aria-modal="true"
             aria-label="Filtros"
@@ -376,7 +384,7 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
                 className="h-12 rounded-xl bg-[#087F72] text-white text-sm font-bold flex items-center justify-center gap-1.5"
               >
                 <Check className="size-4" />
-                Ver {result?.totalElements ?? 0} resultados
+                {(result?.totalElements ?? 0) === 1 ? "Ver 1 resultado" : `Ver ${result?.totalElements ?? 0} resultados`}
               </button>
             </div>
           </div>

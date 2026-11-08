@@ -15,6 +15,7 @@ import { FormError } from "@/components/ui/form-error"
 import { LoadError } from "@/components/ui/load-error"
 import { markTutorialSeen } from "@/components/onboarding/TutorialOverlay"
 import { SoftBackdrop } from "@/components/layout/SoftBackdrop"
+import { formatPhone, phoneDigits } from "@/lib/phone"
 
 const LocationPicker = dynamic(() => import("@/components/map/LocationPicker"), {
   ssr: false,
@@ -22,10 +23,6 @@ const LocationPicker = dynamic(() => import("@/components/map/LocationPicker"), 
 })
 
 type Step = 1 | 2 | 3 | "done"
-
-function formatPhone(digits: string): string {
-  return [digits.slice(0, 3), digits.slice(3, 6), digits.slice(6, 9)].filter(Boolean).join(" ")
-}
 
 function StepHeader({ step, onBack }: { step: 1 | 2 | 3; onBack: () => void }) {
   return (
@@ -89,6 +86,10 @@ export function RegisterFlow() {
   const firstName = name.trim().split(/\s+/)[0] || "vecino"
 
   useEffect(() => {
+    if (authService.getCurrentUser()) {
+      router.replace("/")
+      return
+    }
     if (new URLSearchParams(window.location.search).has("paso")) window.history.replaceState(null, "", "/registro")
     const onPop = () => {
       const paso = Number(new URLSearchParams(window.location.search).get("paso"))
@@ -96,7 +97,7 @@ export function RegisterFlow() {
     }
     window.addEventListener("popstate", onPop)
     return () => window.removeEventListener("popstate", onPop)
-  }, [])
+  }, [router])
 
   const goForward = (next: 2 | 3) => {
     window.history.pushState(null, "", `/registro?paso=${next}`)
@@ -152,7 +153,7 @@ export function RegisterFlow() {
       setStep("done")
     } catch (err) {
       if (err instanceof ApiError && err.status === 409 && /tel[eé]fono/i.test(err.message)) {
-        setSubmitError({ message: "Ese celular ya tiene una cuenta en AYNI.", phoneTaken: true })
+        setSubmitError({ message: "Ese celular ya tiene una cuenta en Ayni.", phoneTaken: true })
       } else {
         setSubmitError({
           message: err instanceof ApiError ? err.friendlyMessage : "No pudimos crear tu cuenta. Intenta otra vez.",
@@ -205,7 +206,7 @@ export function RegisterFlow() {
                     inputMode="numeric"
                     autoComplete="tel-national"
                     value={formatPhone(phone)}
-                    onChange={e => setPhone(e.target.value.replace(/\D/g, "").slice(0, 9))}
+                    onChange={e => setPhone(phoneDigits(e.target.value))}
                     placeholder="987 654 321"
                     className={inputClass}
                   />
@@ -214,7 +215,7 @@ export function RegisterFlow() {
                   <FormError>Escribe tus 9 dígitos. Empieza con 9, por ejemplo 987 654 321.</FormError>
                 ) : (
                   <p className={helpClass}>
-                    Con este número entrarás a AYNI. No se lo mostramos a nadie sin tu permiso.
+                    Con este número entrarás a Ayni. No se lo mostramos a nadie sin tu permiso.
                   </p>
                 )}
               </div>
@@ -260,7 +261,7 @@ export function RegisterFlow() {
                   </button>
                 </div>
                 <ul className="mt-3 space-y-1.5" aria-live="polite">
-                  <Rule ok={hasLength}>Tiene 8 letras o números</Rule>
+                  <Rule ok={hasLength}>Tiene al menos 8 letras o números</Rule>
                   <Rule ok={hasNumber}>Tiene al menos un número</Rule>
                 </ul>
               </div>

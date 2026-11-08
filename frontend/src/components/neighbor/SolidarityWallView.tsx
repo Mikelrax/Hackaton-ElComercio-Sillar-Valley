@@ -199,7 +199,7 @@ export const SolidarityWallView: React.FC<SolidarityWallViewProps> = ({
               >
                 <div className="flex items-center gap-2">
                   <span
-                    className={`px-2.5 py-0.5 rounded-md text-[11px] font-bold ${
+                    className={`px-2.5 py-0.5 rounded-md text-xs font-bold ${
                       isNecesito
                         ? "bg-amber-100 text-[#8A5800]"
                         : "bg-[#d4f3eb] text-[#087F72]"
@@ -224,7 +224,7 @@ export const SolidarityWallView: React.FC<SolidarityWallViewProps> = ({
                   </p>
 
                   {isMine ? (
-                    <span className="shrink-0 text-[11px] font-bold text-gray-400">Tu publicación</span>
+                    <span className="shrink-0 text-xs font-bold text-gray-400">Tu publicación</span>
                   ) : isSent ? (
                     <span className="shrink-0 h-8 px-3 rounded-xl bg-[#EAF5F1] text-[#087F72] font-bold text-xs flex items-center gap-1">
                       <Check className="size-3.5" />
@@ -234,7 +234,7 @@ export const SolidarityWallView: React.FC<SolidarityWallViewProps> = ({
                     <button
                       onClick={() => handleRespond(favor)}
                       disabled={isSending}
-                      className="shrink-0 h-8 px-4 rounded-xl border border-[#087F72] text-[#087F72] font-bold text-xs flex items-center justify-center hover:bg-[#EAF5F1] active:scale-98 transition-all disabled:opacity-60"
+                      className="shrink-0 h-9 px-4 rounded-xl bg-[#087F72] text-white font-bold text-xs flex items-center justify-center hover:bg-[#075E54] active:scale-98 transition-all disabled:opacity-60"
                     >
                       {isSending ? "Enviando…" : isNecesito ? "Yo te ayudo" : "Me interesa"}
                     </button>
@@ -242,12 +242,12 @@ export const SolidarityWallView: React.FC<SolidarityWallViewProps> = ({
                 </div>
 
                 {sentIds.includes(favor.id) && (
-                  <p className="text-[11px] text-gray-500">
+                  <p className="text-xs text-gray-500">
                     Cuando {favor.author} acepte tu respuesta, verás su número en “Mi actividad” para coordinar.
                   </p>
                 )}
                 {respondError?.id === favor.id && (
-                  <p className="text-[11px] font-semibold text-rose-600">{respondError.message}</p>
+                  <p className="text-xs font-semibold text-rose-600">{respondError.message}</p>
                 )}
               </div>
             )

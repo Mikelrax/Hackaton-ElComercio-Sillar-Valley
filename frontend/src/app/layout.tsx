@@ -14,12 +14,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AYNI · Red Comunitaria y Soporte Vecinal",
+  title: "Ayni · Red comunitaria y apoyo vecinal",
   description:
     "Plataforma cívica barrial de servicios recomendados, apoyo solidario y coordinación en emergencias para Arequipa.",
   appleWebApp: {
     capable: true,
-    title: "AYNI",
+    title: "Ayni",
     statusBarStyle: "default",
   },
 };
@@ -38,7 +38,7 @@ export default function RootLayout({
       lang="es"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased scroll-smooth`}
     >
-      <body className="min-h-full flex flex-col font-sans bg-background text-foreground selection:bg-emerald-500/20 selection:text-emerald-900">
+      <body className="min-h-full flex flex-col font-sans bg-background text-foreground selection:bg-[#087F72]/20 selection:text-[#172B2A]">
         {children}
         <ServiceWorkerRegister />
       </body>

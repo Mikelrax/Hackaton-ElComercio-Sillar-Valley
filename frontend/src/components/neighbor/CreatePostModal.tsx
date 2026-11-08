@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React, { useRef, useState } from "react"
 import dynamic from "next/dynamic"
 import { AlertCircle, Check, LocateFixed, MapPin, Minus, Plus, WifiOff, X } from "lucide-react"
 import { Option, Spot } from "@/lib/types"
@@ -8,6 +8,7 @@ import { ApiError } from "@/lib/api"
 import { Address } from "@/lib/auth"
 import { currentPosition, type LatLng, type Where } from "@/lib/map"
 import { CategoryIcon } from "@/components/ui/category-icon"
+import { useDialog } from "@/lib/use-dialog"
 
 const LocationPicker = dynamic(() => import("@/components/map/LocationPicker"), {
   ssr: false,
@@ -110,14 +111,8 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const [closesAt, setClosesAt] = useState("")
   const [openDays, setOpenDays] = useState("")
 
-  useEffect(() => {
-    if (!isOpen) return
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose()
-    }
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [isOpen, onClose])
+  const dialogRef = useRef<HTMLDivElement>(null)
+  useDialog(isOpen, dialogRef, onClose)
 
   if (!isOpen) return null
 
@@ -229,6 +224,8 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4 overflow-y-auto animate-in fade-in duration-200"
     >
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label="Publicar"
@@ -263,7 +260,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
                 }`}
               >
                 <p className={`text-sm font-black ${t.titleColor}`}>{t.title}</p>
-                <p className="text-[11px] text-gray-500 font-medium mt-0.5 leading-tight">{t.hint}</p>
+                <p className="text-xs text-gray-500 font-medium mt-0.5 leading-tight">{t.hint}</p>
               </button>
             ))}
           </div>
@@ -348,7 +345,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
               </legend>
               <div className="grid grid-cols-2 gap-2">
                 <label className="space-y-1">
-                  <span className="block text-[11px] font-semibold text-gray-500">Abre</span>
+                  <span className="block text-xs font-semibold text-gray-500">Abre</span>
                   <input
                     type="time"
                     value={opensAt}
@@ -357,7 +354,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
                   />
                 </label>
                 <label className="space-y-1">
-                  <span className="block text-[11px] font-semibold text-gray-500">Cierra</span>
+                  <span className="block text-xs font-semibold text-gray-500">Cierra</span>
                   <input
                     type="time"
                     value={closesAt}
@@ -496,7 +493,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
               )}
             </div>
             {currentWhere === "gps" && (
-              <p className={`text-[11px] ${gpsState === "error" ? "font-semibold text-rose-600" : "text-gray-500"}`}>
+              <p className={`text-xs ${gpsState === "error" ? "font-semibold text-rose-600" : "text-gray-500"}`}>
                 {gpsState === "locating"
                   ? "Buscando dónde estás…"
                   : gpsState === "error"

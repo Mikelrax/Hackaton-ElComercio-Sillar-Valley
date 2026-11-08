@@ -1,8 +1,8 @@
 import { LegalPage } from "@/components/legal/LegalPage"
 
 export const metadata = {
-  title: "Política de privacidad · AYNI",
-  description: "Qué datos guarda AYNI y quién puede verlos.",
+  title: "Política de privacidad · Ayni",
+  description: "Qué datos guarda Ayni y quién puede verlos.",
 }
 
 export default function PrivacidadPage() {
@@ -51,7 +51,7 @@ export default function PrivacidadPage() {
           ],
         },
         {
-          title: "Si quieres dejar AYNI",
+          title: "Si quieres dejar Ayni",
           items: ["Pide a un moderador de tu junta vecinal que desactive tu cuenta. Así nadie podrá volver a entrar con ella."],
         },
       ]}

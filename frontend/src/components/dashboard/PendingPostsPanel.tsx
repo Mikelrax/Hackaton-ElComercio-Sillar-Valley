@@ -129,7 +129,7 @@ export function PendingPostsPanel({ onChanged }: { onChanged?: () => void }) {
 
       {items?.map(item => (
         <div key={item.key} className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-3">
-          <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold">
+          <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
             <span className={`px-2 py-0.5 rounded-md ${item.badgeClass}`}>{item.badge}</span>
             <span className="text-gray-500">{item.category}</span>
             <span className="text-gray-400 font-medium">· {timeAgo(item.createdAt)}</span>
@@ -137,7 +137,7 @@ export function PendingPostsPanel({ onChanged }: { onChanged?: () => void }) {
           <div>
             <p className="text-base font-bold">{item.title}</p>
             {item.body && <p className="text-xs text-gray-600 whitespace-pre-line mt-1">{item.body}</p>}
-            <p className="text-[11px] text-gray-400 mt-1">
+            <p className="text-xs text-gray-400 mt-1">
               Por {item.author}
               {item.place ? ` · ${item.place}` : ""}
             </p>

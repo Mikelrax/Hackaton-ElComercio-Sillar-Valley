@@ -90,26 +90,55 @@ function toUser(res: AuthResponse): User {
   }
 }
 
+const SESSION_EVENT = "ayni-session"
+
+function notifySession() {
+  window.dispatchEvent(new Event(SESSION_EVENT))
+}
+
+export function parseSession(raw: string | null): User | null {
+  try {
+    const user: User | null = raw ? JSON.parse(raw) : null
+    const expired = user?.expiresAt !== undefined && user.expiresAt < Date.now()
+    return !user?.token || expired || !user.location?.neighborhood ? null : user
+  } catch {
+    return null
+  }
+}
+
+export function sessionSnapshot(): string | null {
+  try {
+    return localStorage.getItem(SESSION_KEY)
+  } catch {
+    return null
+  }
+}
+
+export function subscribeSession(listener: () => void) {
+  window.addEventListener(SESSION_EVENT, listener)
+  window.addEventListener("storage", listener)
+  return () => {
+    window.removeEventListener(SESSION_EVENT, listener)
+    window.removeEventListener("storage", listener)
+  }
+}
+
 export const authService = {
   getCurrentUser(): User | null {
     if (typeof window === "undefined") return null
-    try {
-      const data = localStorage.getItem(SESSION_KEY)
-      const user: User | null = data ? JSON.parse(data) : null
-      const expired = user?.expiresAt !== undefined && user.expiresAt < Date.now()
-      if (!user?.token || expired || !user.location?.neighborhood) {
+    const user = parseSession(sessionSnapshot())
+    if (!user) {
+      try {
         localStorage.removeItem(SESSION_KEY)
-        return null
-      }
-      return user
-    } catch {
-      return null
+      } catch {}
     }
+    return user
   },
 
   setCurrentUser(user: User): void {
     if (typeof window === "undefined") return
     localStorage.setItem(SESSION_KEY, JSON.stringify(user))
+    notifySession()
   },
 
   async refreshLocation(): Promise<void> {
@@ -136,6 +165,7 @@ export const authService = {
     if (typeof window === "undefined") return
     localStorage.removeItem(SESSION_KEY)
     clearOutbox()
+    notifySession()
     if ("caches" in window) {
       caches
         .keys()

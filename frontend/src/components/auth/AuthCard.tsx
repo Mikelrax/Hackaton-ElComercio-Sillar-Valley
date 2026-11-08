@@ -3,43 +3,37 @@
 import * as React from "react"
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import {
-  User as UserIcon,
-  Phone,
-  Lock,
-  Eye,
-  EyeOff,
-  Sparkles,
-  AlertCircle,
-  ChevronDown,
-  ChevronUp,
-  Siren,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card"
+import { useRouter } from "next/navigation"
+import { User as UserIcon, Eye, EyeOff, ChevronDown, ChevronUp, Siren } from "lucide-react"
 import { Logo } from "@/components/brand/Logo"
+import { FormError } from "@/components/ui/form-error"
 import { authService } from "@/lib/auth"
 import { ApiError } from "@/lib/api"
 import { DemoAccount } from "@/lib/types"
+import { formatPhone, phoneDigits } from "@/lib/phone"
+import { inputClass, labelClass, primaryButton } from "@/lib/form-styles"
 
 function errorMessage(err: unknown, fallback: string): string {
   return err instanceof ApiError ? err.friendlyMessage : fallback
 }
 
 export function AuthCard() {
-  const [loginPhone, setLoginPhone] = useState("")
-  const [loginPassword, setLoginPassword] = useState("")
-  const [showLoginPassword, setShowLoginPassword] = useState(false)
+  const router = useRouter()
+  const [phone, setPhone] = useState("")
+  const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [showForgot, setShowForgot] = useState(false)
-  const [loginLoading, setLoginLoading] = useState(false)
-  const [loginError, setLoginError] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
 
   const [showDemoPanel, setShowDemoPanel] = useState(false)
   const [demoAccounts, setDemoAccounts] = useState<DemoAccount[]>([])
 
   useEffect(() => {
+    if (authService.getCurrentUser()) {
+      router.replace("/")
+      return
+    }
     let cancelled = false
     authService
       .demoAccounts()
@@ -50,193 +44,170 @@ export function AuthCard() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [router])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoginError("")
-    if (!loginPhone || !loginPassword) {
-      setLoginError("Por favor ingresa tu número de celular y contraseña.")
+    setError("")
+    if (phone.length !== 9 || !password) {
+      setError("Escribe tus 9 dígitos de celular y tu contraseña.")
       return
     }
 
-    setLoginLoading(true)
+    setLoading(true)
     try {
-      await authService.login({ phone: loginPhone, password: loginPassword })
-      window.location.assign("/")
+      await authService.login({ phone, password })
+      router.push("/")
     } catch (err) {
-      setLoginError(
+      setError(
         err instanceof ApiError && err.status === 401
           ? "El número o la contraseña no coinciden. Revísalos e intenta otra vez."
           : errorMessage(err, "No pudimos iniciar sesión. Intenta otra vez.")
       )
-      setLoginLoading(false)
+      setLoading(false)
     }
   }
 
   const handleDemoAccess = async (key: string) => {
-    setLoginError("")
-    setLoginLoading(true)
+    setError("")
+    setLoading(true)
     try {
       await authService.demoLogin(key)
-      window.location.assign("/")
+      router.push("/")
     } catch (err) {
-      setLoginError(errorMessage(err, "No pudimos iniciar sesión. Intenta otra vez."))
-      setLoginLoading(false)
+      setError(errorMessage(err, "No pudimos iniciar sesión. Intenta otra vez."))
+      setLoading(false)
     }
   }
 
   return (
-    <Card className="w-full max-w-lg border-border/80 bg-card/95 backdrop-blur-md shadow-xl transition-all">
-      <CardHeader className="text-center pb-4 space-y-3">
-        <div className="flex justify-center">
-          <Link href="/" className="hover:opacity-90 transition-opacity">
-            <Logo size="lg" />
-          </Link>
-        </div>
+    <div className="w-full max-w-[440px] bg-white rounded-2xl border border-border/80 shadow-xl px-5 py-6 sm:px-7 sm:py-7 space-y-6 text-[#1C1917]">
+      <div className="text-center space-y-3">
+        <Link href="/" className="inline-flex hover:opacity-90 transition-opacity">
+          <Logo size="lg" />
+        </Link>
+        <h1 className="text-[26px] font-bold tracking-tight leading-tight">Ingresa a tu barrio</h1>
+        <p className="text-[16px] text-[#57534E]">Con el celular y la contraseña que usaste al registrarte.</p>
+      </div>
 
-        <CardDescription className="text-xs sm:text-sm text-muted-foreground">
-          Ingresa para conectarte con los servicios y la red de apoyo de tu barrio
-        </CardDescription>
-      </CardHeader>
-
-      <CardContent className="space-y-4">
-        <form onSubmit={handleLogin} className="space-y-4">
-          {loginError && (
-            <div className="flex items-center gap-2 rounded-xl bg-destructive/10 p-3 text-xs sm:text-sm text-destructive border border-destructive/20">
-              <AlertCircle className="size-4 shrink-0" />
-              <span>{loginError}</span>
-            </div>
-          )}
-
-          <div className="space-y-1.5">
-            <Label htmlFor="login-phone" className="text-xs font-semibold flex items-center gap-1.5">
-              <Phone className="size-3.5 text-[#087F72]" />
-              Número de Celular
-            </Label>
-            <Input
+      <form onSubmit={handleLogin} noValidate className="space-y-5">
+        <div>
+          <label htmlFor="login-phone" className={labelClass}>Tu celular</label>
+          <div className="flex gap-2">
+            <span className="h-14 px-4 rounded-2xl border-2 border-[#E7E5E4] bg-white flex items-center text-[17px] font-semibold text-[#57534E]">
+              +51
+            </span>
+            <input
               id="login-phone"
               type="tel"
               inputMode="numeric"
-              placeholder="Ej. 987 654 321"
-              value={loginPhone}
-              onChange={(e) => setLoginPhone(e.target.value)}
               autoComplete="tel-national"
-              className="h-11 rounded-xl"
+              value={formatPhone(phone)}
+              onChange={e => setPhone(phoneDigits(e.target.value))}
+              placeholder="987 654 321"
+              className={inputClass}
             />
           </div>
+        </div>
 
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="login-password" className="text-xs font-semibold flex items-center gap-1.5">
-                <Lock className="size-3.5 text-[#087F72]" />
-                Contraseña
-              </Label>
-              <button
-                type="button"
-                onClick={() => setShowForgot(!showForgot)}
-                aria-expanded={showForgot}
-                className="text-[11px] font-semibold text-[#087F72] hover:underline"
-              >
-                ¿Olvidaste tu clave?
-              </button>
-            </div>
-            {showForgot && (
-              <p className="rounded-xl bg-[#EAF5F1] border border-[#087F72]/20 p-3 text-xs leading-relaxed text-[#115E59]" role="status">
-                Pide ayuda a un moderador de tu junta vecinal: desde su panel puede darte una clave temporal para que
-                vuelvas a entrar con tu mismo número.
-              </p>
-            )}
-            <div className="relative">
-              <Input
-                id="login-password"
-                type={showLoginPassword ? "text" : "password"}
-                placeholder="Ingresa tu contraseña"
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-                autoComplete="current-password"
-                className="h-11 rounded-xl pr-10"
-              />
-              <button
-                type="button"
-                onClick={() => setShowLoginPassword(!showLoginPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition-colors"
-                aria-label={showLoginPassword ? "Ocultar contraseña" : "Ver contraseña"}
-              >
-                {showLoginPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-              </button>
-            </div>
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label htmlFor="login-password" className="block text-[15px] font-semibold text-[#1C1917]">Tu contraseña</label>
+            <button
+              type="button"
+              onClick={() => setShowForgot(!showForgot)}
+              aria-expanded={showForgot}
+              className="text-[14px] font-semibold text-[#087F72] hover:underline"
+            >
+              ¿Olvidaste tu clave?
+            </button>
           </div>
+          {showForgot && (
+            <p className="mb-2 rounded-2xl bg-[#EAF5F1] border border-[#087F72]/20 p-3.5 text-[15px] leading-snug text-[#115E59]" role="status">
+              Pide ayuda a un moderador de tu junta vecinal: desde su panel puede darte una clave temporal para que
+              vuelvas a entrar con tu mismo número.
+            </p>
+          )}
+          <div className="relative">
+            <input
+              id="login-password"
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              autoComplete="current-password"
+              className={`${inputClass} pr-28`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 h-10 px-3 rounded-xl flex items-center gap-1.5 text-[15px] font-bold text-[#087F72] hover:bg-[#EAF5F1]"
+            >
+              {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              {showPassword ? "Ocultar" : "Mostrar"}
+            </button>
+          </div>
+        </div>
 
-          <Button
-            type="submit"
-            disabled={loginLoading}
-            className="w-full h-11 text-sm font-bold bg-[#087F72] hover:bg-[#075E54] text-white rounded-xl shadow-md transition-all active:scale-98"
-          >
-            {loginLoading ? "Ingresando al barrio..." : "Ingresar a AYNI"}
-          </Button>
+        {error && <FormError>{error}</FormError>}
 
-          <p className="text-center text-xs text-muted-foreground">
-            ¿Primera vez en AYNI?{" "}
-            <Link href="/registro" className="font-bold text-[#087F72] hover:underline">
-              Crea tu cuenta gratis
-            </Link>
-          </p>
-        </form>
+        <button type="submit" disabled={loading} className={primaryButton}>
+          {loading ? "Ingresando…" : "Ingresar"}
+        </button>
 
-        {demoAccounts.length > 0 && (
-        <div className="pt-3 border-t border-border/70">
+        <p className="text-center text-[15px] text-[#57534E]">
+          ¿Primera vez en Ayni?{" "}
+          <Link href="/registro" className="font-bold text-[#087F72] hover:underline">
+            Crea tu cuenta gratis
+          </Link>
+        </p>
+      </form>
+
+      {demoAccounts.length > 0 && (
+        <div className="pt-4 border-t border-[#E7E5E4]">
           <button
             type="button"
             onClick={() => setShowDemoPanel(!showDemoPanel)}
-            className="w-full flex items-center justify-between py-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors"
+            aria-expanded={showDemoPanel}
+            className="w-full flex items-center justify-between py-2 text-[15px] font-semibold text-[#57534E] hover:text-[#1C1917]"
           >
-            <span className="flex items-center gap-1.5">
-              <Sparkles className="size-3.5 text-amber-500" />
-              Panel de Evaluación Rápida (Para Evaluadores)
-            </span>
-            {showDemoPanel ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
+            Acceso rápido para evaluadores
+            {showDemoPanel ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
           </button>
 
           {showDemoPanel && (
-            <div className="mt-2.5 p-3 rounded-xl bg-muted/60 border border-border/70 space-y-2 text-xs">
-              <p className="text-[11px] text-muted-foreground">
-                Selecciona un perfil demostrativo precargado para ingresar en 1 clic:
-              </p>
-              <div className="space-y-2">
-                {demoAccounts.map(account => {
-                  const isModerator = account.role === "MODERATOR"
-                  const Icon = isModerator ? Siren : UserIcon
-                  return (
-                    <button
-                      key={account.key}
-                      type="button"
-                      disabled={loginLoading}
-                      onClick={() => handleDemoAccess(account.key)}
-                      className={`w-full flex items-start gap-2.5 rounded-lg border bg-background p-2.5 text-left transition-colors hover:bg-muted disabled:opacity-60 ${
-                        isModerator ? "border-rose-500/30" : "border-border"
-                      }`}
-                    >
-                      <Icon className={`size-4 mt-0.5 shrink-0 ${isModerator ? "text-rose-600" : "text-[#087F72]"}`} />
-                      <span className="min-w-0">
-                        <span className={`block text-xs font-bold ${isModerator ? "text-rose-600" : "text-foreground"}`}>
-                          {account.title}
-                        </span>
-                        <span className="block text-[11px] text-muted-foreground">
-                          {account.fullName}
-                          {account.neighborhood ? ` · ${account.neighborhood}` : ""}
-                        </span>
-                        <span className="block text-[11px] text-muted-foreground">{account.summary}</span>
+            <div className="mt-2 space-y-2">
+              <p className="text-[14px] text-[#57534E]">Elige una cuenta de prueba para entrar con un toque:</p>
+              {demoAccounts.map(account => {
+                const isModerator = account.role === "MODERATOR"
+                const Icon = isModerator ? Siren : UserIcon
+                return (
+                  <button
+                    key={account.key}
+                    type="button"
+                    disabled={loading}
+                    onClick={() => handleDemoAccess(account.key)}
+                    className={`w-full flex items-start gap-3 rounded-2xl border-2 bg-white p-3.5 text-left transition-colors hover:bg-[#F5F5F4] disabled:opacity-60 ${
+                      isModerator ? "border-[#BA1A1A]/30" : "border-[#E7E5E4]"
+                    }`}
+                  >
+                    <Icon className={`size-5 mt-0.5 shrink-0 ${isModerator ? "text-[#BA1A1A]" : "text-[#087F72]"}`} />
+                    <span className="min-w-0">
+                      <span className={`block text-[15px] font-bold ${isModerator ? "text-[#BA1A1A]" : "text-[#1C1917]"}`}>
+                        {account.title}
                       </span>
-                    </button>
-                  )
-                })}
-              </div>
+                      <span className="block text-[14px] text-[#57534E]">
+                        {account.fullName}
+                        {account.neighborhood ? ` · ${account.neighborhood}` : ""}
+                      </span>
+                      <span className="block text-[14px] text-[#78716C]">{account.summary}</span>
+                    </span>
+                  </button>
+                )
+              })}
             </div>
           )}
         </div>
-        )}
-      </CardContent>
-    </Card>
+      )}
+    </div>
   )
 }

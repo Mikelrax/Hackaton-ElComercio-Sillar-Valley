@@ -111,7 +111,7 @@ export const EmergencySOSView: React.FC<EmergencySOSViewProps> = ({
                 <Phone className="size-4" />
                 {n.value}
               </p>
-              <p className="text-[11px] font-bold text-rose-900 mt-0.5">{n.label}</p>
+              <p className="text-xs font-bold text-rose-900 mt-0.5">{n.label}</p>
             </a>
           ))}
         </div>
@@ -186,7 +186,7 @@ export const EmergencySOSView: React.FC<EmergencySOSViewProps> = ({
                         {rep.distanceMeters !== null && ` · a ${formatDistance(rep.distanceMeters)}`} · {timeAgo(rep.createdAt)}
                       </p>
                     </div>
-                    <span className={`shrink-0 px-2 py-0.5 rounded-md text-[11px] font-bold ${SEVERITY_STYLE[rep.severity]}`}>
+                    <span className={`shrink-0 px-2 py-0.5 rounded-md text-xs font-bold ${SEVERITY_STYLE[rep.severity]}`}>
                       {rep.kind === "OFFER" ? "Recurso" : rep.severityLabel}
                     </span>
                   </div>
@@ -254,7 +254,7 @@ export const EmergencySOSView: React.FC<EmergencySOSViewProps> = ({
                   <span className={`size-3 rounded-sm shrink-0 ${point.open ? "bg-blue-600" : "bg-gray-300"}`} />
                   <div className="min-w-0">
                     <p className="text-sm font-bold text-gray-800 truncate">{point.name}</p>
-                    <p className="text-[11px] text-gray-500">
+                    <p className="text-xs text-gray-500">
                       {point.typeLabel}
                       {point.address && ` · ${point.address}`}
                     </p>

@@ -2,7 +2,7 @@ import * as React from "react"
 import { RefreshCw, WifiOff } from "lucide-react"
 
 export function LoadError({
-  title = "No pudimos cargar AYNI",
+  title = "No pudimos cargar Ayni",
   message = "Revisa tu conexión a internet y vuelve a intentarlo.",
   onRetry,
   className = "",

@@ -1,31 +1,25 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { authService, User } from "@/lib/auth"
+import { useMemo, useState, useSyncExternalStore } from "react"
+import { authService, parseSession, sessionSnapshot, subscribeSession } from "@/lib/auth"
 import { LandingView } from "@/components/landing/LandingView"
 import { ModeratorDashboard } from "@/components/dashboard/ModeratorDashboard"
 import { DashboardView } from "@/components/dashboard/DashboardView"
 
 export default function Home() {
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
-  const [mounted, setMounted] = useState(false)
+  const raw = useSyncExternalStore<string | null | undefined>(subscribeSession, sessionSnapshot, () => undefined)
+  const currentUser = useMemo(() => (raw === undefined ? null : parseSession(raw)), [raw])
   const [neighborView, setNeighborView] = useState(false)
 
-  useEffect(() => {
-    setMounted(true)
-    setCurrentUser(authService.getCurrentUser())
-  }, [])
-
   const handleLogout = () => {
-    authService.logout()
     setNeighborView(false)
-    setCurrentUser(null)
+    authService.logout()
   }
 
-  if (!mounted) {
+  if (raw === undefined) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="size-8 rounded-full border-2 border-emerald-600 border-t-transparent animate-spin" />
+        <div className="size-8 rounded-full border-2 border-[#087F72] border-t-transparent animate-spin" />
       </div>
     )
   }

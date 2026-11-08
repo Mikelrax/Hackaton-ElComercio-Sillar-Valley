@@ -14,7 +14,7 @@ export function CommunityHeroIllustration({ landing, className }: { landing: Lan
   const supportPoint = landing?.supportPoint
   return (
     <div className={cn("relative w-full max-w-lg mx-auto aspect-[4/3] flex items-center justify-center select-none", className)}>
-      <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/15 via-teal-500/10 to-transparent rounded-3xl blur-2xl -z-10" />
+      <div className="absolute inset-0 bg-gradient-to-tr from-[#087F72]/15 via-teal-500/10 to-transparent rounded-3xl blur-2xl -z-10" />
 
       <svg
         viewBox="0 0 520 380"
@@ -27,9 +27,9 @@ export function CommunityHeroIllustration({ landing, className }: { landing: Lan
             <stop offset="0%" stopColor="#ffffff" />
             <stop offset="100%" stopColor="#f1f5f9" />
           </linearGradient>
-          <linearGradient id="emeraldGrad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#059669" />
-            <stop offset="100%" stopColor="#047857" />
+          <linearGradient id="brandGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#087F72" />
+            <stop offset="100%" stopColor="#075E54" />
           </linearGradient>
           <linearGradient id="mintGrad" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0%" stopColor="#34d399" />
@@ -59,9 +59,9 @@ export function CommunityHeroIllustration({ landing, className }: { landing: Lan
 
         <g transform="translate(70, 160)">
           <rect x="0" y="30" width="100" height="80" rx="6" fill="url(#sillarGrad)" stroke="#cbd5e1" strokeWidth="2" />
-          <polygon points="0,30 50,0 100,30" fill="#047857" />
+          <polygon points="0,30 50,0 100,30" fill="#075E54" />
           <path d="M5 35 Q 25 45 50 35 Q 75 45 95 35" fill="none" stroke="#10b981" strokeWidth="6" strokeLinecap="round" />
-          <rect x="15" y="65" width="25" height="45" rx="3" fill="#059669" />
+          <rect x="15" y="65" width="25" height="45" rx="3" fill="#087F72" />
           <rect x="55" y="60" width="30" height="30" rx="4" fill="#e2e8f0" stroke="#94a3b8" strokeWidth="1.5" />
           <rect x="25" y="15" width="50" height="14" rx="3" fill="#10b981" />
           <text x="50" y="25" fill="#ffffff" fontSize="8" fontWeight="bold" textAnchor="middle">BODEGA</text>
@@ -69,14 +69,14 @@ export function CommunityHeroIllustration({ landing, className }: { landing: Lan
 
         <g transform="translate(200, 110)">
           <rect x="0" y="40" width="120" height="120" rx="8" fill="url(#sillarGrad)" stroke="#cbd5e1" strokeWidth="2" />
-          <polygon points="0,40 60,10 120,40" fill="#059669" />
+          <polygon points="0,40 60,10 120,40" fill="#087F72" />
           <rect x="25" y="20" width="35" height="15" rx="2" fill="#0284c7" stroke="#38bdf8" strokeWidth="1" transform="skewX(-15)" />
           <rect x="20" y="60" width="22" height="25" rx="3" fill="#fef08a" stroke="#cbd5e1" />
           <rect x="78" y="60" width="22" height="25" rx="3" fill="#fef08a" stroke="#cbd5e1" />
           <rect x="20" y="100" width="22" height="25" rx="3" fill="#e2e8f0" stroke="#cbd5e1" />
           <rect x="78" y="100" width="22" height="25" rx="3" fill="#e2e8f0" stroke="#cbd5e1" />
           <rect x="47" y="115" width="26" height="45" rx="4" fill="#0f172a" />
-          <line x1="60" y1="10" x2="60" y2="-15" stroke="#059669" strokeWidth="2.5" />
+          <line x1="60" y1="10" x2="60" y2="-15" stroke="#087F72" strokeWidth="2.5" />
           <circle cx="60" cy="-15" r="4" fill="#10b981" />
           <path d="M50 -20 A15 15 0 0 1 70 -20" stroke="#10b981" strokeWidth="2" fill="none" strokeLinecap="round" />
           <path d="M42 -27 A25 25 0 0 1 78 -27" stroke="#10b981" strokeWidth="1.5" strokeDasharray="3 3" fill="none" strokeLinecap="round" />
@@ -107,10 +107,10 @@ export function CommunityHeroIllustration({ landing, className }: { landing: Lan
             <g className="animate-bounce" style={{ animationDuration: "5s", transformBox: "fill-box" }}>
               <rect x="0" y="0" width="172" height="42" rx="12" fill="#ffffff" stroke="#e2e8f0" strokeWidth="1.5" filter="drop-shadow(0 4px 6px rgba(0,0,0,0.06))" />
               <circle cx="22" cy="21" r="13" fill="#d1fae5" />
-              <DynamicIcon name={business.categoryIcon as IconName} x={15} y={14} size={14} color="#059669" strokeWidth={2.25} />
+              <DynamicIcon name={business.categoryIcon as IconName} x={15} y={14} size={14} color="#087F72" strokeWidth={2.25} />
               <text x="42" y="18" fill="#0f172a" fontSize="10" fontWeight="bold">{clip(business.name, 22)}</text>
-              <Star x={42} y={23} size={8} color="#059669" fill="#059669" />
-              <text x="53" y="30" fill="#059669" fontSize="8.5" fontWeight="600">
+              <Star x={42} y={23} size={8} color="#087F72" fill="#087F72" />
+              <text x="53" y="30" fill="#087F72" fontSize="8.5" fontWeight="600">
                 {business.recommendations === 1 ? "Recomendado por 1 vecino" : `Recomendado por ${business.recommendations} vecinos`}
               </text>
             </g>

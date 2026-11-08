@@ -371,7 +371,7 @@ export function DashboardView({ user, onLogout, onOpenPanel }: DashboardViewProp
               }`}
             >
               <AlertTriangle className="size-3.5" />
-              Emergencia SOS
+              Emergencia
             </button>
           </nav>
 
@@ -392,7 +392,7 @@ export function DashboardView({ user, onLogout, onOpenPanel }: DashboardViewProp
 
             <button
               onClick={() => setTutorialOpen(true)}
-              aria-label="Cómo funciona AYNI"
+              aria-label="Cómo funciona Ayni"
               title="Cómo funciona"
               className="size-9 rounded-xl border border-gray-200 bg-white text-[#087F72] hover:border-[#087F72] flex items-center justify-center"
             >
@@ -415,7 +415,7 @@ export function DashboardView({ user, onLogout, onOpenPanel }: DashboardViewProp
               <MapPin className="size-4 text-[#087F72]" />
               <span className="hidden lg:flex flex-col text-left">
                 <span className="text-xs font-bold leading-tight">{user.name}</span>
-                <span className="text-[10px] text-gray-500">{neighborhoodName} · Mis direcciones</span>
+                <span className="text-xs text-gray-500">{neighborhoodName} · Mis direcciones</span>
               </span>
               <span className="sr-only lg:hidden">Mis direcciones</span>
             </Link>
@@ -541,14 +541,14 @@ export function DashboardView({ user, onLogout, onOpenPanel }: DashboardViewProp
           className={`flex flex-col items-center gap-1 ${activeTab === "inicio" ? "text-[#087F72]" : "text-gray-500"}`}
         >
           <Home className="size-5" />
-          <span className="text-[11px] font-bold">Inicio</span>
+          <span className="text-xs font-bold">Inicio</span>
         </button>
         <button
           onClick={() => goTo("mapa")}
           className={`flex flex-col items-center gap-1 ${activeTab === "mapa" ? "text-[#087F72]" : "text-gray-500"}`}
         >
           <Map className="size-5" />
-          <span className="text-[11px] font-bold">Mapa</span>
+          <span className="text-xs font-bold">Mapa</span>
         </button>
         <button
           onClick={() => openCreate(activeTab === "emergencia" ? "emergencia" : "necesito")}
@@ -564,14 +564,14 @@ export function DashboardView({ user, onLogout, onOpenPanel }: DashboardViewProp
           className={`flex flex-col items-center gap-1 ${activeTab === "muro" ? "text-[#087F72]" : "text-gray-500"}`}
         >
           <Heart className="size-5" />
-          <span className="text-[11px] font-bold">Muro</span>
+          <span className="text-xs font-bold">Muro</span>
         </button>
         <button
           onClick={() => goTo("emergencia")}
           className={`flex flex-col items-center gap-1 ${activeTab === "emergencia" ? "text-[#BA1A1A]" : "text-gray-500"}`}
         >
           <AlertTriangle className="size-5" />
-          <span className="text-[11px] font-bold">Emergencia</span>
+          <span className="text-xs font-bold">Emergencia</span>
         </button>
       </nav>
 

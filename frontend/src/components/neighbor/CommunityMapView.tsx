@@ -78,7 +78,7 @@ function Chip({
 function FilterGroup({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="space-y-2">
-      <p className="text-[11px] font-black uppercase tracking-wide text-gray-500">{title}</p>
+      <p className="text-xs font-black uppercase tracking-wide text-gray-500">{title}</p>
       <div className="flex flex-wrap gap-2">{children}</div>
     </div>
   )
@@ -260,7 +260,7 @@ export const CommunityMapView: React.FC<CommunityMapViewProps> = ({
             )}
             {searchData && searchData.items.length > 0 && (
               <div className="py-1">
-                <p className="px-4 pt-2 pb-1 text-[11px] font-black uppercase tracking-wide text-gray-400">En Ayni</p>
+                <p className="px-4 pt-2 pb-1 text-xs font-black uppercase tracking-wide text-gray-400">En Ayni</p>
                 {searchData.items.map(item => (
                   <button
                     key={item.key}
@@ -286,7 +286,7 @@ export const CommunityMapView: React.FC<CommunityMapViewProps> = ({
             )}
             {searchData && searchData.places.length > 0 && (
               <div className="py-1 border-t border-gray-100">
-                <p className="px-4 pt-2 pb-1 text-[11px] font-black uppercase tracking-wide text-gray-400">Lugares</p>
+                <p className="px-4 pt-2 pb-1 text-xs font-black uppercase tracking-wide text-gray-400">Lugares</p>
                 {searchData.places.map(place => (
                   <button
                     key={`${place.name}-${place.latitude}-${place.longitude}`}
@@ -312,7 +312,7 @@ export const CommunityMapView: React.FC<CommunityMapViewProps> = ({
       </div>
 
       <div className="space-y-1">
-        <p className="text-[11px] font-black uppercase tracking-wide text-gray-500">Buscar cerca de</p>
+        <p className="text-xs font-black uppercase tracking-wide text-gray-500">Buscar cerca de</p>
         <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
           {addresses.map(a => {
             const active = origin.key === `a-${a.id}` || (origin.key === "primary" && a.primary)
@@ -354,7 +354,7 @@ export const CommunityMapView: React.FC<CommunityMapViewProps> = ({
       </div>
 
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-        <span className="shrink-0 text-[11px] font-black uppercase tracking-wide text-gray-500">A</span>
+        <span className="shrink-0 text-xs font-black uppercase tracking-wide text-gray-500">A</span>
         {options.radii.map(r => (
           <Chip key={r.label} active={radius === r.meters} onClick={() => r.meters && setRadius(r.meters)}>
             {r.label}
@@ -366,7 +366,7 @@ export const CommunityMapView: React.FC<CommunityMapViewProps> = ({
             <CategoryIcon name={l.icon} className="size-3.5" />
             {l.label}
             {has(l.value) && counts[l.value] !== undefined && (
-              <span className="ml-0.5 rounded-full bg-white/25 px-1.5 text-[10px]">{counts[l.value]}</span>
+              <span className="ml-0.5 rounded-full bg-white/25 px-1.5 text-xs">{counts[l.value]}</span>
             )}
           </Chip>
         ))}
@@ -384,7 +384,7 @@ export const CommunityMapView: React.FC<CommunityMapViewProps> = ({
           <SlidersHorizontal className="size-4" />
           Filtros
           {activeFilters > 0 && (
-            <span className="rounded-full bg-[#087F72] text-white px-1.5 text-[10px]">{activeFilters}</span>
+            <span className="rounded-full bg-[#087F72] text-white px-1.5 text-xs">{activeFilters}</span>
           )}
         </button>
 
@@ -536,7 +536,7 @@ export const CommunityMapView: React.FC<CommunityMapViewProps> = ({
           />
 
           <div className="absolute top-3 left-3 z-10 flex flex-col items-start gap-2">
-            <span className="rounded-full bg-white/95 px-3 py-1 text-[11px] font-bold text-gray-700 shadow-sm">
+            <span className="rounded-full bg-white/95 px-3 py-1 text-xs font-bold text-gray-700 shadow-sm">
               {loading ? "Buscando…" : `${items.length} lugares a ${options.radii.find(r => r.meters === radius)?.label ?? `${radius} m`} de ${origin.label.toLowerCase() === "mi casa" ? "tu casa" : origin.label}`}
             </span>
             {movedAway && !current && (
@@ -612,7 +612,7 @@ export const CommunityMapView: React.FC<CommunityMapViewProps> = ({
                   <span className="block text-xs text-gray-500 mt-0.5">{item.subtitle}</span>
                   {item.badge && (
                     <span
-                      className={`inline-block mt-1.5 px-2 py-0.5 rounded-md text-[11px] font-bold ${
+                      className={`inline-block mt-1.5 px-2 py-0.5 rounded-md text-xs font-bold ${
                         item.alert ? "bg-rose-100 text-[#BA1A1A]" : style.soft
                       }`}
                     >
@@ -672,7 +672,7 @@ function ItemCard({
           </p>
           {item.badge && (
             <span
-              className={`inline-block mt-1.5 px-2 py-0.5 rounded-md text-[11px] font-bold ${
+              className={`inline-block mt-1.5 px-2 py-0.5 rounded-md text-xs font-bold ${
                 item.alert ? "bg-rose-100 text-[#BA1A1A]" : style.soft
               }`}
             >
@@ -686,11 +686,11 @@ function ItemCard({
       </div>
 
       {item.approximate && (
-        <p className="text-[11px] text-gray-500">
+        <p className="text-xs text-gray-500">
           Ubicación aproximada (unos {approximateRadius} m) para cuidar la privacidad del vecino.
         </p>
       )}
-      {error && <p className="text-[11px] font-semibold text-rose-600">{error}</p>}
+      {error && <p className="text-xs font-semibold text-rose-600">{error}</p>}
 
       <div className="flex flex-wrap gap-2">
         {item.layer === "businesses" && (
@@ -717,7 +717,7 @@ function ItemCard({
               type="button"
               disabled={busy}
               onClick={onRespond}
-              className="flex-1 h-10 px-4 rounded-xl bg-[#B45309] text-white font-bold text-xs disabled:opacity-60"
+              className="flex-1 h-10 px-4 rounded-xl bg-[#087F72] hover:bg-[#075E54] text-white font-bold text-xs disabled:opacity-60"
             >
               {busy ? "Enviando…" : item.type === "REQUEST" ? "Yo te ayudo" : "Me interesa"}
             </button>
@@ -754,7 +754,7 @@ function ItemCard({
         )}
       </div>
       {isWall && done && (
-        <p className="text-[11px] text-gray-500">Cuando te acepten, verás su número en «Mi actividad» del muro.</p>
+        <p className="text-xs text-gray-500">Cuando te acepten, verás su número en «Mi actividad» del muro.</p>
       )}
     </div>
   )

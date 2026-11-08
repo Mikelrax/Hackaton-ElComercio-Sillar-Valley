@@ -1,8 +1,9 @@
 "use client"
 
 import * as React from "react"
-import { useEffect, useState } from "react"
+import { useRef, useState } from "react"
 import { ArrowLeft, HeartHandshake, Plus, Search, WifiOff, type LucideIcon } from "lucide-react"
+import { useDialog } from "@/lib/use-dialog"
 
 const SEEN_KEY = "ayni_tutorial_seen"
 
@@ -53,20 +54,12 @@ const STEPS: Step[] = [
 
 export function TutorialOverlay({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [index, setIndex] = useState(0)
-
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose()
-    }
-    window.addEventListener("keydown", onKey)
-    const previous = document.body.style.overflow
-    document.body.style.overflow = "hidden"
-    return () => {
-      window.removeEventListener("keydown", onKey)
-      document.body.style.overflow = previous
-    }
-  }, [open, onClose])
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const close = () => {
+    setIndex(0)
+    onClose()
+  }
+  useDialog(open, dialogRef, close)
 
   if (!open) return null
 
@@ -74,14 +67,11 @@ export function TutorialOverlay({ open, onClose }: { open: boolean; onClose: () 
   const last = index === STEPS.length - 1
   const Icon = step.icon
 
-  const close = () => {
-    setIndex(0)
-    onClose()
-  }
-
   return (
     <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center">
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="tutorial-title"

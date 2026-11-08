@@ -43,7 +43,7 @@ export function Logo({
             cx="48"
             cy="22"
             r="16"
-            stroke="#F2A900"
+            stroke="#F59E0B"
             strokeWidth="7"
             fill="none"
           />
