@@ -18,7 +18,6 @@ export interface User {
   profile: UserProfile
   location: UserLocation
   token?: string
-  /** Momento (ms) en que vence el token. */
   expiresAt?: number
   verified?: boolean
   reputation?: {
@@ -32,27 +31,39 @@ export interface LoginCredentials {
   password: string
 }
 
+export interface AddressInput {
+  label?: string
+  neighborhood: string
+  reference?: string
+  latitude?: number
+  longitude?: number
+}
+
 export interface RegisterData {
   name: string
   phone: string
   password: string
-  role: UserRole
-  profile: UserProfile
-  location: UserLocation
-  /** Código de la junta vecinal: si es correcto, la cuenta se crea como moderador. */
   inviteCode?: string
+  address: AddressInput
 }
 
-// Respuesta de /api/auth/login y /api/auth/register
+export interface Address {
+  id: number
+  label: string
+  neighborhood: string
+  reference: string | null
+  latitude: number | null
+  longitude: number | null
+  primary: boolean
+}
+
 interface BackendUser {
   id: number
   fullName: string
   phone: string
-  email: string | null
   role: "NEIGHBOR" | "MODERATOR"
-  ayniPoints: number
   helpGiven: number
-  helpReceived: number
+  primaryAddress: Address | null
 }
 
 interface AuthResponse {
@@ -61,44 +72,23 @@ interface AuthResponse {
   user: BackendUser
 }
 
-// El backend todavía no guarda el perfil, si es emprendedor ni la ubicación:
-// se recuerdan en este navegador, por usuario.
-const PREFS_KEY = "ayni_profile_prefs"
-const DEFAULT_LOCATION: UserLocation = { lat: -16.3988, lng: -71.535 }
-
-interface ProfilePrefs {
-  role?: "vecino" | "emprendedor"
-  profile?: UserProfile
-  location?: UserLocation
-}
-
-function readAllPrefs(): Record<string, ProfilePrefs> {
-  try {
-    return JSON.parse(localStorage.getItem(PREFS_KEY) || "{}")
-  } catch {
-    return {}
-  }
-}
-
-function savePrefs(userId: string, prefs: ProfilePrefs): void {
-  try {
-    localStorage.setItem(PREFS_KEY, JSON.stringify({ ...readAllPrefs(), [userId]: prefs }))
-  } catch {
-    // Sin almacenamiento disponible: se usan los valores por defecto.
-  }
-}
+const DEFAULT_COORDS = { lat: -16.3988, lng: -71.535 }
 
 function toUser(res: AuthResponse): User {
   const b = res.user
-  const id = String(b.id)
-  const prefs = readAllPrefs()[id] ?? {}
+  const address = b.primaryAddress
   return {
-    id,
+    id: String(b.id),
     name: b.fullName,
     phone: b.phone,
-    role: b.role === "MODERATOR" ? "moderador" : prefs.role ?? "vecino",
-    profile: prefs.profile ?? "adulto",
-    location: prefs.location ?? DEFAULT_LOCATION,
+    role: b.role === "MODERATOR" ? "moderador" : "vecino",
+    profile: "adulto",
+    location: {
+      lat: address?.latitude ?? DEFAULT_COORDS.lat,
+      lng: address?.longitude ?? DEFAULT_COORDS.lng,
+      neighborhood: address?.neighborhood,
+      address: address?.reference ?? undefined,
+    },
     token: res.token,
     expiresAt: Date.now() + res.expiresInSeconds * 1000,
     verified: true,
@@ -107,7 +97,6 @@ function toUser(res: AuthResponse): User {
 }
 
 export const authService = {
-  // Usuario con sesión válida guardada en el navegador
   getCurrentUser(): User | null {
     if (typeof window === "undefined") return null
     try {
@@ -133,7 +122,6 @@ export const authService = {
     localStorage.removeItem(SESSION_KEY)
   },
 
-  // Ingreso con celular y contraseña (POST /api/auth/login)
   async login(credentials: LoginCredentials): Promise<User> {
     const res = await apiFetch<AuthResponse>("/api/auth/login", {
       method: "POST",
@@ -145,7 +133,6 @@ export const authService = {
     return user
   },
 
-  // Registro de nuevo vecino (POST /api/auth/register)
   async register(data: RegisterData): Promise<User> {
     const res = await apiFetch<AuthResponse>("/api/auth/register", {
       method: "POST",
@@ -155,12 +142,8 @@ export const authService = {
         phone: data.phone,
         password: data.password,
         inviteCode: data.inviteCode?.trim() || undefined,
+        address: data.address,
       },
-    })
-    savePrefs(String(res.user.id), {
-      role: data.role === "emprendedor" ? "emprendedor" : "vecino",
-      profile: data.profile,
-      location: data.location,
     })
     const user = toUser(res)
     this.setCurrentUser(user)

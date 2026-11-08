@@ -37,7 +37,6 @@ const DISTRICTS = [
 export function LandingView() {
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground antialiased selection:bg-emerald-500/20">
-      {/* ================= BARRA DE NAVEGACIÓN SUPERIOR ================= */}
       <header className="sticky top-0 z-40 w-full border-b border-border/80 bg-background/85 backdrop-blur-md transition-all">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <Logo size="md" />
@@ -60,7 +59,7 @@ export function LandingView() {
                 Iniciar Sesión
               </Button>
             </Link>
-            <Link href="/login">
+            <Link href="/registro">
               <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs h-9 px-4 rounded-xl shadow-sm shadow-emerald-600/25 gap-1.5">
                 <span>Registrarme</span>
                 <ArrowRight className="size-3.5" />
@@ -70,14 +69,11 @@ export function LandingView() {
         </div>
       </header>
 
-      {/* ================= HERO SECTION ================= */}
       <section className="relative overflow-hidden pt-10 pb-16 md:pt-16 md:pb-24 border-b border-border/50">
-        {/* Fondo sutil con cuadrícula cívica */}
         <div className="absolute inset-0 bg-[radial-gradient(#059669_1px,transparent_1px)] [background-size:28px_28px] opacity-10 pointer-events-none" />
 
         <div className="max-w-6xl mx-auto px-4 sm:px-6 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-            {/* Columna Izquierda: Texto y Llamados a la Acción */}
             <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-800 dark:text-emerald-300 text-xs font-semibold">
                 <Sparkles className="size-3.5 text-emerald-600" />
@@ -95,9 +91,8 @@ export function LandingView() {
                 Encuentra productos y servicios recomendados a 5 minutos a pie, intercambia favores y herramientas sin dinero, y coordina ayuda comunitaria inmediata ante cualquier emergencia.
               </p>
 
-              {/* Botones de acción principales */}
               <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
-                <Link href="/login">
+                <Link href="/registro">
                   <Button className="w-full sm:w-auto h-12 px-7 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm shadow-md shadow-emerald-600/20 gap-2">
                     <span>Unirme a mi Barrio</span>
                     <ArrowRight className="size-4" />
@@ -111,7 +106,6 @@ export function LandingView() {
                 </Link>
               </div>
 
-              {/* Insignias de confianza cívica */}
               <div className="pt-4 flex flex-wrap items-center justify-center lg:justify-start gap-y-2 gap-x-5 text-xs text-muted-foreground font-medium">
                 <div className="flex items-center gap-1.5">
                   <CheckCircle2 className="size-4 text-emerald-600" />
@@ -128,7 +122,6 @@ export function LandingView() {
               </div>
             </div>
 
-            {/* Columna Derecha: Ilustración Comunitaria Vectorial */}
             <div className="lg:col-span-5 flex justify-center">
               <CommunityHeroIllustration />
             </div>
@@ -136,7 +129,6 @@ export function LandingView() {
         </div>
       </section>
 
-      {/* ================= COBERTURA DE DISTRITOS DE AREQUIPA ================= */}
       <section className="py-5 bg-muted/40 border-b border-border/60">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground">
@@ -158,7 +150,6 @@ export function LandingView() {
         </div>
       </section>
 
-      {/* ================= LOS 3 PILARES DEL PRODUCTO ================= */}
       <section id="directorio" className="py-16 sm:py-20 max-w-6xl mx-auto px-4 sm:px-6 w-full">
         <div className="text-center max-w-2xl mx-auto space-y-3 mb-12">
           <Badge variant="outline" className="text-emerald-700 dark:text-emerald-300 border-emerald-500/30">
@@ -173,7 +164,6 @@ export function LandingView() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Pilar 1: Directorio 5 Min */}
           <div className="rounded-2xl border border-border/80 bg-card p-6 flex flex-col justify-between space-y-5 hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-500/5 transition-all">
             <div className="space-y-4">
               <div className="size-12 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center border border-emerald-500/20">
@@ -195,7 +185,6 @@ export function LandingView() {
             </div>
           </div>
 
-          {/* Pilar 2: Muro Solidario (Sin Dinero) */}
           <div id="solidaridad" className="rounded-2xl border border-border/80 bg-card p-6 flex flex-col justify-between space-y-5 hover:border-blue-500/40 hover:shadow-lg hover:shadow-blue-500/5 transition-all">
             <div className="space-y-4">
               <div className="size-12 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center border border-blue-500/20">
@@ -217,7 +206,6 @@ export function LandingView() {
             </div>
           </div>
 
-          {/* Pilar 3: Red SOS Emergencias */}
           <div id="emergencias" className="rounded-2xl border border-rose-500/30 bg-rose-50/30 dark:bg-rose-950/20 p-6 flex flex-col justify-between space-y-5 hover:border-rose-500/50 hover:shadow-lg hover:shadow-rose-500/5 transition-all">
             <div className="space-y-4">
               <div className="size-12 rounded-xl bg-rose-500/10 text-rose-600 flex items-center justify-center border border-rose-500/20">
@@ -241,7 +229,6 @@ export function LandingView() {
         </div>
       </section>
 
-      {/* ================= LLAMADO FINAL A LA ACCIÓN ================= */}
       <section className="py-16 sm:py-20 max-w-4xl mx-auto px-4 sm:px-6 w-full text-center space-y-6">
         <div className="p-8 sm:p-12 rounded-3xl bg-gradient-to-br from-[#087F72] via-[#075E54] to-teal-900 text-white shadow-xl shadow-[#087F72]/15 space-y-5">
           <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight">
@@ -251,7 +238,7 @@ export function LandingView() {
             Únete hoy a AYNI y fortalece los lazos de confianza, apoyo mutuo y seguridad en tu comunidad.
           </p>
           <div className="pt-3 flex flex-wrap gap-3 justify-center">
-            <Link href="/login">
+            <Link href="/registro">
               <Button className="h-12 px-8 rounded-xl bg-white text-[#087F72] hover:bg-emerald-50 font-bold text-sm shadow-md">
                 Empezar Ahora
               </Button>
@@ -260,7 +247,6 @@ export function LandingView() {
         </div>
       </section>
 
-      {/* ================= PIE DE PÁGINA CÍVICO ================= */}
       <footer className="border-t border-border/80 bg-background py-8 text-xs text-muted-foreground">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
           <Logo size="sm" withSubtitle={false} />
@@ -280,4 +266,3 @@ export function LandingView() {
     </div>
   )
 }
-
